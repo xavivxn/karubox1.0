@@ -1,17 +1,39 @@
 import { createClient } from '@supabase/supabase-js'
+import { Database } from '@/types/supabase'
 
-// TODO: Configurar variables de entorno en .env.local
-// NEXT_PUBLIC_SUPABASE_URL=tu_url_de_supabase
-// NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
+// Configurar variables de entorno
+// Ver: ENV_CONFIG.md para instrucciones de configuración
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    '⚠️ Credenciales de Supabase no configuradas. Ver ENV_CONFIG.md para instrucciones.'
+  )
+}
 
-// Cliente de Supabase para operaciones del lado del cliente
-// Una vez que tengas las credenciales de Supabase:
-// 1. Crea un proyecto en https://supabase.com
-// 2. Copia la URL y la ANON KEY del proyecto
-// 3. Créalas en el archivo .env.local en la raíz del proyecto
+// Cliente de Supabase con tipos
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  }
+})
+
+// Helper para verificar conexión
+export async function testConnection() {
+  try {
+    const { data, error } = await supabase.from('categorias').select('count')
+    if (error) throw error
+    return { success: true, message: 'Conexión exitosa con Supabase' }
+  } catch (error) {
+    return { success: false, message: 'Error de conexión', error }
+  }
+}
 
