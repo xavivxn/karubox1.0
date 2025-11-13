@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { Database } from '@/types/supabase'
 
 // Configurar variables de entorno
 // Ver: ENV_CONFIG.md para instrucciones de configuración
@@ -13,8 +12,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-// Cliente de Supabase con tipos
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+// Cliente de Supabase
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,

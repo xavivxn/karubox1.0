@@ -1,5 +1,5 @@
 import { supabase } from '../supabase'
-import type { Categoria } from '@/types/supabase'
+// import type { Categoria } from '@/types/supabase'
 
 /**
  * Obtener todas las categorías activas ordenadas

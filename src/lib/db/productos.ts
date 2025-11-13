@@ -1,5 +1,5 @@
 import { supabase } from '../supabase'
-import type { Producto, ProductoCompleto, NuevoProducto } from '@/types/supabase'
+// import type { Producto, ProductoCompleto, NuevoProducto } from '@/types/supabase'
 
 /**
  * Obtener todos los productos disponibles
@@ -12,7 +12,7 @@ export async function getProductos() {
     .order('nombre')
   
   if (error) throw error
-  return data as Producto[]
+  return data
 }
 
 /**

@@ -1,80 +1,222 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+import { useCartStore } from '@/store/cartStore'
+import CategoryList from '@/components/pos/CategoryList'
+import ProductGrid from '@/components/pos/ProductGrid'
+import Cart from '@/components/pos/Cart'
+import ClientModal from '@/components/pos/ClientModal'
+
+interface Categoria {
+  id: string
+  nombre: string
+  orden: number
+}
+
+interface Producto {
+  id: string
+  nombre: string
+  descripcion?: string
+  precio: number
+  categoria_id?: string
+  disponible: boolean
+}
+
 export default function POSPage() {
+  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [productos, setProductos] = useState<Producto[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  const { addItem, items, cliente, tipo, clearCart, getTotal } = useCartStore()
+
+  // Cargar categorías y productos
+  useEffect(() => {
+    async function loadData() {
+      try {
+        // Cargar categorías
+        const { data: cats, error: errorCats } = await supabase
+          .from('categorias')
+          .select('*')
+          .eq('activa', true)
+          .order('orden')
+
+        if (errorCats) throw errorCats
+        setCategorias(cats || [])
+
+        // Cargar productos
+        const { data: prods, error: errorProds } = await supabase
+          .from('productos')
+          .select('*')
+          .eq('disponible', true)
+          .order('nombre')
+
+        if (errorProds) throw errorProds
+        setProductos(prods || [])
+      } catch (error) {
+        console.error('Error cargando datos:', error)
+        alert('Error al cargar datos')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  // Filtrar productos por categoría
+  const filteredProducts = selectedCategory
+    ? productos.filter((p) => p.categoria_id === selectedCategory)
+    : productos
+
+  // Calcular puntos (1 punto por cada $100)
+  const calcularPuntos = (total: number): number => {
+    return Math.floor(total / 100)
+  }
+
+  // Confirmar pedido
+  const handleConfirmOrder = async () => {
+    if (!tipo) {
+      alert('Selecciona el tipo de pedido')
+      return
+    }
+
+    if (items.length === 0) {
+      alert('Agrega productos al pedido')
+      return
+    }
+
+    setIsProcessing(true)
+
+    try {
+      const total = getTotal()
+      const puntosGenerados = calcularPuntos(total)
+
+      // Crear pedido
+      const { data: pedido, error: errorPedido } = await supabase
+        .from('pedidos')
+        .insert({
+          cliente_id: cliente?.id || null,
+          tipo,
+          total,
+          puntos_generados: cliente ? puntosGenerados : 0,
+          estado: 'pendiente'
+        })
+        .select()
+        .single()
+
+      if (errorPedido) throw errorPedido
+
+      // Crear items del pedido
+      const itemsToInsert = items.map((item) => ({
+        pedido_id: pedido.id,
+        producto_id: item.producto_id,
+        producto_nombre: item.nombre,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio,
+        subtotal: item.subtotal
+      }))
+
+      const { error: errorItems } = await supabase
+        .from('items_pedido')
+        .insert(itemsToInsert)
+
+      if (errorItems) throw errorItems
+
+      // Si hay cliente, sumar puntos
+      if (cliente && puntosGenerados > 0) {
+        const nuevosPuntos = cliente.puntos_totales + puntosGenerados
+
+        // Actualizar puntos del cliente
+        const { error: errorCliente } = await supabase
+          .from('clientes')
+          .update({ puntos_totales: nuevosPuntos })
+          .eq('id', cliente.id)
+
+        if (errorCliente) throw errorCliente
+
+        // Registrar transacción de puntos
+        await supabase.from('transacciones_puntos').insert({
+          cliente_id: cliente.id,
+          pedido_id: pedido.id,
+          tipo: 'ganado',
+          puntos: puntosGenerados,
+          saldo_anterior: cliente.puntos_totales,
+          saldo_nuevo: nuevosPuntos,
+          descripcion: `Puntos ganados por pedido #${pedido.numero_pedido}`
+        })
+      }
+
+      // Mostrar confirmación
+      alert(
+        `✅ Pedido #${pedido.numero_pedido} confirmado!\n` +
+        `Total: $${total.toLocaleString()}\n` +
+        (cliente ? `Puntos ganados: ${puntosGenerados} ⭐` : '')
+      )
+
+      // Limpiar carrito
+      clearCart()
+    } catch (error) {
+      console.error('Error confirmando pedido:', error)
+      alert('Error al confirmar pedido')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">
-            🖥️ Punto de Venta (POS)
-          </h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">
+              🖥️ Punto de Venta (POS)
+            </h1>
+            <a
+              href="/"
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+            >
+              ← Volver
+            </a>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Categorías y Productos */}
             <div className="lg:col-span-2 space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h2 className="text-xl font-semibold mb-4">Categorías</h2>
-                <div className="flex gap-2 flex-wrap">
-                  {['Lomitos', 'Hamburguesas', 'Bebidas', 'Extras', 'Promos'].map((cat) => (
-                    <button
-                      key={cat}
-                      className="px-4 py-2 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <CategoryList
+                categories={categorias}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+              />
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h2 className="text-xl font-semibold mb-4">Productos</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {['Lomito Completo', 'Lomito Especial', 'Hamburguesa Simple', 'Hamburguesa Doble'].map((prod) => (
-                    <button
-                      key={prod}
-                      className="p-4 bg-white border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors text-left"
-                    >
-                      <div className="font-semibold">{prod}</div>
-                      <div className="text-sm text-gray-600">$0.00</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <ProductGrid
+                products={filteredProducts}
+                onAddProduct={(product) => addItem(product)}
+                loading={loading}
+              />
             </div>
 
-            {/* Pedido Actual */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h2 className="text-xl font-semibold mb-4">Pedido Actual</h2>
-              <div className="space-y-3 mb-4">
-                <div className="text-center text-gray-500 py-8">
-                  Selecciona productos para comenzar
-                </div>
-              </div>
-
-              <div className="border-t pt-4 space-y-3">
-                <div className="flex justify-between text-lg font-semibold">
-                  <span>Total:</span>
-                  <span>$0.00</span>
-                </div>
-
-                <div className="space-y-2">
-                  <button className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                    🏠 Delivery
-                  </button>
-                  <button className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
-                    🍽️ Comer en local
-                  </button>
-                  <button className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
-                    📦 Para llevar
-                  </button>
-                </div>
-
-                <button className="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-semibold">
-                  Confirmar Pedido
-                </button>
-              </div>
+            {/* Carrito */}
+            <div className="lg:col-span-1">
+              <Cart
+                onOpenClientModal={() => setIsClientModalOpen(true)}
+                onConfirmOrder={handleConfirmOrder}
+                isProcessing={isProcessing}
+              />
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal de Cliente */}
+      <ClientModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+      />
     </div>
-  );
+  )
 }
 
