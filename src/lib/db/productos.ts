@@ -1,5 +1,9 @@
 import { supabase } from '../supabase'
-// import type { Producto, ProductoCompleto, NuevoProducto } from '@/types/supabase'
+import type { Producto } from '@/types/database'
+
+// Tipos auxiliares para el archivo
+type ProductoCompleto = Producto & { categoria_nombre?: string }
+type NuevoProducto = Omit<Producto, 'id'>
 
 /**
  * Obtener todos los productos disponibles

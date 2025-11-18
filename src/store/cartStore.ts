@@ -63,7 +63,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         items: [
           ...items,
           {
-            id: crypto.randomUUID(),
+            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `temp-${Date.now()}-${Math.random()}`,
             producto_id: producto.id,
             nombre: producto.nombre,
             precio: producto.precio,

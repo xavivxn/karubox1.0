@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { supabase, testConnection } from '@/lib/supabase'
 
 export default function TestPage() {
@@ -121,12 +122,12 @@ export default function TestPage() {
         </div>
 
         <div className="text-center">
-          <a 
+          <Link 
             href="/" 
             className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             ← Volver al Inicio
-          </a>
+          </Link>
         </div>
       </div>
     </div>

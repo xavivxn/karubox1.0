@@ -3,12 +3,14 @@ import { createClient } from '@supabase/supabase-js'
 // Configurar variables de entorno
 // Ver: ENV_CONFIG.md para instrucciones de configuración
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder'
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    '⚠️ Credenciales de Supabase no configuradas. Ver ENV_CONFIG.md para instrucciones.'
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  console.error(
+    '❌ ERROR: Credenciales de Supabase no configuradas.\n' +
+    'Por favor configura el archivo .env.local con tus credenciales.\n' +
+    'Ver ENV_CONFIG.md para instrucciones.'
   )
 }
 
