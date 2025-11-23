@@ -67,3 +67,4 @@ export default function ProductGrid({ products, onAddProduct, loading }: Props) 
   )
 }
 
+

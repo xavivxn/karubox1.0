@@ -45,3 +45,4 @@ export default function CategoryList({ categories, selectedCategory, onSelectCat
   )
 }
 
+
