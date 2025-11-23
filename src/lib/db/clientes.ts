@@ -2,14 +2,14 @@ import { supabase } from '../supabase'
 import type { Cliente, NuevoCliente, TopCliente } from '@/types/supabase'
 
 /**
- * Buscar cliente por teléfono
+ * Buscar cliente por teléfono (filtrado por tenant)
  */
-export async function buscarClientePorTelefono(telefono: string) {
+export async function buscarClientePorTelefono(telefono: string, tenantId: string) {
   const { data, error } = await supabase
     .from('clientes')
     .select('*')
     .eq('telefono', telefono)
-    .eq('activo', true)
+    .eq('tenant_id', tenantId)
     .single()
   
   if (error) {
@@ -24,16 +24,31 @@ export async function buscarClientePorTelefono(telefono: string) {
 }
 
 /**
- * Buscar clientes por nombre o teléfono
+ * Buscar clientes por nombre, CI o teléfono (filtrado por tenant)
  */
-export async function buscarClientes(termino: string) {
+export async function buscarClientes(termino: string, tenantId: string) {
   const { data, error } = await supabase
     .from('clientes')
     .select('*')
-    .or(`nombre.ilike.%${termino}%,telefono.ilike.%${termino}%`)
-    .eq('activo', true)
+    .eq('tenant_id', tenantId)
+    .or(`nombre.ilike.%${termino}%,telefono.ilike.%${termino}%,ci.ilike.%${termino}%`)
     .order('nombre')
-    .limit(10)
+    .limit(20)
+  
+  if (error) throw error
+  return data as Cliente[]
+}
+
+/**
+ * Obtener todos los clientes de un tenant
+ */
+export async function getClientesPorTenant(tenantId: string, limite: number = 100) {
+  const { data, error } = await supabase
+    .from('clientes')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('nombre')
+    .limit(limite)
   
   if (error) throw error
   return data as Cliente[]
@@ -60,6 +75,21 @@ export async function crearCliente(cliente: NuevoCliente) {
   const { data, error } = await supabase
     .from('clientes')
     .insert(cliente)
+    .select()
+    .single()
+  
+  if (error) throw error
+  return data as Cliente
+}
+
+/**
+ * Actualizar un cliente existente
+ */
+export async function actualizarCliente(clienteId: string, datos: Partial<Cliente>) {
+  const { data, error } = await supabase
+    .from('clientes')
+    .update(datos)
+    .eq('id', clienteId)
     .select()
     .single()
   

@@ -4,6 +4,7 @@ export interface CartItem {
   id: string
   producto_id: string
   nombre: string
+  descripcion?: string
   precio: number
   cantidad: number
   subtotal: number
@@ -20,15 +21,15 @@ export interface Cliente {
 interface CartState {
   items: CartItem[]
   cliente: Cliente | null
-  tipo: 'delivery' | 'local' | 'takeaway' | null
+  tipo: 'delivery' | 'local' | 'para_llevar' | null
   
   // Acciones
-  addItem: (producto: { id: string; nombre: string; precio: number }) => void
+  addItem: (producto: { id: string; nombre: string; descripcion?: string; precio: number }) => void
   removeItem: (productoId: string) => void
   updateQuantity: (productoId: string, cantidad: number) => void
   clearCart: () => void
   setCliente: (cliente: Cliente | null) => void
-  setTipo: (tipo: 'delivery' | 'local' | 'takeaway') => void
+  setTipo: (tipo: 'delivery' | 'local' | 'para_llevar') => void
   
   // Computed
   getTotal: () => number
@@ -66,6 +67,7 @@ export const useCartStore = create<CartState>((set, get) => ({
             id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `temp-${Date.now()}-${Math.random()}`,
             producto_id: producto.id,
             nombre: producto.nombre,
+            descripcion: producto.descripcion,
             precio: producto.precio,
             cantidad: 1,
             subtotal: producto.precio

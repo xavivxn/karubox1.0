@@ -1,3 +1,6 @@
+import Link from 'next/link'
+import { formatGuaranies } from '@/lib/utils/format'
+
 export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -20,7 +23,7 @@ export default function AdminPage() {
               <div className="text-green-600 text-sm font-semibold mb-2">
                 VENTAS HOY
               </div>
-              <div className="text-4xl font-bold text-green-900">$0</div>
+              <div className="text-4xl font-bold text-green-900">{formatGuaranies(0)}</div>
             </div>
 
             <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6">
@@ -61,9 +64,12 @@ export default function AdminPage() {
             <button className="px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
               Gestionar Productos
             </button>
-            <button className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <Link 
+              href="/admin/clientes"
+              className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center"
+            >
               Gestionar Clientes
-            </button>
+            </Link>
             <button className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
               Configurar Promociones
             </button>

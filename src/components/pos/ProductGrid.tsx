@@ -1,5 +1,7 @@
 'use client'
 
+import { formatGuaranies } from '@/lib/utils/format'
+
 interface Product {
   id: string
   nombre: string
@@ -72,7 +74,7 @@ export default function ProductGrid({ products, onAddProduct, loading, darkMode 
                 </div>
               )}
               <div className="text-2xl font-bold text-orange-600">
-                ${product.precio.toLocaleString()}
+                {formatGuaranies(product.precio)}
               </div>
             </div>
           </button>

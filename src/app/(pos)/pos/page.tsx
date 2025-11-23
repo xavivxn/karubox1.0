@@ -6,6 +6,7 @@ import { Moon, Sun } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
+import { formatGuaranies } from '@/lib/utils/format'
 import CategoryList from '@/components/pos/CategoryList'
 import ProductGrid from '@/components/pos/ProductGrid'
 import Cart from '@/components/pos/Cart'
@@ -156,7 +157,7 @@ export default function POSPage() {
         `✅ Pedido #${pedido.numero_pedido} confirmado!\n` +
         `Lomitería: ${tenant.nombre}\n` +
         `Cajero: ${usuario.nombre}\n` +
-        `Total: $${total.toLocaleString()}\n` +
+        `Total: ${formatGuaranies(total)}\n` +
         (cliente ? `Puntos ganados: ${puntosGenerados} ⭐` : '')
       )
 
@@ -257,12 +258,14 @@ export default function POSPage() {
 
           <div className="lg:col-span-1">
             <div className="sticky top-6">
-              <Cart
-                onOpenClientModal={() => setIsClientModalOpen(true)}
-                onConfirmOrder={handleConfirmOrder}
-                isProcessing={isProcessing}
-                darkMode={darkMode}
-              />
+              <div style={{ maxHeight: 'calc(100vh - 140px)' }} className="h-full">
+                <Cart
+                  onOpenClientModal={() => setIsClientModalOpen(true)}
+                  onConfirmOrder={handleConfirmOrder}
+                  isProcessing={isProcessing}
+                  darkMode={darkMode}
+                />
+              </div>
             </div>
           </div>
         </div>
