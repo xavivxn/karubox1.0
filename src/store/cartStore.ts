@@ -1,4 +1,21 @@
 import { create } from 'zustand'
+import type { IngredientRequirement } from '@/types/ingredients'
+
+export interface ExtraIngredientSelection extends IngredientRequirement {
+  unitPrice: number
+}
+
+export interface RemovedIngredientInfo {
+  slug: string
+  label: string
+}
+
+export interface CartItemCustomization {
+  removedIngredients: RemovedIngredientInfo[]
+  extras: ExtraIngredientSelection[]
+  resolvedRecipe: IngredientRequirement[]
+  notes?: string
+}
 
 export interface CartItem {
   id: string
@@ -9,6 +26,8 @@ export interface CartItem {
   cantidad: number
   subtotal: number
   notas?: string
+  extraCostPerUnit?: number
+  customization?: CartItemCustomization
 }
 
 export interface Cliente {
@@ -25,8 +44,9 @@ interface CartState {
   
   // Acciones
   addItem: (producto: { id: string; nombre: string; descripcion?: string; precio: number }) => void
-  removeItem: (productoId: string) => void
-  updateQuantity: (productoId: string, cantidad: number) => void
+  removeItem: (itemId: string) => void
+  updateQuantity: (itemId: string, cantidad: number) => void
+  updateItemCustomization: (itemId: string, customization: CartItemCustomization | null, extraCostPerUnit: number) => void
   clearCart: () => void
   setCliente: (cliente: Cliente | null) => void
   setTipo: (tipo: 'delivery' | 'local' | 'para_llevar') => void
@@ -34,6 +54,11 @@ interface CartState {
   // Computed
   getTotal: () => number
   getItemCount: () => number
+}
+
+const calculateSubtotal = (precioBase: number, extraCostPerUnit: number | undefined, cantidad: number) => {
+  const extras = extraCostPerUnit ?? 0
+  return (precioBase + extras) * cantidad
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -53,7 +78,7 @@ export const useCartStore = create<CartState>((set, get) => ({
             ? {
                 ...item,
                 cantidad: item.cantidad + 1,
-                subtotal: (item.cantidad + 1) * item.precio
+                subtotal: calculateSubtotal(item.precio, item.extraCostPerUnit, item.cantidad + 1)
               }
             : item
         )
@@ -70,32 +95,48 @@ export const useCartStore = create<CartState>((set, get) => ({
             descripcion: producto.descripcion,
             precio: producto.precio,
             cantidad: 1,
-            subtotal: producto.precio
+            subtotal: producto.precio,
+            extraCostPerUnit: 0
           }
         ]
       })
     }
   },
 
-  removeItem: (productoId) => {
+  removeItem: (itemId) => {
     set({
-      items: get().items.filter(item => item.producto_id !== productoId)
+      items: get().items.filter(item => item.id !== itemId)
     })
   },
 
-  updateQuantity: (productoId, cantidad) => {
+  updateQuantity: (itemId, cantidad) => {
     if (cantidad <= 0) {
-      get().removeItem(productoId)
+      get().removeItem(itemId)
       return
     }
 
     set({
       items: get().items.map(item =>
-        item.producto_id === productoId
+        item.id === itemId
           ? {
               ...item,
               cantidad,
-              subtotal: cantidad * item.precio
+              subtotal: calculateSubtotal(item.precio, item.extraCostPerUnit, cantidad)
+            }
+          : item
+      )
+    })
+  },
+
+  updateItemCustomization: (itemId, customization, extraCostPerUnit) => {
+    set({
+      items: get().items.map(item =>
+        item.id === itemId
+          ? {
+              ...item,
+              customization: customization ?? undefined,
+              extraCostPerUnit,
+              subtotal: calculateSubtotal(item.precio, extraCostPerUnit, item.cantidad)
             }
           : item
       )

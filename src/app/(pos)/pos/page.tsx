@@ -12,6 +12,7 @@ import CategoryList from '@/components/pos/CategoryList'
 import ProductGrid from '@/components/pos/ProductGrid'
 import Cart from '@/components/pos/Cart'
 import ClientModal from '@/components/pos/ClientModal'
+import { ItemCustomizationDrawer } from '@/components/pos/ItemCustomizationDrawer'
 
 interface Categoria {
   id: string
@@ -35,6 +36,7 @@ export default function POSPage() {
   const [loading, setLoading] = useState(true)
   const [isClientModalOpen, setIsClientModalOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
 
   const { usuario, tenant, loading: tenantLoading, darkMode, toggleDarkMode, signOut } = useTenant()
   const { addItem, items, cliente, tipo, clearCart, getTotal } = useCartStore()
@@ -275,6 +277,7 @@ export default function POSPage() {
                   onConfirmOrder={handleConfirmOrder}
                   isProcessing={isProcessing}
                   darkMode={darkMode}
+                  onEditItem={(itemId) => setEditingItemId(itemId)}
                 />
               </div>
             </div>
@@ -285,6 +288,12 @@ export default function POSPage() {
       <ClientModal
         isOpen={isClientModalOpen}
         onClose={() => setIsClientModalOpen(false)}
+      />
+      <ItemCustomizationDrawer
+        open={Boolean(editingItemId)}
+        itemId={editingItemId}
+        onClose={() => setEditingItemId(null)}
+        darkMode={darkMode}
       />
     </div>
   )

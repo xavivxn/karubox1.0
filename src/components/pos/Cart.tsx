@@ -1,7 +1,7 @@
 'use client'
 
-import { useCartStore } from '@/store/cartStore'
-import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react'
+import { useCartStore, type CartItem } from '@/store/cartStore'
+import { Trash2, Plus, Minus, ShoppingBag, Settings2 } from 'lucide-react'
 import { formatGuaranies } from '@/lib/utils/format'
 
 interface Props {
@@ -9,9 +9,16 @@ interface Props {
   onConfirmOrder: () => void
   isProcessing?: boolean
   darkMode?: boolean
+  onEditItem?: (itemId: string) => void
 }
 
-export default function Cart({ onOpenClientModal, onConfirmOrder, isProcessing, darkMode }: Props) {
+export default function Cart({
+  onOpenClientModal,
+  onConfirmOrder,
+  isProcessing,
+  darkMode,
+  onEditItem
+}: Props) {
   const { items, cliente, tipo, removeItem, updateQuantity, getTotal, setTipo } = useCartStore()
   
   const total = getTotal()
@@ -48,13 +55,48 @@ export default function Cart({ onOpenClientModal, onConfirmOrder, isProcessing, 
                 <div className={`font-bold text-sm mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     {item.nombre}
                 </div>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  {item.descripcion && (
+                    <div className={`text-xs leading-relaxed flex-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {item.descripcion}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => onEditItem?.(item.id)}
+                    className={`text-[11px] inline-flex items-center gap-1 px-2 py-1 rounded-lg ${
+                      darkMode
+                        ? 'bg-gray-800 text-orange-200 hover:bg-gray-700'
+                        : 'bg-white text-orange-600 border border-orange-200 hover:bg-orange-50'
+                    }`}
+                    title="Editar ingredientes"
+                  >
+                    <Settings2 size={12} />
+                    Editar
+                  </button>
+                </div>
                 {item.descripcion && (
                   <div className={`text-xs leading-relaxed mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {item.descripcion}
                   </div>
                 )}
+                {item.customization && (
+                  <div className={`text-[11px] space-y-1 mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    {item.customization.extras.length > 0 && (
+                      <p>
+                        <span className="font-semibold text-green-500 mr-1">+ Extras:</span>
+                        {item.customization.extras.map((extra) => `${extra.label} (${extra.quantityPerItem}${extra.unit})`).join(', ')}
+                      </p>
+                    )}
+                    {item.customization.removedIngredients.length > 0 && (
+                      <p>
+                        <span className="font-semibold text-red-400 mr-1">- Sin:</span>
+                        {item.customization.removedIngredients.map((ing) => ing.label).join(', ')}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {formatGuaranies(item.precio)} × {item.cantidad}
+                  {formatGuaranies(item.precio + (item.extraCostPerUnit ?? 0))} × {item.cantidad}
                 </div>
               </div>
               
@@ -64,7 +106,7 @@ export default function Cart({ onOpenClientModal, onConfirmOrder, isProcessing, 
                 </div>
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => updateQuantity(item.producto_id, item.cantidad - 1)}
+                    onClick={() => updateQuantity(item.id, item.cantidad - 1)}
                     className={`p-1.5 rounded transition-colors ${
                       darkMode
                         ? 'bg-gray-600 hover:bg-gray-500'
@@ -75,13 +117,13 @@ export default function Cart({ onOpenClientModal, onConfirmOrder, isProcessing, 
                   </button>
                   <span className="w-8 text-center font-bold text-sm">{item.cantidad}</span>
                   <button
-                    onClick={() => updateQuantity(item.producto_id, item.cantidad + 1)}
+                    onClick={() => updateQuantity(item.id, item.cantidad + 1)}
                     className="p-1.5 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
                   >
                     <Plus size={12} />
                   </button>
                   <button
-                    onClick={() => removeItem(item.producto_id)}
+                    onClick={() => removeItem(item.id)}
                     className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors ml-1"
                   >
                     <Trash2 size={14} />

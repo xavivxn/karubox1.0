@@ -2,12 +2,8 @@
 
 import { supabase } from '@/lib/supabase'
 import { CartItem } from '@/store/cartStore'
-import {
-  IngredientConsumption,
-  IngredientUnit,
-  aggregateIngredientConsumption,
-  normalizeProductName
-} from '@/data/inventoryRecipes'
+import { fetchRecipesForProducts } from '@/lib/api/ingredients'
+import type { IngredientConsumption, IngredientRequirement, IngredientUnit } from '@/types/ingredients'
 
 type InventoryRow = {
   id: string
@@ -62,6 +58,31 @@ interface ApplyInventoryArgs {
   usuarioId: string | null
 }
 
+const normalizeProductName = (value: string) => value.trim().toLowerCase()
+
+const collectIngredientTotals = (
+  totalsMap: Map<string, IngredientConsumption>,
+  requirements: IngredientRequirement[],
+  multiplier: number
+) => {
+  requirements.forEach((ingredient) => {
+    const key = ingredient.slug
+    const increment = ingredient.quantityPerItem * multiplier
+
+    if (totalsMap.has(key)) {
+      const current = totalsMap.get(key)!
+      current.total += increment
+    } else {
+      totalsMap.set(key, {
+        slug: ingredient.slug,
+        label: ingredient.label,
+        unit: ingredient.unit,
+        total: increment
+      })
+    }
+  })
+}
+
 /**
  * Descuenta inventario estimado según las recetas definidas para cada producto.
  * Si un insumo no existe en inventario, se ignora y sólo se registra en consola.
@@ -75,10 +96,33 @@ export async function applyInventoryConsumption({
 }: ApplyInventoryArgs) {
   if (!tenantId || !items.length) return
 
-  const ingredientTotals = aggregateIngredientConsumption(
-    items.map(item => ({ nombre: item.nombre, cantidad: item.cantidad }))
+  const totalsMap = new Map<string, IngredientConsumption>()
+  const productIds = Array.from(
+    new Set(
+      items
+        .filter((item) => !item.customization?.resolvedRecipe?.length && item.producto_id)
+        .map((item) => item.producto_id as string)
+    )
   )
+  const recipeMap = productIds.length
+    ? await fetchRecipesForProducts(tenantId, productIds)
+    : new Map<string, IngredientRequirement[]>()
 
+  for (const item of items) {
+    if (item.customization?.resolvedRecipe?.length) {
+      collectIngredientTotals(totalsMap, item.customization.resolvedRecipe, item.cantidad)
+      continue
+    }
+
+    if (!item.producto_id) continue
+
+    const recipe = recipeMap.get(item.producto_id)
+    if (!recipe?.length) continue
+
+    collectIngredientTotals(totalsMap, recipe, item.cantidad)
+  }
+
+  const ingredientTotals = Array.from(totalsMap.values())
   if (!ingredientTotals.length) return
 
   const { data: inventoryRows, error } = await supabase
@@ -153,11 +197,29 @@ export async function applyInventoryConsumption({
 }
 
 export function getIngredientEstimationFromItems(
-  items: Array<{ producto_nombre: string; cantidad: number }>
-): IngredientConsumption[] {
-  return aggregateIngredientConsumption(
-    items.map(item => ({ nombre: item.producto_nombre, cantidad: item.cantidad }))
+  tenantId: string,
+  items: Array<{ producto_id: string | null; producto_nombre: string; cantidad: number }>
+): Promise<IngredientConsumption[]> {
+  const productIds = Array.from(
+    new Set(items.map((item) => item.producto_id).filter((id): id is string => Boolean(id)))
   )
+
+  if (!productIds.length) {
+    return Promise.resolve([])
+  }
+
+  return fetchRecipesForProducts(tenantId, productIds).then((recipeMap) => {
+    const totalsMap = new Map<string, IngredientConsumption>()
+
+    items.forEach((item) => {
+      if (!item.producto_id) return
+      const recipe = recipeMap.get(item.producto_id)
+      if (!recipe?.length) return
+      collectIngredientTotals(totalsMap, recipe, item.cantidad)
+    })
+
+    return Array.from(totalsMap.values())
+  })
 }
 
 

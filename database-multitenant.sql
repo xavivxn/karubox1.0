@@ -106,6 +106,61 @@ CREATE INDEX idx_productos_categoria ON productos(categoria_id);
 CREATE INDEX idx_productos_disponible ON productos(disponible);
 
 -- ============================================
+-- 4B. INGREDIENTES BASE POR TENANT
+-- ============================================
+
+DROP TABLE IF EXISTS ingredientes CASCADE;
+
+CREATE TABLE ingredientes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  slug TEXT NOT NULL,
+  nombre TEXT NOT NULL,
+  unidad TEXT NOT NULL DEFAULT 'unidad',
+  icono TEXT,
+  precio_publico NUMERIC(10,2) DEFAULT 0,
+  stock_minimo_sugerido NUMERIC(10,2),
+  descripcion TEXT,
+  activo BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(tenant_id, slug)
+);
+
+COMMENT ON TABLE ingredientes IS 'Catálogo de ingredientes por lomitería';
+COMMENT ON COLUMN ingredientes.slug IS 'Identificador único del ingrediente dentro del tenant';
+COMMENT ON COLUMN ingredientes.precio_publico IS 'Costo público sugerido para agregar extras';
+
+CREATE INDEX idx_ingredientes_tenant ON ingredientes(tenant_id);
+CREATE INDEX idx_ingredientes_slug ON ingredientes(tenant_id, slug);
+CREATE INDEX idx_ingredientes_activo ON ingredientes(tenant_id, activo);
+
+-- ============================================
+-- 4C. RECETAS POR PRODUCTO
+-- ============================================
+
+DROP TABLE IF EXISTS recetas_producto CASCADE;
+
+CREATE TABLE recetas_producto (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  producto_id UUID NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+  ingrediente_id UUID NOT NULL REFERENCES ingredientes(id) ON DELETE CASCADE,
+  cantidad NUMERIC(10,2) NOT NULL CHECK (cantidad >= 0),
+  unidad TEXT,
+  obligatorio BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(tenant_id, producto_id, ingrediente_id)
+);
+
+COMMENT ON TABLE recetas_producto IS 'Detalle de ingredientes por producto y tenant';
+
+CREATE INDEX idx_recetas_producto_tenant ON recetas_producto(tenant_id);
+CREATE INDEX idx_recetas_producto_producto ON recetas_producto(producto_id);
+CREATE INDEX idx_recetas_producto_ingrediente ON recetas_producto(ingrediente_id);
+
+-- ============================================
 -- 5. CLIENTES (con tenant_id)
 -- ============================================
 DROP TABLE IF EXISTS clientes CASCADE;
@@ -340,6 +395,14 @@ DROP TRIGGER IF EXISTS trigger_productos_updated ON productos;
 CREATE TRIGGER trigger_productos_updated BEFORE UPDATE ON productos
   FOR EACH ROW EXECUTE FUNCTION actualizar_updated_at();
 
+DROP TRIGGER IF EXISTS trigger_ingredientes_updated ON ingredientes;
+CREATE TRIGGER trigger_ingredientes_updated BEFORE UPDATE ON ingredientes
+  FOR EACH ROW EXECUTE FUNCTION actualizar_updated_at();
+
+DROP TRIGGER IF EXISTS trigger_recetas_producto_updated ON recetas_producto;
+CREATE TRIGGER trigger_recetas_producto_updated BEFORE UPDATE ON recetas_producto
+  FOR EACH ROW EXECUTE FUNCTION actualizar_updated_at();
+
 DROP TRIGGER IF EXISTS trigger_clientes_updated ON clientes;
 CREATE TRIGGER trigger_clientes_updated BEFORE UPDATE ON clientes
   FOR EACH ROW EXECUTE FUNCTION actualizar_updated_at();
@@ -363,6 +426,8 @@ ALTER TABLE tenants DISABLE ROW LEVEL SECURITY;
 ALTER TABLE usuarios DISABLE ROW LEVEL SECURITY;
 ALTER TABLE categorias DISABLE ROW LEVEL SECURITY;
 ALTER TABLE productos DISABLE ROW LEVEL SECURITY;
+ALTER TABLE ingredientes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE recetas_producto DISABLE ROW LEVEL SECURITY;
 ALTER TABLE clientes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pedidos DISABLE ROW LEVEL SECURITY;
 ALTER TABLE items_pedido DISABLE ROW LEVEL SECURITY;

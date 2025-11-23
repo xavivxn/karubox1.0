@@ -3,31 +3,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Loader2, X, PlusCircle, Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import {
-  INGREDIENT_CATALOG,
-  INGREDIENT_CATEGORY_NAME,
-  type IngredientDefinition
-} from '@/data/ingredientCatalog'
+import type { IngredientDefinition } from '@/types/ingredients'
 
 type Operation = 'entrada' | 'salida' | 'ajuste'
+const INGREDIENT_CATEGORY_NAME = 'Insumos Base'
 
 interface InventoryDrawerProps {
   open: boolean
   onClose: () => void
   tenantId: string
   usuarioId: string | null
-  ingredients?: IngredientDefinition[]
   onSaved?: () => void
 }
 
-export function InventoryDrawer({
-  open,
-  onClose,
-  tenantId,
-  usuarioId,
-  ingredients = INGREDIENT_CATALOG,
-  onSaved
-}: InventoryDrawerProps) {
+export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }: InventoryDrawerProps) {
+  const [ingredients, setIngredients] = useState<IngredientDefinition[]>([])
+  const [loadingIngredients, setLoadingIngredients] = useState(false)
   const [selectedSlug, setSelectedSlug] = useState<string>('')
   const [operation, setOperation] = useState<Operation>('entrada')
   const [quantity, setQuantity] = useState<number>(0)
@@ -41,21 +32,43 @@ export function InventoryDrawer({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
-  const filteredIngredients = useMemo(() => {
-    if (!search.trim()) return ingredients
-    const query = search.toLowerCase()
-    return ingredients.filter((ingredient) => ingredient.nombre.toLowerCase().includes(query))
-  }, [ingredients, search])
+  useEffect(() => {
+    if (!open) return
 
-  const selectedIngredient = useMemo(
-    () => ingredients.find((ingredient) => ingredient.slug === selectedSlug) ?? null,
-    [ingredients, selectedSlug]
-  )
+    let isMounted = true
+    const loadIngredients = async () => {
+      setLoadingIngredients(true)
+      const { data, error } = await supabase
+        .from('ingredientes')
+        .select(
+          'id, tenant_id, slug, nombre, unidad, icono, precio_publico, stock_minimo_sugerido, descripcion, activo'
+        )
+        .eq('tenant_id', tenantId)
+        .eq('activo', true)
+        .order('nombre')
+
+      if (!isMounted) return
+
+      if (error) {
+        console.error('Error cargando ingredientes', error)
+        setIngredients([])
+      } else {
+        setIngredients((data ?? []) as IngredientDefinition[])
+      }
+      setLoadingIngredients(false)
+    }
+
+    loadIngredients()
+
+    return () => {
+      isMounted = false
+    }
+  }, [open, tenantId])
 
   useEffect(() => {
     if (open && !selectedSlug && ingredients.length) {
       setSelectedSlug(ingredients[0].slug)
-      setStockMin(ingredients[0].stockMinimo ?? 0)
+      setStockMin(ingredients[0].stock_minimo_sugerido ?? 0)
     }
   }, [open, selectedSlug, ingredients])
 
@@ -73,6 +86,17 @@ export function InventoryDrawer({
       setSearch('')
     }
   }, [open])
+
+  const filteredIngredients = useMemo(() => {
+    if (!search.trim()) return ingredients
+    const query = search.toLowerCase()
+    return ingredients.filter((ingredient) => ingredient.nombre.toLowerCase().includes(query))
+  }, [ingredients, search])
+
+  const selectedIngredient = useMemo(
+    () => ingredients.find((ingredient) => ingredient.slug === selectedSlug) ?? null,
+    [ingredients, selectedSlug]
+  )
 
   useEffect(() => {
     if (!selectedIngredient || !open) {
@@ -110,11 +134,11 @@ export function InventoryDrawer({
         setErrorMessage('No se pudo cargar la información del inventario.')
       } else if (data) {
         setCurrentStock(Number(data.stock_actual ?? 0))
-        setStockMin(Number(data.stock_minimo ?? selectedIngredient.stockMinimo ?? 0))
+        setStockMin(Number(data.stock_minimo ?? selectedIngredient.stock_minimo_sugerido ?? 0))
         setControlStock(Boolean(data.controlar_stock))
       } else {
         setCurrentStock(null)
-        setStockMin(selectedIngredient.stockMinimo ?? 0)
+        setStockMin(selectedIngredient.stock_minimo_sugerido ?? 0)
       }
 
       setLoadingInventory(false)
@@ -182,7 +206,7 @@ export function InventoryDrawer({
           .update({
             stock_actual: newStock,
             stock_minimo: stockMin,
-            unidad: selectedIngredient.unit,
+            unidad: selectedIngredient.unidad,
             controlar_stock: controlStock
           })
           .eq('id', inventoryId)
@@ -196,7 +220,7 @@ export function InventoryDrawer({
             producto_id: ensuredProductId,
             stock_actual: newStock,
             stock_minimo: stockMin,
-            unidad: selectedIngredient.unit,
+            unidad: selectedIngredient.unidad,
             controlar_stock: controlStock
           })
           .select()
@@ -227,6 +251,8 @@ export function InventoryDrawer({
   }
 
   if (!open) return null
+
+  const noIngredientsAvailable = !loadingIngredients && ingredients.length === 0
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -273,31 +299,41 @@ export function InventoryDrawer({
                 className="flex-1 bg-transparent text-sm focus:outline-none"
               />
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-              {filteredIngredients.map((ingredient) => (
-                <button
-                  type="button"
-                  key={ingredient.slug}
-                  onClick={() => {
-                    setSelectedSlug(ingredient.slug)
-                    setStockMin(ingredient.stockMinimo ?? 0)
-                  }}
-                  className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
-                    selectedSlug === ingredient.slug
-                      ? 'border-orange-500 bg-orange-50 text-orange-900'
-                      : 'border-gray-200 hover:border-orange-200'
-                  }`}
-                >
-                  <span className="text-2xl">{ingredient.icon}</span>
-                  <div>
-                    <p className="text-sm font-semibold">{ingredient.nombre}</p>
-                    {ingredient.descripcion && (
-                      <p className="text-[11px] text-gray-500">{ingredient.descripcion}</p>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
+            {loadingIngredients ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-4">
+                <Loader2 className="w-4 h-4 animate-spin" /> Cargando ingredientes...
+              </div>
+            ) : noIngredientsAvailable ? (
+              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                No hay ingredientes configurados para este tenant. Crealos desde el panel de administración.
+              </p>
+            ) : (
+              <div className="mt-4 grid grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                {filteredIngredients.map((ingredient) => (
+                  <button
+                    type="button"
+                    key={ingredient.slug}
+                    onClick={() => {
+                      setSelectedSlug(ingredient.slug)
+                      setStockMin(ingredient.stock_minimo_sugerido ?? 0)
+                    }}
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                      selectedSlug === ingredient.slug
+                        ? 'border-orange-500 bg-orange-50 text-orange-900'
+                        : 'border-gray-200 hover:border-orange-200'
+                    }`}
+                  >
+                    <span className="text-2xl">{ingredient.icono ?? '🥙'}</span>
+                    <div>
+                      <p className="text-sm font-semibold">{ingredient.nombre}</p>
+                      {ingredient.descripcion && (
+                        <p className="text-[11px] text-gray-500">{ingredient.descripcion}</p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
             {loadingInventory && (
               <p className="text-xs text-gray-400 flex items-center gap-1 mt-2">
                 <Loader2 className="w-3 h-3 animate-spin" /> Buscando inventario...
@@ -315,14 +351,14 @@ export function InventoryDrawer({
                   <p className="text-gray-500 dark:text-gray-400">Stock actual</p>
                   <p className="text-lg font-bold text-gray-900 dark:text-white">
                     {currentStock !== null
-                      ? `${currentStock.toLocaleString()} ${selectedIngredient.unit}`
+                      ? `${currentStock.toLocaleString()} ${selectedIngredient.unidad}`
                       : 'Sin registro'}
                   </p>
                 </div>
                 <div>
                   <p className="text-gray-500 dark:text-gray-400">Stock mínimo sugerido</p>
                   <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    {stockMin} {selectedIngredient.unit}
+                    {stockMin} {selectedIngredient.unidad}
                   </p>
                 </div>
               </div>
@@ -376,7 +412,7 @@ export function InventoryDrawer({
                   Unidad
                 </label>
                 <div className="mt-2 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm font-semibold">
-                  {selectedIngredient.unit.toUpperCase()}
+                  {selectedIngredient.unidad.toUpperCase()}
                 </div>
               </div>
             )}
@@ -418,7 +454,7 @@ export function InventoryDrawer({
               onChange={(e) => setNote(e.target.value)}
               rows={3}
               className="mt-2 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500"
-              placeholder="Ej: Compra semanal en mayorista, lote #A23, proveedor, etc."
+              placeholder="Ej: Compra semanal en mayorista, lote, etc."
             />
           </div>
 
@@ -431,16 +467,16 @@ export function InventoryDrawer({
 
         <div className="border-t border-gray-100 dark:border-gray-800 px-6 py-4 flex items-center justify-between bg-gray-50/60 dark:bg-gray-900/60">
           <div>
-            {selectedIngredient && (
+            {selectedIngredient && currentStock !== null && (
               <p className="text-xs text-gray-500">
                 Stock después de la operación:{' '}
                 <span className="font-semibold text-gray-900 dark:text-gray-100">
                   {operation === 'entrada'
-                    ? (currentStock ?? 0) + quantity
+                    ? (currentStock + quantity).toLocaleString()
                     : operation === 'salida'
-                      ? Math.max((currentStock ?? 0) - quantity, 0)
-                      : quantity}{' '}
-                  {selectedIngredient.unit}
+                      ? Math.max(currentStock - quantity, 0).toLocaleString()
+                      : quantity.toLocaleString()}{' '}
+                  {selectedIngredient.unidad}
                 </span>
               </p>
             )}
@@ -449,7 +485,7 @@ export function InventoryDrawer({
           <button
             type="submit"
             form="inventory-form"
-            disabled={isSaving}
+            disabled={isSaving || !selectedIngredient}
             className="px-5 py-3 rounded-xl font-semibold bg-orange-500 text-white hover:bg-orange-600 transition disabled:opacity-50 flex items-center gap-2"
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -537,4 +573,3 @@ async function ensureIngredientProduct(
 
   return insertedProduct.id
 }
-

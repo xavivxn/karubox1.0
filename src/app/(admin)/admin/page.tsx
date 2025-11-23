@@ -256,7 +256,8 @@ export default function AdminPage() {
         return new Date(createdAt) >= todayStart
       })
 
-      setIngredientsUsage(getIngredientEstimationFromItems(todayItems))
+      const usageEstimate = await getIngredientEstimationFromItems(tenant.id, todayItems)
+      setIngredientsUsage(usageEstimate)
 
       setStats({
         todayOrders: todayOrders.length,
