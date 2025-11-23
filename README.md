@@ -1,151 +1,222 @@
-# 🍔 POS Lomitería
+# 🍔 POS Lomitería - Multi-Tenant System
 
-Sistema integral de punto de venta para lomitería con gestión de pedidos en tiempo real, pantalla de cocina (KDS) y programa de fidelización.
+Sistema de punto de venta multi-tenant para múltiples lomiterías. Cada lomitería tiene sus propios datos, usuarios y configuración completamente aislados.
 
-## 🚀 Stack Tecnológico
+---
 
-- **Next.js 15** - Framework React con App Router
-- **TypeScript** - Tipado estático
-- **Tailwind CSS** - Estilos utility-first
-- **Supabase** - Base de datos PostgreSQL + Realtime
-- **shadcn/ui** - Componentes UI (próximamente)
+## 🚀 Quick Start
 
-## 📂 Estructura del Proyecto
+### 1. Configurar Supabase
 
-```
-pos-lomiteria/
-├── src/
-│   ├── app/
-│   │   ├── (pos)/         # Punto de venta
-│   │   │   └── pos/
-│   │   ├── (kds)/         # Kitchen Display System
-│   │   │   └── kds/
-│   │   ├── (admin)/       # Panel de administración
-│   │   │   └── admin/
-│   │   ├── layout.tsx     # Layout principal
-│   │   ├── page.tsx       # Página de inicio
-│   │   └── globals.css    # Estilos globales
-│   ├── components/        # Componentes reutilizables
-│   └── lib/
-│       └── supabase.ts    # Cliente de Supabase
-├── public/               # Archivos estáticos
-└── ...archivos de config
+```bash
+# 1. Ejecutar el schema SQL
+# Copiar TODO el contenido de database-multitenant.sql
+# Ir a Supabase → SQL Editor → Pegar → Run
 ```
 
-## 🛠️ Instalación
+### 2. Crear primer usuario
 
-### 1. Instalar dependencias
+```bash
+# Supabase → Authentication → Add User
+Email: admin@lomiteria-don-juan.com
+Password: Admin123!
+
+# Luego vincular con tenant (SQL Editor):
+INSERT INTO usuarios (tenant_id, auth_user_id, email, nombre, rol)
+VALUES (
+  (SELECT id FROM tenants WHERE slug = 'lomiteria-don-juan'),
+  'UUID-DEL-USUARIO-DE-AUTH',
+  'admin@lomiteria-don-juan.com',
+  'Admin Don Juan',
+  'admin'
+);
+```
+
+### 3. Configurar Auth
+
+```bash
+# Supabase → Authentication → Settings
+- Enable Email Auth
+- Confirm email: OFF (desarrollo)
+- Site URL: http://localhost:3000
+```
+
+### 4. Iniciar
 
 ```bash
 npm install
-```
-
-### 2. Configurar Supabase (opcional para empezar)
-
-Crea un archivo `.env.local` en la raíz del proyecto:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key_aqui
-```
-
-### 3. Instalar shadcn/ui (próximo paso)
-
-```bash
-npx shadcn@latest init
-```
-
-## 🏃‍♂️ Ejecutar el Proyecto
-
-### Modo desarrollo
-
-```bash
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+Abrir http://localhost:3000 e iniciar sesión.
 
-### Build para producción
+---
 
-```bash
-npm run build
-npm start
+## 📁 Documentación
+
+- **[RESUMEN_MULTITENANT.md](./RESUMEN_MULTITENANT.md)** - Resumen ejecutivo
+- **[IMPLEMENTACION_COMPLETA.md](./IMPLEMENTACION_COMPLETA.md)** - Guía completa
+- **[MIGRACION_MULTITENANT.md](./MIGRACION_MULTITENANT.md)** - Pasos detallados
+
+---
+
+## 🎯 Características
+
+### Multi-Tenant
+- ✅ Múltiples lomiterías en una sola instalación
+- ✅ Datos completamente separados por tenant
+- ✅ Row Level Security (RLS) automático
+- ✅ Personalización por lomitería
+
+### Roles y Permisos
+- **Admin**: Acceso completo
+- **Cajero**: Solo POS
+- **Cocinero**: Solo KDS
+- **Repartidor**: Solo delivery
+
+### POS (Punto de Venta)
+- Gestión de pedidos (local, delivery, para llevar)
+- Catálogo de productos por categorías
+- Sistema de puntos de fidelidad
+- Búsqueda y creación de clientes
+
+### Seguridad
+- Autenticación con Supabase Auth
+- RLS en todas las tablas
+- Middleware de protección de rutas
+- Separación automática por tenant
+
+---
+
+## 🏗️ Stack Tecnológico
+
+- **Frontend**: Next.js 15 (App Router)
+- **Lenguaje**: TypeScript
+- **Estilos**: Tailwind CSS
+- **Backend**: Supabase (PostgreSQL + Auth)
+- **Estado**: Zustand
+- **Iconos**: Lucide React
+
+---
+
+## 📦 Estructura del Proyecto
+
+```
+pos-lomiteria/
+├── database-multitenant.sql          # Schema SQL completo
+├── src/
+│   ├── app/
+│   │   ├── login/                    # Pantalla de login
+│   │   ├── (pos)/pos/                # Punto de venta
+│   │   ├── (kds)/kds/                # Kitchen Display System
+│   │   └── (admin)/admin/            # Panel de administración
+│   ├── components/
+│   │   └── pos/                      # Componentes del POS
+│   ├── contexts/
+│   │   └── TenantContext.tsx         # Context global tenant/usuario
+│   ├── lib/
+│   │   └── supabase.ts               # Cliente Supabase
+│   └── store/
+│       └── cartStore.ts              # Estado del carrito (Zustand)
+├── middleware.ts                     # Protección de rutas
+└── package.json
 ```
 
-## 📱 Módulos del Sistema
+---
 
-### 🖥️ POS (Punto de Venta)
-- Toma de pedidos
-- Selección de tipo (Delivery/Local/Takeaway)
-- Gestión de clientes y puntos
-- Impresión de tickets
+## 🔐 Seguridad con RLS
 
-**Acceso:** [/pos](http://localhost:3000/pos)
+Todas las tablas tienen Row Level Security:
 
-### 🍳 KDS (Kitchen Display System)
-- Visualización de pedidos en tiempo real
-- Estados de pedidos (Pendiente/Preparando/Listo)
-- Alertas visuales por tiempo
-- Interfaz optimizada para cocina
+```sql
+-- Usuario de Lomitería A consulta productos
+SELECT * FROM productos;
 
-**Acceso:** [/kds](http://localhost:3000/kds)
+-- RLS automáticamente filtra:
+-- WHERE tenant_id = 'id-lomiteria-a'
+```
 
-### 📊 Admin (Administración)
-- Dashboard de estadísticas
-- Gestión de productos y categorías
-- Top clientes y puntos
-- Configuración de promociones
-- Reportes
+**Resultado:** Cada lomitería ve SOLO sus datos.
 
-**Acceso:** [/admin](http://localhost:3000/admin)
+---
 
-## 🗄️ Base de Datos (Supabase)
+## 🎨 Personalización por Tenant
 
-### Tablas principales (a crear):
+Cada lomitería puede configurar:
+- Nombre y datos de contacto
+- Logo (próximamente)
+- Configuración de impresión de tickets
+- Productos y categorías propias
+- Clientes propios
 
-- `clientes` - Información de clientes
-- `pedidos` - Órdenes realizadas
-- `items_pedido` - Detalle de productos por pedido
-- `productos` - Catálogo de productos
-- `categorias` - Categorías de productos
-- `transacciones_puntos` - Historial de puntos
-- `promociones` - Configuración de promociones
+---
 
-## 🎨 Próximos Pasos
+## 🖨️ Impresión de Tickets
 
-1. ✅ Setup inicial del proyecto
-2. ⏳ Instalar y configurar shadcn/ui
-3. ⏳ Configurar Supabase y crear esquema de base de datos
-4. ⏳ Implementar autenticación
-5. ⏳ Desarrollar funcionalidad del POS
-6. ⏳ Implementar sincronización realtime para KDS
-7. ⏳ Sistema de puntos y fidelización
-8. ⏳ Integración con impresora térmica
+El sistema está preparado para imprimir tickets térmicos con un Print Server local. Ver `GUIA_IMPRESION_TICKETS.md` para más detalles.
 
-## 📝 Comandos Útiles
+---
+
+## 📊 Datos de Ejemplo
+
+El sistema incluye 2 lomiterías de ejemplo:
+- **Lomitería Don Juan**: 5 categorías, 8 productos, 3 clientes
+- **El Lomito de la Esquina**: 3 categorías, 3 productos
+
+---
+
+## 🚀 Agregar Nueva Lomitería
+
+Ver [IMPLEMENTACION_COMPLETA.md](./IMPLEMENTACION_COMPLETA.md) sección "Agregar otra lomitería" para instrucciones SQL.
+
+---
+
+## 🧪 Testing
 
 ```bash
-# Desarrollo
-npm run dev
+# Iniciar sesión con usuario de prueba
+Email: admin@lomiteria-don-juan.com
+Password: Admin123!
 
-# Build
-npm run build
-
-# Iniciar en producción
-npm start
-
-# Linting
-npm run lint
-
-# Instalar componente shadcn/ui
-npx shadcn@latest add [componente]
+# Verificar que:
+✅ Solo ves productos de tu lomitería
+✅ Solo ves clientes de tu lomitería
+✅ Puedes crear pedidos
+✅ Los pedidos registran tu usuario_id
 ```
+
+---
+
+## 📝 TODO
+
+- [ ] Panel Super Admin para registrar tenants
+- [ ] KDS multi-tenant
+- [ ] Admin multi-tenant con reportes
+- [ ] Print Server para tickets térmicos
+- [ ] Upload de logos por tenant
+
+---
 
 ## 🤝 Contribuir
 
-Este es un proyecto privado para la lomitería.
+Este es un proyecto privado para lomiterías. Para agregar funcionalidades, consultar con el equipo de desarrollo.
+
+---
 
 ## 📄 Licencia
 
-Privado - Todos los derechos reservados
+Propietario
 
+---
+
+## 🆘 Soporte
+
+Para problemas o dudas:
+1. Ver [IMPLEMENTACION_COMPLETA.md](./IMPLEMENTACION_COMPLETA.md)
+2. Revisar sección "Troubleshooting"
+3. Contactar al equipo de desarrollo
+
+---
+
+**Última actualización:** Noviembre 2025  
+**Versión:** 2.0 Multi-tenant

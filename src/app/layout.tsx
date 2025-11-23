@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { TenantProvider } from "@/contexts/TenantContext";
 
 export const metadata: Metadata = {
   title: "POS Lomitería - Sistema de Punto de Venta",
@@ -13,7 +14,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <TenantProvider>
+          {children}
+        </TenantProvider>
+      </body>
     </html>
   );
 }

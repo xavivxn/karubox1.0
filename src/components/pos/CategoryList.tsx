@@ -10,19 +10,22 @@ interface Props {
   categories: Category[]
   selectedCategory: string | null
   onSelectCategory: (categoryId: string | null) => void
+  darkMode?: boolean
 }
 
-export default function CategoryList({ categories, selectedCategory, onSelectCategory }: Props) {
+export default function CategoryList({ categories, selectedCategory, onSelectCategory, darkMode }: Props) {
   return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <h2 className="text-xl font-semibold mb-4">Categorías</h2>
-      <div className="flex gap-2 flex-wrap">
+    <div className={`rounded-2xl shadow-lg p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+      <h2 className={`text-2xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Categorías</h2>
+      <div className="flex gap-3 flex-wrap">
         <button
           onClick={() => onSelectCategory(null)}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 ${
             selectedCategory === null
-              ? 'bg-blue-600 text-white'
-              : 'bg-white border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+              ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30'
+              : darkMode 
+                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           Todos
@@ -31,10 +34,12 @@ export default function CategoryList({ categories, selectedCategory, onSelectCat
           <button
             key={cat.id}
             onClick={() => onSelectCategory(cat.id)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 ${
               selectedCategory === cat.id
-                ? 'bg-blue-600 text-white'
-                : 'bg-white border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+                ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30'
+                : darkMode
+                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             {cat.nombre}
@@ -44,5 +49,3 @@ export default function CategoryList({ categories, selectedCategory, onSelectCat
     </div>
   )
 }
-
-
