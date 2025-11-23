@@ -1,11 +1,38 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from "next/link";
-import { Moon, Sun, ShoppingCart, BarChart3, LogOut } from "lucide-react";
+import { Moon, Sun, ShoppingCart, BarChart3, LogOut, Loader2 } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
 
 export default function Home() {
-  const { tenant, usuario, darkMode, toggleDarkMode, signOut } = useTenant();
+  const router = useRouter()
+  const { tenant, usuario, darkMode, toggleDarkMode, signOut, loading, user } = useTenant();
+
+  // Redirigir a login si no hay sesión después de cargar
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login')
+    }
+  }, [loading, user, router])
+
+  // Mostrar loading mientras se verifica la sesión
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-500 to-orange-600">
+        <div className="text-center text-white">
+          <Loader2 className="h-16 w-16 animate-spin mx-auto mb-4" />
+          <p className="text-xl font-semibold">Verificando sesión...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Si no hay usuario, no renderizar nada (el useEffect redirigirá)
+  if (!user) {
+    return null
+  }
 
   return (
     <main className={`min-h-screen transition-colors ${

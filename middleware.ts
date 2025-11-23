@@ -4,11 +4,35 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
+  
+  // Verificar que las variables de entorno estén configuradas
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('❌ Middleware: Variables de entorno de Supabase no configuradas')
+    // Si no hay credenciales, permitir acceso a login para que el usuario vea el error
+    if (req.nextUrl.pathname !== '/login') {
+      return NextResponse.redirect(new URL('/login', req.url))
+    }
+    return res
+  }
+
   const supabase = createMiddlewareClient({ req, res })
 
   const {
     data: { session },
+    error: sessionError,
   } = await supabase.auth.getSession()
+
+  // Si hay error al obtener la sesión, redirigir a login
+  if (sessionError) {
+    console.error('❌ Middleware: Error obteniendo sesión:', sessionError)
+    if (req.nextUrl.pathname !== '/login') {
+      return NextResponse.redirect(new URL('/login', req.url))
+    }
+    return res
+  }
 
   // Rutas públicas que no requieren autenticación
   const publicRoutes = ['/login']
