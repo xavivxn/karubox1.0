@@ -1,85 +1,693 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { formatGuaranies } from '@/lib/utils/format'
+import {
+  Loader2,
+  TrendingUp,
+  Package2,
+  Users2,
+  Coins,
+  Moon,
+  Sun,
+  Warehouse,
+  AlertTriangle,
+  PlusCircle,
+  BarChart3,
+  Activity,
+  Droplet,
+  ShieldCheck,
+  ArrowLeft,
+  Package,
+  Percent
+} from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { useTenant } from '@/contexts/TenantContext'
+import { formatGuaranies, formatNumber } from '@/lib/utils/format'
+import { KpiCard } from '@/components/admin/KpiCard'
+import { InventoryDrawer } from '@/components/admin/InventoryDrawer'
+import { getIngredientEstimationFromItems } from '@/lib/inventory/consumption'
+
+interface PedidoRecord {
+  id: string
+  total: number
+  created_at: string
+  tipo: 'local' | 'delivery' | 'para_llevar'
+  estado: string
+  puntos_generados: number | null
+}
+
+interface InventoryRecord {
+  id: string
+  stock_actual: number
+  stock_minimo: number
+  unidad: string
+  controlar_stock: boolean
+  productos?: {
+    nombre: string | null
+    categoria?: {
+      nombre: string | null
+    } | null
+  } | null
+}
+
+interface ClientRanking {
+  id: string
+  nombre: string
+  telefono: string | null
+  puntos_totales: number
+  total_pedidos: number
+  total_gastado: number
+}
+
+interface ProductRanking {
+  producto_id: string | null
+  producto_nombre: string
+  unidades: number
+  ingresos: number
+}
+
+interface IngredientUsage {
+  slug: string
+  label: string
+  unit: string
+  total: number
+}
+
+const buildWeekLabels = () => {
+  const labels: { label: string; date: string }[] = []
+  const now = new Date()
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(now)
+    date.setDate(now.getDate() - i)
+    date.setHours(0, 0, 0, 0)
+    labels.push({
+      label: date.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase(),
+      date: date.toISOString()
+    })
+  }
+  return labels
+}
+
+const normalizeNumber = (value: number | null | undefined) => Number(value ?? 0)
 
 export default function AdminPage() {
-  return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">
-            📊 Panel de Administración
-          </h1>
+  const { tenant, usuario, darkMode, toggleDarkMode } = useTenant()
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    todayOrders: 0,
+    todayRevenue: 0,
+    monthRevenue: 0,
+    avgTicket: 0,
+    itemsPerOrder: 0,
+    loyaltyRate: 0,
+    activeClients: 0,
+    pendingOrders: 0,
+    loyaltyPoints: 0,
+    weeklyTrend: buildWeekLabels().map((item) => ({ label: item.label, value: 0 })),
+    channelSplit: {
+      local: 0,
+      delivery: 0,
+      para_llevar: 0
+    }
+  })
+  const [topClients, setTopClients] = useState<ClientRanking[]>([])
+  const [topProducts, setTopProducts] = useState<ProductRanking[]>([])
+  const [inventory, setInventory] = useState<InventoryRecord[]>([])
+  const [ingredientsUsage, setIngredientsUsage] = useState<IngredientUsage[]>([])
+  const [showInventoryDrawer, setShowInventoryDrawer] = useState(false)
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {/* Tarjetas de estadísticas */}
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-              <div className="text-blue-600 text-sm font-semibold mb-2">
-                PEDIDOS HOY
-              </div>
-              <div className="text-4xl font-bold text-blue-900">0</div>
-            </div>
+  const fetchDashboard = useCallback(async () => {
+    if (!tenant) return
+    setLoading(true)
 
-            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
-              <div className="text-green-600 text-sm font-semibold mb-2">
-                VENTAS HOY
-              </div>
-              <div className="text-4xl font-bold text-green-900">{formatGuaranies(0)}</div>
-            </div>
+    const now = new Date()
+    const todayStart = new Date(now)
+    todayStart.setHours(0, 0, 0, 0)
+    const weekStart = new Date(now)
+    weekStart.setDate(now.getDate() - 6)
+    weekStart.setHours(0, 0, 0, 0)
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-            <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6">
-              <div className="text-purple-600 text-sm font-semibold mb-2">
-                CLIENTES ACTIVOS
-              </div>
-              <div className="text-4xl font-bold text-purple-900">0</div>
-            </div>
-          </div>
+    try {
+      const [pedidosRes, clientesRes, topClientsRes, inventoryRes, itemsRes] = await Promise.all([
+        supabase
+          .from('pedidos')
+          .select('id,total,created_at,tipo,estado,puntos_generados')
+          .eq('tenant_id', tenant.id)
+          .gte('created_at', monthStart.toISOString()),
+        supabase
+          .from('clientes')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenant.id),
+        supabase
+          .from('vista_top_clientes')
+          .select('*')
+          .eq('tenant_id', tenant.id)
+          .limit(5),
+        supabase
+          .from('inventario')
+          .select(
+            'id,stock_actual,stock_minimo,unidad,controlar_stock,productos:producto_id(nombre,categoria:categorias(nombre))'
+          )
+          .eq('tenant_id', tenant.id),
+        supabase
+          .from('items_pedido')
+          .select(
+            'cantidad,subtotal,producto_id,producto_nombre,pedidos!inner(tenant_id,created_at)'
+          )
+          .eq('pedidos.tenant_id', tenant.id)
+          .gte('pedidos.created_at', monthStart.toISOString())
+      ])
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top Clientes */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">🏆 Top Clientes</h2>
-              <div className="space-y-3">
-                <div className="bg-white rounded-lg p-4 flex justify-between items-center">
-                  <div>
-                    <div className="font-semibold">Sin clientes registrados</div>
-                    <div className="text-sm text-gray-600">Comienza a registrar clientes</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      const pedidos = (pedidosRes.data as PedidoRecord[]) ?? []
+      const todayOrders = pedidos.filter((pedido) => new Date(pedido.created_at) >= todayStart)
+      const todayRevenue = todayOrders.reduce(
+        (acc, pedido) => acc + normalizeNumber(pedido.total),
+        0
+      )
+      const avgTicket = todayOrders.length > 0 ? Math.round(todayRevenue / todayOrders.length) : 0
+      const monthRevenue = pedidos.reduce(
+        (acc, pedido) => acc + normalizeNumber(pedido.total),
+        0
+      )
 
-            {/* Productos más vendidos */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">📈 Productos Populares</h2>
-              <div className="space-y-3">
-                <div className="bg-white rounded-lg p-4">
-                  <div className="font-semibold">Sin datos aún</div>
-                  <div className="text-sm text-gray-600">Los productos más vendidos aparecerán aquí</div>
-                </div>
-              </div>
-            </div>
-          </div>
+      const weeklyLabels = buildWeekLabels()
+      const weeklyTrend = weeklyLabels.map((slot) => {
+        const value = pedidos
+          .filter(
+            (pedido) =>
+              new Date(pedido.created_at).toLocaleDateString() ===
+              new Date(slot.date).toLocaleDateString()
+          )
+          .reduce((sum, pedido) => sum + normalizeNumber(pedido.total), 0)
+        return {
+          label: slot.label,
+          value
+        }
+      })
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <button className="px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
-              Gestionar Productos
-            </button>
-            <Link 
-              href="/admin/clientes"
-              className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center"
-            >
-              Gestionar Clientes
-            </Link>
-            <button className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-              Configurar Promociones
-            </button>
-            <button className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-              Ver Reportes
-            </button>
-          </div>
+      const channelSplit = { local: 0, delivery: 0, para_llevar: 0 }
+      pedidos.forEach((pedido) => {
+        const tipo = pedido.tipo
+        channelSplit[tipo] = (channelSplit[tipo as keyof typeof channelSplit] ?? 0) + 1
+      })
+
+      const loyaltyPoints = pedidos.reduce(
+        (sum, pedido) => sum + normalizeNumber(pedido.puntos_generados),
+        0
+      )
+
+      setStats({
+        todayOrders: todayOrders.length,
+        todayRevenue,
+        avgTicket,
+        activeClients: clientesRes.count ?? 0,
+        pendingOrders: pedidos.filter(
+          (pedido) => pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'
+        ).length,
+        loyaltyPoints,
+        weeklyTrend,
+        channelSplit
+      })
+
+      setTopClients((topClientsRes.data as ClientRanking[]) ?? [])
+
+      const inventoryData = (inventoryRes.data as InventoryRecord[])?.map((item) => ({
+        ...item,
+        stock_actual: normalizeNumber(item.stock_actual),
+        stock_minimo: normalizeNumber(item.stock_minimo)
+      }))
+
+      setInventory(inventoryData ?? [])
+
+      const items = (itemsRes.data as any[]) ?? []
+      const productTotals = new Map<string, ProductRanking>()
+
+      items.forEach((item) => {
+        const key = item.producto_id || item.producto_nombre
+        const existing = productTotals.get(key) ?? {
+          producto_id: item.producto_id,
+          producto_nombre: item.producto_nombre,
+          unidades: 0,
+          ingresos: 0
+        }
+
+        existing.unidades += item.cantidad ?? 0
+        existing.ingresos += normalizeNumber(item.subtotal)
+        productTotals.set(key, existing)
+      })
+
+      setTopProducts(
+        Array.from(productTotals.values())
+          .sort((a, b) => b.unidades - a.unidades)
+          .slice(0, 5)
+      )
+
+      const totalItemsCount = items.reduce((sum, item) => sum + (item.cantidad ?? 0), 0)
+      const itemsPerOrder = pedidos.length ? totalItemsCount / pedidos.length : 0
+
+      const loyaltyOrders = pedidos.filter((pedido) => normalizeNumber(pedido.puntos_generados) > 0).length
+      const loyaltyRate = pedidos.length ? loyaltyOrders / pedidos.length : 0
+
+      const todayItems = items.filter((item) => {
+        const createdAt = item.pedidos?.created_at
+        if (!createdAt) return false
+        return new Date(createdAt) >= todayStart
+      })
+
+      setIngredientsUsage(getIngredientEstimationFromItems(todayItems))
+
+      setStats({
+        todayOrders: todayOrders.length,
+        todayRevenue,
+        monthRevenue,
+        avgTicket,
+        itemsPerOrder,
+        loyaltyRate,
+        activeClients: clientesRes.count ?? 0,
+        pendingOrders: pedidos.filter(
+          (pedido) => pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'
+        ).length,
+        loyaltyPoints,
+        weeklyTrend,
+        channelSplit
+      })
+    } catch (error) {
+      console.error('Error cargando dashboard:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [tenant])
+
+  useEffect(() => {
+    fetchDashboard()
+  }, [fetchDashboard])
+
+  const lowStockItems = useMemo(
+    () => inventory.filter((item) => item.stock_actual <= item.stock_minimo),
+    [inventory]
+  )
+
+  const totalInventoryItems = inventory.length
+
+  if (!tenant) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div
+        className={`min-h-screen flex items-center justify-center ${
+          darkMode
+            ? 'bg-gradient-to-br from-gray-900 to-gray-800'
+            : 'bg-gradient-to-br from-orange-50 via-white to-orange-50'
+        }`}
+      >
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto mb-4" />
+          <p className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-700'}`}>
+            Preparando tu panel inteligente...
+          </p>
         </div>
       </div>
+    )
+  }
+
+  return (
+    <div
+      className={`min-h-screen px-4 py-6 ${
+        darkMode
+          ? 'bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 text-gray-100'
+          : 'bg-gradient-to-br from-orange-50 via-white to-orange-50 text-gray-900'
+      }`}
+    >
+      <div className="max-w-7xl mx-auto space-y-10">
+        <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-orange-600 hover:text-orange-500 mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Volver al menú principal
+            </Link>
+            <p className="text-sm uppercase tracking-[0.3em] text-orange-500 mb-2">Atlas Burger</p>
+            <h1 className="text-4xl lg:text-5xl font-black tracking-tight">
+              Control maestro de tu lomitería
+            </h1>
+            <p className="text-gray-500 dark:text-gray-300 mt-2">
+              Ventas, clientes e inventario unidos en un solo dashboard.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleDarkMode}
+              className="p-3 rounded-2xl bg-white/80 dark:bg-gray-800 shadow-lg border border-gray-100 dark:border-gray-700 hover:scale-105 transition"
+            >
+              {darkMode ? <Sun className="w-5 h-5 text-yellow-300" /> : <Moon className="w-5 h-5 text-gray-700" />}
+            </button>
+            <button
+              onClick={() => setShowInventoryDrawer(true)}
+              className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-5 py-3 font-semibold text-white shadow-xl shadow-orange-500/40 hover:bg-orange-600 transition"
+            >
+              <PlusCircle className="w-5 h-5" />
+              Cargar inventario
+            </button>
+          </div>
+        </header>
+
+        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <KpiCard
+            title="Ventas de hoy"
+            value={formatGuaranies(stats.todayRevenue)}
+            subtitle={`${stats.todayOrders} pedidos • Ticket prom. ${formatGuaranies(stats.avgTicket)}`}
+            accent="orange"
+          />
+          <KpiCard
+            title="Clientes activos"
+            value={formatNumber(stats.activeClients)}
+            subtitle="+ Fidelización en tiempo real"
+            accent="green"
+          >
+            <div className="text-xs text-gray-500 flex items-center gap-1">
+              <ShieldCheck className="w-4 h-4 text-green-500" /> Puntos emitidos: {formatNumber(stats.loyaltyPoints)}
+            </div>
+          </KpiCard>
+          <KpiCard
+            title="Pedidos pendientes"
+            value={stats.pendingOrders.toString()}
+            subtitle="Seguimiento en cocina y entrega"
+            accent="purple"
+          />
+          <KpiCard
+            title="Stock monitoreado"
+            value={`${totalInventoryItems - lowStockItems.length}/${totalInventoryItems}`}
+            subtitle={`${lowStockItems.length} insumos con alertas`}
+            accent="blue"
+          />
+        </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <KpiCard
+            title="Ingresos del mes"
+            value={formatGuaranies(stats.monthRevenue)}
+            subtitle="Incluye delivery + salón + take-away"
+            accent="green"
+          >
+            <div className="text-xs text-gray-500 flex items-center gap-2">
+              <Coins className="w-4 h-4 text-green-500" />
+              Proyección semanal: {formatGuaranies(stats.monthRevenue / Math.max(1, new Date().getDate()) * 7)}
+            </div>
+          </KpiCard>
+          <KpiCard
+            title="Items por pedido"
+            value={stats.itemsPerOrder.toFixed(1)}
+            subtitle="Promedio de productos por ticket"
+            accent="purple"
+          >
+            <div className="text-xs text-gray-500 flex items-center gap-2">
+              <Package className="w-4 h-4 text-purple-500" />
+              Tickets más grandes = mayor margen
+            </div>
+          </KpiCard>
+          <KpiCard
+            title="Clientes fidelizados"
+            value={`${Math.round(stats.loyaltyRate * 100)}%`}
+            subtitle="Pedidos con puntos acumulados"
+            accent="blue"
+          >
+            <div className="text-xs text-gray-500 flex items-center gap-2">
+              <Percent className="w-4 h-4 text-blue-500" />
+              Puntos emitidos: {formatNumber(stats.loyaltyPoints)}
+            </div>
+          </KpiCard>
+        </section>
+
+        <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
+          <div className="xl:col-span-2 rounded-3xl border border-white/40 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 backdrop-blur shadow-lg shadow-black/5 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-orange-500">últimos 7 días</p>
+                <h2 className="text-2xl font-bold">Tendencia de ingresos</h2>
+              </div>
+              <TrendingUp className="w-6 h-6 text-orange-500" />
+            </div>
+            <div className="grid grid-cols-7 gap-3 min-h-[160px]">
+              {stats.weeklyTrend.map((day) => (
+                <div key={day.label} className="flex flex-col items-center gap-2">
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-2xl h-28 relative overflow-hidden">
+                    <div
+                      className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-orange-500 to-orange-300"
+                      style={{ height: `${Math.min(100, day.value / 500000 * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs font-semibold text-gray-500">{day.label}</p>
+                  <p className="text-[11px] text-gray-400">{formatNumber(day.value)}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 flex flex-wrap gap-4 text-sm">
+              {(['local', 'delivery', 'para_llevar'] as const).map((channel) => (
+                <div
+                  key={channel}
+                  className="flex-1 min-w-[120px] rounded-2xl border border-gray-100 dark:border-gray-800 px-4 py-3"
+                >
+                  <p className="text-xs text-gray-500 uppercase">{channel}</p>
+                  <p className="text-lg font-bold">{stats.channelSplit[channel]}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-3xl border border-white/40 dark:border-gray-800 bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 shadow-xl shadow-black/30">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-green-300">Inventario crítico</p>
+                <h2 className="text-2xl font-bold">Alertas inmediatas</h2>
+              </div>
+              <Warehouse className="w-7 h-7 text-green-300" />
+            </div>
+            <div className="space-y-4">
+              {lowStockItems.slice(0, 4).map((item) => (
+                <div key={item.id} className="p-4 rounded-2xl bg-white/10 border border-white/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">{item.productos?.nombre ?? 'Insumo sin nombre'}</p>
+                      <p className="text-xs text-white/60">{item.unidad} • mínimo {item.stock_minimo}</p>
+                    </div>
+                    <AlertTriangle className="w-5 h-5 text-yellow-300" />
+                  </div>
+                  <div className="mt-3 h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-red-500 to-orange-400"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (item.stock_actual / Math.max(item.stock_minimo || 1, 1)) * 100
+                        )}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {lowStockItems.length === 0 && (
+                <p className="text-sm text-white/60 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4" /> Todo el inventario está por encima del mínimo.
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => setShowInventoryDrawer(true)}
+              className="mt-6 w-full rounded-2xl bg-white text-gray-900 font-semibold py-3 hover:bg-orange-50 transition"
+            >
+              Registrar movimiento
+            </button>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="rounded-3xl border border-white/60 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 backdrop-blur p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Users2 className="w-5 h-5 text-orange-500" />
+                Top clientes
+              </h3>
+              <span className="text-xs text-gray-500">Últimos 30 días</span>
+            </div>
+            <div className="space-y-4">
+              {topClients.map((client) => (
+                <div key={client.id} className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold">{client.nombre}</p>
+                    <p className="text-xs text-gray-500">Pedidos: {client.total_pedidos}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold">{formatGuaranies(client.total_gastado)}</p>
+                    <p className="text-xs text-orange-500">{client.puntos_totales} pts</p>
+                  </div>
+                </div>
+              ))}
+              {!topClients.length && (
+                <p className="text-sm text-gray-500">Aún no hay clientes con compras registradas.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/60 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 backdrop-blur p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Package2 className="w-5 h-5 text-orange-500" />
+                Productos estrella
+              </h3>
+              <BarChart3 className="w-5 h-5 text-gray-400" />
+            </div>
+            <div className="space-y-4">
+              {topProducts.map((product) => (
+                <div key={product.producto_id ?? product.producto_nombre} className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold">{product.producto_nombre}</p>
+                    <p className="text-xs text-gray-500">{product.unidades} unidades</p>
+                  </div>
+                  <p className="text-sm font-bold">{formatGuaranies(product.ingresos)}</p>
+                </div>
+              ))}
+              {!topProducts.length && (
+                <p className="text-sm text-gray-500">Aún no hay ventas registradas.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/60 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 backdrop-blur p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Droplet className="w-5 h-5 text-orange-500" />
+                Consumo estimado
+              </h3>
+              <Activity className="w-5 h-5 text-gray-400" />
+            </div>
+            <div className="space-y-3">
+              {ingredientsUsage.slice(0, 5).map((ingredient) => (
+                <div key={ingredient.slug}>
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold">{ingredient.label}</p>
+                    <p className="text-sm text-gray-500">
+                      {ingredient.total.toFixed(ingredient.unit === 'unidad' ? 0 : 1)} {ingredient.unit}
+                    </p>
+                  </div>
+                  <div className="mt-2 h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-orange-500 to-orange-300"
+                      style={{ width: '75%' }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {!ingredientsUsage.length && (
+                <p className="text-sm text-gray-500">
+                  Todavía no hay suficientes pedidos para calcular el consumo de insumos.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-white/60 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-orange-500">
+                Inventario detallado
+              </p>
+              <h3 className="text-2xl font-bold">Insumos controlados</h3>
+            </div>
+            <div className="flex gap-3">
+              <Link
+                href="/admin/productos"
+                className="rounded-2xl border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-semibold hover:border-orange-400 transition"
+              >
+                Gestionar productos
+              </Link>
+              <button
+                onClick={() => setShowInventoryDrawer(true)}
+                className="rounded-2xl bg-gray-900 text-white px-4 py-2 text-sm font-semibold hover:bg-gray-800 transition"
+              >
+                Nuevo movimiento
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {inventory.map((item) => {
+              const progress = Math.min(
+                100,
+                (item.stock_actual / Math.max(item.stock_minimo || 1, 1)) * 100
+              )
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4 bg-white/60 dark:bg-gray-900/40"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">{item.productos?.nombre ?? 'Insumo sin nombre'}</p>
+                      <p className="text-xs text-gray-500">
+                        Min {item.stock_minimo} {item.unidad}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        item.controlar_stock
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {item.controlar_stock ? 'Auto' : 'Manual'}
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="font-bold">
+                        {item.stock_actual.toLocaleString()} {item.unidad}
+                      </span>
+                      <span className="text-gray-500">{progress.toFixed(0)}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                      <div
+                        className={`h-full ${
+                          progress < 30
+                            ? 'bg-gradient-to-r from-red-500 to-orange-500'
+                            : 'bg-gradient-to-r from-emerald-500 to-emerald-300'
+                        }`}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+            {!inventory.length && (
+              <div className="col-span-full text-sm text-gray-500">
+                Aún no tienes insumos cargados en inventario. Usá el botón "Nuevo movimiento" para
+                registrar el primero.
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <InventoryDrawer
+        open={showInventoryDrawer}
+        onClose={() => setShowInventoryDrawer(false)}
+        tenantId={tenant.id}
+        usuarioId={usuario?.id ?? null}
+        onSaved={() => {
+          setShowInventoryDrawer(false)
+          fetchDashboard()
+        }}
+      />
     </div>
-  );
+  )
 }
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Moon, Sun } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { applyInventoryConsumption } from '@/lib/inventory/consumption'
 import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
 import { formatGuaranies } from '@/lib/utils/format'
@@ -152,6 +153,16 @@ export default function POSPage() {
           descripcion: `Puntos ganados por pedido #${pedido.numero_pedido}`
         })
       }
+
+      applyInventoryConsumption({
+        tenantId: tenant.id,
+        items,
+        pedidoId: pedido.id,
+        pedidoNumero: pedido.numero_pedido,
+        usuarioId: usuario.id
+      }).catch((consumptionError) => {
+        console.warn('No se pudo descontar inventario automáticamente', consumptionError)
+      })
 
       alert(
         `✅ Pedido #${pedido.numero_pedido} confirmado!\n` +
