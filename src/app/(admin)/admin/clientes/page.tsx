@@ -4,20 +4,9 @@ import { useState, useEffect } from 'react'
 import { useTenant } from '@/contexts/TenantContext'
 import { supabase } from '@/lib/supabase'
 import { getClientesPorTenant, crearCliente, buscarClientes, actualizarCliente } from '@/lib/db/clientes'
+import type { Cliente } from '@/types/supabase'
 import { UserPlus, Search, Edit2, Trash2, Check, X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
-
-interface Cliente {
-  id: string
-  tenant_id: string
-  nombre: string
-  ci?: string | null
-  telefono?: string | null
-  email?: string | null
-  direccion?: string | null
-  puntos_totales: number
-  created_at: string
-}
 
 export default function ClientesPage() {
   const { tenant, loading: tenantLoading } = useTenant()
