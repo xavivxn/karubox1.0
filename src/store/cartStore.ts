@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { IngredientRequirement } from '@/types/ingredients'
+import type { Cliente } from '@/types/supabase'
 
 export interface ExtraIngredientSelection extends IngredientRequirement {
   unitPrice: number
@@ -28,13 +29,6 @@ export interface CartItem {
   notas?: string
   extraCostPerUnit?: number
   customization?: CartItemCustomization
-}
-
-export interface Cliente {
-  id: string
-  nombre: string
-  telefono: string
-  puntos_totales: number
 }
 
 interface CartState {

@@ -43,7 +43,9 @@ interface InventoryRecord {
   stock_minimo: number
   unidad: string
   controlar_stock: boolean
-  productos?: unknown
+  productos?: {
+    nombre?: string | null
+  } | null
 }
 
 interface ClientRanking {
@@ -197,13 +199,17 @@ export default function AdminPage() {
 
       const inventoryRawData = inventoryRes.data ?? []
       const inventoryData: InventoryRecord[] = inventoryRawData.map((item) => {
+        // Supabase devuelve productos como un array en este caso
+        const productosArray = item.productos as unknown as Array<{ nombre?: string | null }> | null
+        const productosNombre = productosArray && productosArray.length > 0 ? productosArray[0].nombre : null
+        
         const record: InventoryRecord = {
           id: String(item.id),
           stock_actual: normalizeNumber(item.stock_actual),
           stock_minimo: normalizeNumber(item.stock_minimo),
           unidad: String(item.unidad),
           controlar_stock: Boolean(item.controlar_stock),
-          productos: item.productos
+          productos: productosNombre ? { nombre: productosNombre } : null
         }
         return record
       })
