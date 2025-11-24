@@ -10,6 +10,7 @@ export async function buscarClientePorTelefono(telefono: string, tenantId: strin
     .select('*')
     .eq('telefono', telefono)
     .eq('tenant_id', tenantId)
+    .eq('is_deleted', false)
     .single()
   
   if (error) {
@@ -31,6 +32,7 @@ export async function buscarClientes(termino: string, tenantId: string) {
     .from('clientes')
     .select('*')
     .eq('tenant_id', tenantId)
+    .eq('is_deleted', false)
     .or(`nombre.ilike.%${termino}%,telefono.ilike.%${termino}%,ci.ilike.%${termino}%`)
     .order('nombre')
     .limit(20)
@@ -47,6 +49,7 @@ export async function getClientesPorTenant(tenantId: string, limite: number = 10
     .from('clientes')
     .select('*')
     .eq('tenant_id', tenantId)
+    .eq('is_deleted', false)
     .order('nombre')
     .limit(limite)
   
@@ -62,6 +65,7 @@ export async function getClientePorId(id: string) {
     .from('clientes')
     .select('*')
     .eq('id', id)
+    .eq('is_deleted', false)
     .single()
   
   if (error) throw error

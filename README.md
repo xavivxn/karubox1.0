@@ -1,222 +1,277 @@
-# 🍔 POS Lomitería - Multi-Tenant System
+# 🍔 Sistema POS Multi-Tenant para Lomiterías
 
-Sistema de punto de venta multi-tenant para múltiples lomiterías. Cada lomitería tiene sus propios datos, usuarios y configuración completamente aislados.
+Sistema completo de Punto de Venta (POS) diseñado específicamente para lomiterías, con arquitectura multi-tenant que permite gestionar múltiples locales desde una sola plataforma.
+
+## ✨ Características Principales
+
+### 🎯 **Multi-Tenant**
+- Cada lomitería tiene su propio espacio aislado
+- Usuarios, productos, clientes e inventario separados por tenant
+- Escalable a cientos de lomiterías
+
+### 💳 **Sistema de Puntos Automático**
+- 1 punto por cada 100 Guaraníes de compra
+- Acreditación automática al entregar pedido
+- Historial completo de transacciones
+- Canje de puntos por productos
+
+### 📦 **Gestión de Inventario**
+- Control por ingredientes (no por producto final)
+- Descuento automático al confirmar pedidos
+- Alertas de stock bajo
+- Historial de movimientos completo
+
+### 🍕 **Ingredientes y Recetas**
+- Catálogo de ingredientes con unidades y precios
+- Recetas por producto (qué ingredientes lleva cada uno)
+- Personalización de pedidos (agregar/quitar ingredientes)
+- Cálculo automático de costos extras
+
+### 📊 **Dashboard Administrativo**
+- KPIs en tiempo real (ventas, clientes, productos top)
+- Alertas de inventario
+- Gestión de ingredientes y stock
+- Reportes y estadísticas
+
+### 🎨 **Interfaz Moderna**
+- Diseño profesional con tema de lomitería
+- Modo oscuro persistente
+- Responsive (funciona en móviles, tablets y desktop)
+- Optimizado para uso intensivo
 
 ---
 
-## 🚀 Quick Start
+## 🚀 **Inicio Rápido**
 
-### 1. Configurar Supabase
+### **1. Clonar el Repositorio**
 
 ```bash
-# 1. Ejecutar el schema SQL
-# Copiar TODO el contenido de database-multitenant.sql
-# Ir a Supabase → SQL Editor → Pegar → Run
+git clone <tu-repo>
+cd pos-lomiteria
 ```
 
-### 2. Crear primer usuario
+### **2. Instalar Dependencias**
 
 ```bash
-# Supabase → Authentication → Add User
-Email: admin@lomiteria-don-juan.com
-Password: Admin123!
+npm install
+```
 
-# Luego vincular con tenant (SQL Editor):
-INSERT INTO usuarios (tenant_id, auth_user_id, email, nombre, rol)
+### **3. Configurar Supabase**
+
+1. Crear proyecto en [Supabase](https://supabase.com)
+2. Ejecutar scripts de base de datos:
+   - `database/00_initial_schema.sql`
+   - `seeds/atlas-burger.sql`
+3. Copiar credenciales de Supabase
+
+### **4. Configurar Variables de Entorno**
+
+Crear archivo `.env.local`:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-clave-publica
+```
+
+### **5. Levantar el Servidor**
+
+```bash
+npm run dev
+```
+
+Abrir [http://localhost:3000](http://localhost:3000)
+
+### **6. Login**
+
+Usuario de prueba (creado por `atlas-burger.sql`):
+- **Email:** `admin@atlasb.com`
+- **Password:** (configurado en Supabase Auth)
+
+---
+
+## 📁 **Estructura del Proyecto**
+
+```
+pos-lomiteria/
+├── src/
+│   ├── app/
+│   │   ├── (pos)/pos/          # Pantalla de toma de pedidos
+│   │   ├── (admin)/admin/      # Dashboard administrativo
+│   │   ├── login/              # Pantalla de login
+│   │   └── page.tsx            # Menú principal
+│   ├── components/
+│   │   ├── pos/                # Componentes del POS
+│   │   └── admin/              # Componentes del admin
+│   ├── contexts/
+│   │   └── TenantContext.tsx   # Estado global (usuario, tenant, dark mode)
+│   ├── lib/
+│   │   ├── supabase.ts         # Cliente de Supabase
+│   │   ├── api/                # Funciones de API
+│   │   └── inventory/          # Lógica de inventario
+│   ├── store/
+│   │   └── cartStore.ts        # Estado del carrito (Zustand)
+│   └── types/
+│       └── ingredients.ts      # Tipos TypeScript
+├── database/
+│   ├── 00_initial_schema.sql   # Schema base
+│   ├── 01_migration_*.sql      # Migraciones futuras
+│   └── README.md               # Guía de base de datos
+├── seeds/
+│   └── atlas-burger.sql        # Datos de prueba
+└── middleware.ts               # Protección de rutas
+```
+
+---
+
+## 🗄️ **Base de Datos**
+
+Ver documentación completa en [`database/README.md`](./database/README.md)
+
+### **Tablas Principales:**
+- `tenants` - Lomiterías registradas
+- `usuarios` - Usuarios por tenant (admin, cajero, cocinero, repartidor)
+- `productos` - Productos del menú
+- `clientes` - Clientes con sistema de puntos
+- `pedidos` - Pedidos (local, delivery, para llevar)
+- `ingredientes` - Catálogo de ingredientes
+- `recetas_producto` - Qué ingredientes lleva cada producto
+- `inventario` - Stock actual por ingrediente
+- `movimientos_inventario` - Historial de movimientos
+- `transacciones_puntos` - Historial de puntos
+
+---
+
+## 🛠️ **Tecnologías Utilizadas**
+
+- **Frontend:** Next.js 14 (App Router), React, TypeScript
+- **Estilos:** Tailwind CSS, shadcn/ui
+- **Backend:** Supabase (PostgreSQL, Auth, Realtime)
+- **Estado:** Zustand (carrito), Context API (tenant, dark mode)
+- **Iconos:** Lucide React
+
+---
+
+## 📱 **Roles de Usuario**
+
+### **Admin (Dueño)**
+- Acceso completo al dashboard
+- Gestión de inventario y ingredientes
+- Reportes y estadísticas
+- Configuración del tenant
+
+### **Cajero**
+- Acceso al POS
+- Toma de pedidos
+- Gestión de clientes y puntos
+
+### **Cocinero** (Futuro)
+- Acceso al KDS (Kitchen Display System)
+- Ver pedidos pendientes
+
+### **Repartidor** (Futuro)
+- Ver pedidos para delivery
+- Actualizar estado de entregas
+
+---
+
+## 🔐 **Seguridad**
+
+- **Autenticación:** Supabase Auth
+- **Autorización:** Middleware de Next.js + RLS (Row Level Security)
+- **Multi-Tenant:** Todos los datos filtrados por `tenant_id`
+- **Variables de Entorno:** Credenciales nunca en el código
+
+---
+
+## 🎨 **Personalización**
+
+### **Cambiar Tema de Colores**
+
+Editar `tailwind.config.ts`:
+
+```typescript
+colors: {
+  primary: '#FF6B35',  // Naranja lomitería
+  // ... más colores
+}
+```
+
+### **Agregar Nueva Lomitería**
+
+```sql
+-- 1. Crear tenant
+INSERT INTO tenants (nombre, slug, telefono, email)
+VALUES ('Mi Lomitería', 'mi-lomiteria', '+595123456789', 'contacto@mi.com');
+
+-- 2. Crear usuario admin
+INSERT INTO usuarios (tenant_id, email, nombre, rol)
 VALUES (
-  (SELECT id FROM tenants WHERE slug = 'lomiteria-don-juan'),
-  'UUID-DEL-USUARIO-DE-AUTH',
-  'admin@lomiteria-don-juan.com',
-  'Admin Don Juan',
+  (SELECT id FROM tenants WHERE slug = 'mi-lomiteria'),
+  'admin@mi.com',
+  'Admin',
   'admin'
 );
 ```
 
-### 3. Configurar Auth
+---
 
+## 🐛 **Troubleshooting**
+
+### **Error: "supabaseUrl is required"**
+✅ Verificar que `.env.local` existe y tiene las variables correctas
+
+### **Error: "Port 3000 is in use"**
+✅ Matar procesos de Node.js:
 ```bash
-# Supabase → Authentication → Settings
-- Enable Email Auth
-- Confirm email: OFF (desarrollo)
-- Site URL: http://localhost:3000
+# Windows
+taskkill /F /IM node.exe
+
+# Linux/Mac
+killall node
 ```
 
-### 4. Iniciar
+### **No redirige al login**
+✅ Verificar que el middleware esté funcionando y que las variables de entorno estén configuradas
 
-```bash
-npm install
-npm run dev
-```
-
-Abrir http://localhost:3000 e iniciar sesión.
+### **Dark mode no persiste**
+✅ Verificar que `localStorage` esté habilitado en el navegador
 
 ---
 
-## 📁 Documentación
+## 📈 **Roadmap**
 
-- **[RESUMEN_MULTITENANT.md](./RESUMEN_MULTITENANT.md)** - Resumen ejecutivo
-- **[IMPLEMENTACION_COMPLETA.md](./IMPLEMENTACION_COMPLETA.md)** - Guía completa
-- **[MIGRACION_MULTITENANT.md](./MIGRACION_MULTITENANT.md)** - Pasos detallados
-
----
-
-## 🎯 Características
-
-### Multi-Tenant
-- ✅ Múltiples lomiterías en una sola instalación
-- ✅ Datos completamente separados por tenant
-- ✅ Row Level Security (RLS) automático
-- ✅ Personalización por lomitería
-
-### Roles y Permisos
-- **Admin**: Acceso completo
-- **Cajero**: Solo POS
-- **Cocinero**: Solo KDS
-- **Repartidor**: Solo delivery
-
-### POS (Punto de Venta)
-- Gestión de pedidos (local, delivery, para llevar)
-- Catálogo de productos por categorías
-- Sistema de puntos de fidelidad
-- Búsqueda y creación de clientes
-
-### Seguridad
-- Autenticación con Supabase Auth
-- RLS en todas las tablas
-- Middleware de protección de rutas
-- Separación automática por tenant
+- [x] Sistema POS completo
+- [x] Dashboard administrativo
+- [x] Sistema de puntos automático
+- [x] Inventario por ingredientes
+- [x] Personalización de pedidos
+- [ ] KDS (Kitchen Display System)
+- [ ] Impresión de tickets
+- [ ] App móvil (React Native)
+- [ ] Reportes avanzados
+- [ ] Integración con delivery apps
 
 ---
 
-## 🏗️ Stack Tecnológico
+## 📄 **Licencia**
 
-- **Frontend**: Next.js 15 (App Router)
-- **Lenguaje**: TypeScript
-- **Estilos**: Tailwind CSS
-- **Backend**: Supabase (PostgreSQL + Auth)
-- **Estado**: Zustand
-- **Iconos**: Lucide React
+Proyecto privado - Todos los derechos reservados
 
 ---
 
-## 📦 Estructura del Proyecto
+## 👥 **Equipo**
 
-```
-pos-lomiteria/
-├── database-multitenant.sql          # Schema SQL completo
-├── src/
-│   ├── app/
-│   │   ├── login/                    # Pantalla de login
-│   │   ├── (pos)/pos/                # Punto de venta
-│   │   ├── (kds)/kds/                # Kitchen Display System
-│   │   └── (admin)/admin/            # Panel de administración
-│   ├── components/
-│   │   └── pos/                      # Componentes del POS
-│   ├── contexts/
-│   │   └── TenantContext.tsx         # Context global tenant/usuario
-│   ├── lib/
-│   │   └── supabase.ts               # Cliente Supabase
-│   └── store/
-│       └── cartStore.ts              # Estado del carrito (Zustand)
-├── middleware.ts                     # Protección de rutas
-└── package.json
-```
+Desarrollado para **Atlas Burger** y preparado para escalar a todas las lomiterías del país 🇵🇾
 
 ---
 
-## 🔐 Seguridad con RLS
+## 📞 **Soporte**
 
-Todas las tablas tienen Row Level Security:
-
-```sql
--- Usuario de Lomitería A consulta productos
-SELECT * FROM productos;
-
--- RLS automáticamente filtra:
--- WHERE tenant_id = 'id-lomiteria-a'
-```
-
-**Resultado:** Cada lomitería ve SOLO sus datos.
+¿Dudas o problemas? Revisá:
+1. [`database/README.md`](./database/README.md) - Guía de base de datos
+2. Comentarios en el código - Están super documentados
+3. Logs de la consola del navegador
 
 ---
 
-## 🎨 Personalización por Tenant
-
-Cada lomitería puede configurar:
-- Nombre y datos de contacto
-- Logo (próximamente)
-- Configuración de impresión de tickets
-- Productos y categorías propias
-- Clientes propios
-
----
-
-## 🖨️ Impresión de Tickets
-
-El sistema está preparado para imprimir tickets térmicos con un Print Server local. Ver `GUIA_IMPRESION_TICKETS.md` para más detalles.
-
----
-
-## 📊 Datos de Ejemplo
-
-El sistema incluye 2 lomiterías de ejemplo:
-- **Lomitería Don Juan**: 5 categorías, 8 productos, 3 clientes
-- **El Lomito de la Esquina**: 3 categorías, 3 productos
-
----
-
-## 🚀 Agregar Nueva Lomitería
-
-Ver [IMPLEMENTACION_COMPLETA.md](./IMPLEMENTACION_COMPLETA.md) sección "Agregar otra lomitería" para instrucciones SQL.
-
----
-
-## 🧪 Testing
-
-```bash
-# Iniciar sesión con usuario de prueba
-Email: admin@lomiteria-don-juan.com
-Password: Admin123!
-
-# Verificar que:
-✅ Solo ves productos de tu lomitería
-✅ Solo ves clientes de tu lomitería
-✅ Puedes crear pedidos
-✅ Los pedidos registran tu usuario_id
-```
-
----
-
-## 📝 TODO
-
-- [ ] Panel Super Admin para registrar tenants
-- [ ] KDS multi-tenant
-- [ ] Admin multi-tenant con reportes
-- [ ] Print Server para tickets térmicos
-- [ ] Upload de logos por tenant
-
----
-
-## 🤝 Contribuir
-
-Este es un proyecto privado para lomiterías. Para agregar funcionalidades, consultar con el equipo de desarrollo.
-
----
-
-## 📄 Licencia
-
-Propietario
-
----
-
-## 🆘 Soporte
-
-Para problemas o dudas:
-1. Ver [IMPLEMENTACION_COMPLETA.md](./IMPLEMENTACION_COMPLETA.md)
-2. Revisar sección "Troubleshooting"
-3. Contactar al equipo de desarrollo
-
----
-
-**Última actualización:** Noviembre 2025  
-**Versión:** 2.0 Multi-tenant
+**¡Buen provecho! 🍔🍟**

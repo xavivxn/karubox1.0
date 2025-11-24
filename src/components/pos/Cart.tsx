@@ -52,15 +52,10 @@ export default function Cart({
               }`}
             >
               <div className="mb-2">
-                <div className={`font-bold text-sm mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {item.nombre}
-                </div>
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  {item.descripcion && (
-                    <div className={`text-xs leading-relaxed flex-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {item.descripcion}
-                    </div>
-                  )}
+                  <div className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {item.nombre}
+                  </div>
                   <button
                     onClick={() => onEditItem?.(item.id)}
                     className={`text-[11px] inline-flex items-center gap-1 px-2 py-1 rounded-lg ${

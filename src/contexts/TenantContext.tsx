@@ -100,13 +100,16 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         .from('usuarios')
         .select(`
           *,
-          tenants (*)
+          tenants!inner (*)
         `)
         .eq('auth_user_id', authUserId)
+        .eq('is_deleted', false)
+        .eq('tenants.is_deleted', false)
         .single()
 
       if (userError) {
         console.error('❌ Error en query de usuarios:', userError)
+        console.error('❌ Detalles del error:', JSON.stringify(userError, null, 2))
         throw userError
       }
 

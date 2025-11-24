@@ -60,6 +60,7 @@ export default function POSPage() {
           .from('productos')
           .select('*')
           .eq('disponible', true)
+          .eq('is_deleted', false)
           .order('nombre')
 
         if (errorProds) throw errorProds

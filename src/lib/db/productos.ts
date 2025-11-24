@@ -13,6 +13,7 @@ export async function getProductos() {
     .from('productos')
     .select('*')
     .eq('disponible', true)
+    .eq('is_deleted', false)
     .order('nombre')
   
   if (error) throw error
@@ -40,6 +41,7 @@ export async function getProductosPorCategoria(categoriaId: string) {
     .select('*')
     .eq('categoria_id', categoriaId)
     .eq('disponible', true)
+    .eq('is_deleted', false)
     .order('nombre')
   
   if (error) throw error
@@ -54,6 +56,7 @@ export async function getProductoPorId(id: string) {
     .from('productos')
     .select('*')
     .eq('id', id)
+    .eq('is_deleted', false)
     .single()
   
   if (error) throw error
