@@ -8,7 +8,7 @@ import type { Cliente } from '@/types/supabase'
 import { UserPlus, Search, Edit2, Trash2, Check, X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
-// Tipo local con campos opcionales
+// Tipo local con campos opcionales para compatibilidad con consultas SQL
 type ClienteLocal = Cliente & { tenant_id?: string; created_at?: string; ci?: string }
 
 export default function ClientesPage() {
