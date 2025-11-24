@@ -35,7 +35,7 @@ export default function ClientesPage() {
     try {
       setLoading(true)
       const data = await getClientesPorTenant(tenant.id)
-      setClientes(data || [])
+      setClientes((data || []) as ClienteLocal[])
     } catch (error) {
       console.error('Error cargando clientes:', error)
       alert('Error al cargar clientes')
@@ -62,7 +62,7 @@ export default function ClientesPage() {
     try {
       setLoading(true)
       const resultados = await buscarClientes(searchTerm.trim(), tenant.id)
-      setClientes(resultados || [])
+      setClientes((resultados || []) as ClienteLocal[])
     } catch (error) {
       console.error('Error buscando clientes:', error)
       alert('Error al buscar clientes')
