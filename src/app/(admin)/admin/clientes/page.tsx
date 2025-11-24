@@ -8,13 +8,16 @@ import type { Cliente } from '@/types/supabase'
 import { UserPlus, Search, Edit2, Trash2, Check, X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
+// Tipo local con campos opcionales
+type ClienteLocal = Cliente & { tenant_id?: string; created_at?: string; ci?: string }
+
 export default function ClientesPage() {
   const { tenant, loading: tenantLoading } = useTenant()
-  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [clientes, setClientes] = useState<ClienteLocal[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [showModal, setShowModal] = useState(false)
-  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null)
+  const [editingCliente, setEditingCliente] = useState<ClienteLocal | null>(null)
   const [saving, setSaving] = useState(false)
 
   // Formulario
@@ -82,7 +85,7 @@ export default function ClientesPage() {
   }
 
   // Abrir modal para editar cliente
-  const handleEditarCliente = (cliente: Cliente) => {
+  const handleEditarCliente = (cliente: ClienteLocal) => {
     setEditingCliente(cliente)
     setFormData({
       nombre: cliente.nombre || '',
