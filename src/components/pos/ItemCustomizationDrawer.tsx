@@ -65,6 +65,7 @@ export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: Ite
     return () => {
       active = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, tenant?.id])
 
   useEffect(() => {
@@ -89,6 +90,7 @@ export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: Ite
     return () => {
       active = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, tenant?.id, item?.producto_id])
 
   useEffect(() => {

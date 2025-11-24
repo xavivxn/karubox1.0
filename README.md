@@ -89,6 +89,20 @@ Usuario de prueba (creado por `atlas-burger.sql`):
 
 ---
 
+## 🌐 **Deployment Automático**
+
+Para configurar auto-deploy con Vercel (cada `git push` despliega automáticamente):
+
+📖 **Ver guía completa:** [`DEPLOY.md`](./DEPLOY.md)
+
+**Resumen rápido:**
+1. Subir código a GitHub
+2. Conectar con [Vercel](https://vercel.com)
+3. Configurar variables de entorno en Vercel Dashboard
+4. ¡Listo! Cada `git push` despliega automáticamente
+
+---
+
 ## 📁 **Estructura del Proyecto**
 
 ```

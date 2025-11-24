@@ -670,7 +670,7 @@ export default function AdminPage() {
             })}
             {!inventory.length && (
               <div className="col-span-full text-sm text-gray-500">
-                Aún no tienes insumos cargados en inventario. Usá el botón "Nuevo movimiento" para
+                Aún no tienes insumos cargados en inventario. Usá el botón &quot;Nuevo movimiento&quot; para
                 registrar el primero.
               </div>
             )}

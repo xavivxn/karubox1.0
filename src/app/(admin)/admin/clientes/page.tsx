@@ -37,13 +37,6 @@ export default function ClientesPage() {
     direccion: ''
   })
 
-  // Cargar clientes
-  useEffect(() => {
-    if (tenantLoading || !tenant) return
-    
-    loadClientes()
-  }, [tenant, tenantLoading])
-
   const loadClientes = async () => {
     if (!tenant) return
     
@@ -58,6 +51,14 @@ export default function ClientesPage() {
       setLoading(false)
     }
   }
+
+  // Cargar clientes
+  useEffect(() => {
+    if (tenantLoading || !tenant) return
+    
+    loadClientes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenant, tenantLoading])
 
   // Buscar clientes
   const handleSearch = async () => {
