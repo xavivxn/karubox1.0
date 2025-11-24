@@ -43,12 +43,7 @@ interface InventoryRecord {
   stock_minimo: number
   unidad: string
   controlar_stock: boolean
-  productos?: {
-    nombre: string | null
-    categoria?: {
-      nombre: string | null
-    } | null
-  } | null
+  productos?: unknown
 }
 
 interface ClientRanking {
@@ -198,26 +193,20 @@ export default function AdminPage() {
         0
       )
 
-      setStats({
-        todayOrders: todayOrders.length,
-        todayRevenue,
-        avgTicket,
-        activeClients: clientesRes.count ?? 0,
-        pendingOrders: pedidos.filter(
-          (pedido) => pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'
-        ).length,
-        loyaltyPoints,
-        weeklyTrend,
-        channelSplit
-      })
-
       setTopClients((topClientsRes.data as ClientRanking[]) ?? [])
 
-      const inventoryData = (inventoryRes.data as InventoryRecord[])?.map((item) => ({
-        ...item,
-        stock_actual: normalizeNumber(item.stock_actual),
-        stock_minimo: normalizeNumber(item.stock_minimo)
-      }))
+      const inventoryRawData = inventoryRes.data ?? []
+      const inventoryData: InventoryRecord[] = inventoryRawData.map((item) => {
+        const record: InventoryRecord = {
+          id: String(item.id),
+          stock_actual: normalizeNumber(item.stock_actual),
+          stock_minimo: normalizeNumber(item.stock_minimo),
+          unidad: String(item.unidad),
+          controlar_stock: Boolean(item.controlar_stock),
+          productos: item.productos
+        }
+        return record
+      })
 
       setInventory(inventoryData ?? [])
 

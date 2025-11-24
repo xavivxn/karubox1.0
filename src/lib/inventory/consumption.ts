@@ -140,13 +140,20 @@ export async function applyInventoryConsumption({
   const inventoryMap = new Map<string, InventoryRow>()
 
   inventoryRows.forEach(row => {
-    const displayName = row.productos?.nombre
+    // Supabase devuelve un objeto anidado para la relación productos
+    const productosData = row.productos as unknown as { nombre: string | null } | null
+    const displayName = productosData?.nombre
+    
     if (displayName) {
-      inventoryMap.set(normalizeProductName(displayName), {
-        ...row,
+      const inventoryRow: InventoryRow = {
+        id: row.id,
         stock_actual: Number(row.stock_actual ?? 0),
-        stock_minimo: Number(row.stock_minimo ?? 0)
-      })
+        stock_minimo: Number(row.stock_minimo ?? 0),
+        unidad: row.unidad,
+        producto_id: row.producto_id,
+        productos: productosData
+      }
+      inventoryMap.set(normalizeProductName(displayName), inventoryRow)
     }
   })
 

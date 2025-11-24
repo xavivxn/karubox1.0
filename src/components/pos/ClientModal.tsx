@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { X, Search, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { useCartStore, Cliente } from '@/store/cartStore'
+import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
+import type { Cliente } from '@/types/supabase'
 
 interface Props {
   isOpen: boolean

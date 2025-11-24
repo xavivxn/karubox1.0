@@ -58,20 +58,24 @@ export async function fetchRecipesForProducts(
 
   const map = new Map<string, IngredientRequirement[]>()
 
-  ;(data as RecipeRow[]).forEach((row) => {
-    if (!row.ingrediente) return
+  if (!data) return map
+
+  data.forEach((row) => {
+    // Type assertion segura: sabemos que Supabase devuelve este formato
+    const typedRow = row as unknown as RecipeRow
+    if (!typedRow.ingrediente) return
 
     const requirement: IngredientRequirement = {
-      ingredienteId: row.ingrediente.id,
-      slug: row.ingrediente.slug,
-      label: row.ingrediente.nombre,
-      unit: row.unidad ?? row.ingrediente.unidad,
-      quantityPerItem: row.cantidad
+      ingredienteId: typedRow.ingrediente.id,
+      slug: typedRow.ingrediente.slug,
+      label: typedRow.ingrediente.nombre,
+      unit: typedRow.unidad ?? typedRow.ingrediente.unidad,
+      quantityPerItem: typedRow.cantidad
     }
 
-    const existing = map.get(row.producto_id) ?? []
+    const existing = map.get(typedRow.producto_id) ?? []
     existing.push(requirement)
-    map.set(row.producto_id, existing)
+    map.set(typedRow.producto_id, existing)
   })
 
   return map
