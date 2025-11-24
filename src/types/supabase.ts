@@ -74,36 +74,45 @@ export interface Database {
       clientes: {
         Row: {
           id: string
-          telefono: string
+          tenant_id: string
           nombre: string
+          telefono: string | null
           email: string | null
+          direccion: string | null
           puntos_totales: number
-          fecha_registro: string
-          ultima_compra: string | null
-          activo: boolean
           notas: string | null
+          created_at: string
+          updated_at: string
+          is_deleted: boolean
+          deleted_at: string | null
         }
         Insert: {
           id?: string
-          telefono: string
+          tenant_id: string
           nombre: string
+          telefono?: string | null
           email?: string | null
+          direccion?: string | null
           puntos_totales?: number
-          fecha_registro?: string
-          ultima_compra?: string | null
-          activo?: boolean
           notas?: string | null
+          created_at?: string
+          updated_at?: string
+          is_deleted?: boolean
+          deleted_at?: string | null
         }
         Update: {
           id?: string
-          telefono?: string
+          tenant_id?: string
           nombre?: string
+          telefono?: string | null
           email?: string | null
+          direccion?: string | null
           puntos_totales?: number
-          fecha_registro?: string
-          ultima_compra?: string | null
-          activo?: boolean
           notas?: string | null
+          created_at?: string
+          updated_at?: string
+          is_deleted?: boolean
+          deleted_at?: string | null
         }
       }
       pedidos: {
