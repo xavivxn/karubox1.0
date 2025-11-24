@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTenant } from '@/contexts/TenantContext'
 import { supabase } from '@/lib/supabase'
 import { getClientesPorTenant, crearCliente, buscarClientes, actualizarCliente } from '@/lib/db/clientes'
-import type { Cliente } from '@/types/supabase'
+import type { Cliente, NuevoCliente } from '@/types/supabase'
 import { UserPlus, Search, Edit2, Trash2, Check, X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -137,7 +137,7 @@ export default function ClientesPage() {
           email: formData.email.trim() || null,
           direccion: formData.direccion.trim() || null,
           puntos_totales: 0
-        })
+        } as NuevoCliente)
         
         alert('✅ Cliente creado correctamente')
       }
