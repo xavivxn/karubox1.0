@@ -85,6 +85,7 @@ export interface Database {
           updated_at: string
           is_deleted: boolean
           deleted_at: string | null
+          ci: string | null
         }
         Insert: {
           id?: string
