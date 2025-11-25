@@ -21,6 +21,8 @@
 - 🔥 **NUEVO:** config_json flexible en tenants
 - 🔥 **NUEVO:** tenant_id en TODAS las tablas
 - 🔥 **NUEVO:** Índices optimizados con filtros
+- 🔥 **NUEVO:** Numeración automática por tenant para pedidos
+- 🔥 **NUEVO:** Pedidos quedan entregados automáticamente al confirmar cobro
 
 ---
 
@@ -110,6 +112,16 @@
 - **Cálculo:** 1 punto por cada 100 GS de compra
 - **Historial:** Tabla `transacciones_puntos` guarda todo
 
+### **Numeración de Pedidos**
+- Tabla `tenant_pedido_counters` guarda el último número de cada tenant
+- Trigger `trigger_asignar_numero_pedido` asegura correlativos sin colisiones
+- No es necesario enviar `numero_pedido` desde el front-end
+
+### **Pedidos Instantáneos**
+- En POS el cajero cobra y el pedido queda en estado `entregado`
+- Eliminamos estados intermedios para registrar ventas más rápido
+- Si más adelante querés reactivar KDS, podés modificar el default sin romper nada
+
 ### **Inventario**
 - **Por Ingrediente:** No por producto final
 - **Automático:** Se descuenta al confirmar pedido (si `controlar_stock = true`)
@@ -148,6 +160,14 @@
 🔥 **Índices Optimizados:**
 - Todos los índices de búsqueda filtran `WHERE is_deleted = false`
 - Queries más rápidas, menor uso de espacio
+
+🔥 **Numeración Segura por Tenant:**
+- Tabla `tenant_pedido_counters` + trigger `trigger_asignar_numero_pedido`
+- Garantiza números correlativos incluso con múltiples cajas
+
+🔥 **Pedidos Instantáneos:**
+- El campo `estado` ahora parte como `entregado`
+- Alineado con el flujo actual donde cobrar = pedido completado
 
 🔥 **Seeds Robustos:**
 - Usan `slug` en vez de IDs hardcodeados

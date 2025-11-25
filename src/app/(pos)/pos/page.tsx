@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Moon, Sun } from 'lucide-react'
+import type { PostgrestError } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { applyInventoryConsumption } from '@/lib/inventory/consumption'
 import { useCartStore } from '@/store/cartStore'
@@ -13,6 +14,7 @@ import ProductGrid from '@/components/pos/ProductGrid'
 import Cart from '@/components/pos/Cart'
 import ClientModal from '@/components/pos/ClientModal'
 import { ItemCustomizationDrawer } from '@/components/pos/ItemCustomizationDrawer'
+import { FeedbackModal } from '@/components/ui/FeedbackModal'
 
 interface Categoria {
   id: string
@@ -29,6 +31,18 @@ interface Producto {
   disponible: boolean
 }
 
+interface FeedbackDetail {
+  label: string
+  value: string
+}
+
+interface FeedbackState {
+  type: 'success' | 'error'
+  title: string
+  message: string
+  details?: FeedbackDetail[]
+}
+
 export default function POSPage() {
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [productos, setProductos] = useState<Producto[]>([])
@@ -37,9 +51,50 @@ export default function POSPage() {
   const [isClientModalOpen, setIsClientModalOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<FeedbackState | null>(null)
 
   const { usuario, tenant, loading: tenantLoading, darkMode, toggleDarkMode, signOut } = useTenant()
   const { addItem, items, cliente, tipo, clearCart, getTotal } = useCartStore()
+
+  const formatTipoPedido = (value: typeof tipo) => {
+    if (!value) return 'Sin definir'
+    if (value === 'para_llevar') return 'Para llevar'
+    return value.charAt(0).toUpperCase() + value.slice(1)
+  }
+
+  const showInlineError = (title: string, message: string, details?: FeedbackDetail[]) => {
+    setFeedback({
+      type: 'error',
+      title,
+      message,
+      details
+    })
+  }
+
+  const buildUnexpectedErrorState = (title: string, rawError: unknown): FeedbackState => {
+    const postgrestError = rawError as Partial<PostgrestError>
+    const message =
+      postgrestError?.message ||
+      (rawError instanceof Error ? rawError.message : 'Ocurrió un error inesperado. Intenta nuevamente.')
+
+    const details: FeedbackDetail[] = []
+    if (postgrestError?.code) {
+      details.push({ label: 'Código', value: postgrestError.code })
+    }
+    if (postgrestError?.details) {
+      details.push({ label: 'Detalle', value: String(postgrestError.details) })
+    }
+    if (postgrestError?.hint) {
+      details.push({ label: 'Hint', value: postgrestError.hint })
+    }
+
+    return {
+      type: 'error',
+      title,
+      message,
+      details: details.length ? details : undefined
+    }
+  }
 
   // Cargar categorías y productos
   useEffect(() => {
@@ -67,7 +122,7 @@ export default function POSPage() {
         setProductos(prods || [])
       } catch (error) {
         console.error('Error cargando datos:', error)
-        alert('Error al cargar datos')
+        setFeedback(buildUnexpectedErrorState('No pudimos cargar el catálogo', error))
       } finally {
         setLoading(false)
       }
@@ -86,17 +141,26 @@ export default function POSPage() {
 
   const handleConfirmOrder = async () => {
     if (!tipo) {
-      alert('Selecciona el tipo de pedido')
+      showInlineError(
+        'Seleccioná el tipo de pedido',
+        'Elegí si es consumo local, delivery o para llevar antes de cobrar.'
+      )
       return
     }
 
     if (items.length === 0) {
-      alert('Agrega productos al pedido')
+      showInlineError(
+        'Tu carrito está vacío',
+        'Agregá al menos un producto antes de confirmar.'
+      )
       return
     }
 
     if (!usuario || !tenant) {
-      alert('Error: No hay usuario autenticado')
+      showInlineError(
+        'No encontramos el usuario',
+        'Volvé a iniciar sesión para poder registrar ventas.'
+      )
       return
     }
 
@@ -109,12 +173,12 @@ export default function POSPage() {
       const { data: pedido, error: errorPedido } = await supabase
         .from('pedidos')
         .insert({
+          tenant_id: tenant.id,
           cliente_id: cliente?.id || null,
           usuario_id: usuario.id,
           tipo,
           total,
-          puntos_generados: cliente ? puntosGenerados : 0,
-          estado: 'pendiente'
+          puntos_generados: cliente ? puntosGenerados : 0
         })
         .select()
         .single()
@@ -147,6 +211,7 @@ export default function POSPage() {
         if (errorCliente) throw errorCliente
 
         await supabase.from('transacciones_puntos').insert({
+          tenant_id: tenant.id,
           cliente_id: cliente.id,
           pedido_id: pedido.id,
           tipo: 'ganado',
@@ -167,18 +232,32 @@ export default function POSPage() {
         console.warn('No se pudo descontar inventario automáticamente', consumptionError)
       })
 
-      alert(
-        `✅ Pedido #${pedido.numero_pedido} confirmado!\n` +
-        `Lomitería: ${tenant.nombre}\n` +
-        `Cajero: ${usuario.nombre}\n` +
-        `Total: ${formatGuaranies(total)}\n` +
-        (cliente ? `Puntos ganados: ${puntosGenerados} ⭐` : '')
-      )
+      const successDetails: FeedbackDetail[] = [
+        { label: 'Lomitería', value: tenant.nombre },
+        { label: 'Cajero', value: usuario.nombre },
+        { label: 'Tipo', value: formatTipoPedido(tipo) },
+        { label: 'Total cobrado', value: formatGuaranies(total) }
+      ]
+
+      if (cliente) {
+        successDetails.push({ label: 'Cliente', value: cliente.nombre })
+      }
+
+      if (cliente && puntosGenerados > 0) {
+        successDetails.push({ label: 'Puntos sumados', value: `${puntosGenerados} ⭐` })
+      }
+
+      setFeedback({
+        type: 'success',
+        title: `Pedido #${pedido.numero_pedido} confirmado`,
+        message: 'Venta registrada y stock actualizado.',
+        details: successDetails
+      })
 
       clearCart()
     } catch (error) {
       console.error('Error confirmando pedido:', error)
-      alert('Error al confirmar pedido')
+      setFeedback(buildUnexpectedErrorState('No pudimos confirmar el pedido', error))
     } finally {
       setIsProcessing(false)
     }
@@ -296,6 +375,17 @@ export default function POSPage() {
         onClose={() => setEditingItemId(null)}
         darkMode={darkMode}
       />
+      {feedback && (
+        <FeedbackModal
+          open
+          type={feedback.type}
+          title={feedback.title}
+          message={feedback.message}
+          details={feedback.details}
+          onClose={() => setFeedback(null)}
+          darkMode={darkMode}
+        />
+      )}
     </div>
   )
 }

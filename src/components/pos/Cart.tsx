@@ -4,6 +4,40 @@ import { useCartStore, type CartItem } from '@/store/cartStore'
 import { Trash2, Plus, Minus, ShoppingBag, Settings2 } from 'lucide-react'
 import { formatGuaranies } from '@/lib/utils/format'
 
+type OrderTypeValue = 'delivery' | 'local' | 'para_llevar'
+
+interface OrderTypeOption {
+  value: OrderTypeValue
+  label: string
+  helper: string
+  icon: string
+  activeClass: string
+}
+
+const ORDER_TYPES: OrderTypeOption[] = [
+  {
+    value: 'delivery',
+    label: 'Delivery',
+    helper: 'Envío a domicilio',
+    icon: '🏠',
+    activeClass: 'bg-blue-600 text-white ring-2 ring-blue-200/70 border-blue-500/80 shadow-lg'
+  },
+  {
+    value: 'local',
+    label: 'Comer aquí',
+    helper: 'Consumo en salón',
+    icon: '🍽️',
+    activeClass: 'bg-green-600 text-white ring-2 ring-green-200/70 border-green-500/80 shadow-lg'
+  },
+  {
+    value: 'para_llevar',
+    label: 'Para llevar',
+    helper: 'El cliente retira',
+    icon: '📦',
+    activeClass: 'bg-orange-600 text-white ring-2 ring-orange-200/70 border-orange-500/80 shadow-lg'
+  }
+]
+
 interface Props {
   onOpenClientModal: () => void
   onConfirmOrder: () => void
@@ -20,6 +54,12 @@ export default function Cart({
   onEditItem
 }: Props) {
   const { items, cliente, tipo, removeItem, updateQuantity, getTotal, setTipo } = useCartStore()
+  const orderTypeInactiveClasses = darkMode
+    ? 'bg-gray-700/60 text-gray-200 border-gray-600 hover:bg-gray-600'
+    : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+  const orderTypeFocusOffset = darkMode
+    ? 'focus-visible:ring-offset-gray-800'
+    : 'focus-visible:ring-offset-white'
   
   const total = getTotal()
   const itemCount = items.reduce((sum, item) => sum + item.cantidad, 0)
@@ -170,45 +210,34 @@ export default function Cart({
           <div className="space-y-1">
             <div className={`text-[10px] font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tipo:</div>
             <div className="grid grid-cols-3 gap-1.5">
-            <button
-              onClick={() => setTipo('delivery')}
-                className={`px-2 py-1.5 rounded text-xs font-semibold transition-all ${
-                tipo === 'delivery'
-                    ? 'bg-blue-600 text-white'
+              {ORDER_TYPES.map((option) => {
+                const isActive = tipo === option.value
+                const helperColor = isActive
+                  ? 'text-white/90'
                   : darkMode
-                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-                title="Delivery"
-            >
-                🏠
-            </button>
-            <button
-              onClick={() => setTipo('local')}
-                className={`px-2 py-1.5 rounded text-xs font-semibold transition-all ${
-                tipo === 'local'
-                    ? 'bg-green-600 text-white'
-                  : darkMode
-                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-                title="Local"
-            >
-                🍽️
-            </button>
-            <button
-              onClick={() => setTipo('para_llevar')}
-                className={`px-2 py-1.5 rounded text-xs font-semibold transition-all ${
-                tipo === 'para_llevar'
-                    ? 'bg-orange-600 text-white'
-                  : darkMode
-                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-                title="Llevar"
-            >
-                📦
-            </button>
+                    ? 'text-gray-400'
+                    : 'text-gray-500'
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={isActive}
+                    aria-label={option.label}
+                    onClick={() => setTipo(option.value)}
+                    className={`px-2 py-1.5 rounded-xl text-[11px] font-semibold transition-all flex flex-col items-center gap-0.5 border text-center focus-visible:outline-none focus-visible:ring-2 ${orderTypeFocusOffset} ${
+                      isActive ? option.activeClass : orderTypeInactiveClasses
+                    }`}
+                    title={option.helper}
+                  >
+                    <span className="text-lg leading-none">{option.icon}</span>
+                    <span className="leading-tight">{option.label}</span>
+                    <span className={`text-[9px] font-medium leading-tight ${helperColor}`}>
+                      {option.helper}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </div>
 

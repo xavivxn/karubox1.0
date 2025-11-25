@@ -172,7 +172,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
   cliente_id UUID REFERENCES clientes(id) ON DELETE SET NULL,
   usuario_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
   tipo TEXT NOT NULL CHECK (tipo IN ('local', 'delivery', 'para_llevar')),
-  estado TEXT NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'en_preparacion', 'listo', 'entregado', 'cancelado')),
+  estado TEXT NOT NULL DEFAULT 'entregado' CHECK (estado IN ('pendiente', 'en_preparacion', 'listo', 'entregado', 'cancelado')),
   total NUMERIC(10,2) NOT NULL CHECK (total >= 0),
   puntos_generados INTEGER DEFAULT 0,
   notas TEXT,
@@ -183,11 +183,68 @@ CREATE TABLE IF NOT EXISTS pedidos (
 
 COMMENT ON TABLE pedidos IS 'Pedidos por tenant';
 COMMENT ON COLUMN pedidos.numero_pedido IS 'Número secuencial por tenant';
+COMMENT ON COLUMN pedidos.estado IS 'Flujo del pedido (por defecto se marca entregado al confirmar el pago)';
 
 CREATE INDEX IF NOT EXISTS idx_pedidos_tenant ON pedidos(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_pedidos_estado ON pedidos(tenant_id, estado);
 CREATE INDEX IF NOT EXISTS idx_pedidos_cliente ON pedidos(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_pedidos_fecha ON pedidos(tenant_id, created_at DESC);
+
+-- Tabla de secuencias por tenant para pedidos
+CREATE TABLE IF NOT EXISTS tenant_pedido_counters (
+  tenant_id UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
+  ultimo_numero INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE tenant_pedido_counters IS 'Lleva el correlativo de pedidos por tenant';
+
+-- Inicializar contadores para tenants existentes
+INSERT INTO tenant_pedido_counters (tenant_id, ultimo_numero)
+SELECT tenant_id, COALESCE(MAX(numero_pedido), 0) AS ultimo_numero
+FROM pedidos
+GROUP BY tenant_id
+ON CONFLICT (tenant_id) DO UPDATE
+SET ultimo_numero = EXCLUDED.ultimo_numero,
+    updated_at = NOW();
+
+-- Función: obtener siguiente número de pedido por tenant
+CREATE OR REPLACE FUNCTION obtener_siguiente_numero_pedido(p_tenant_id UUID)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  nuevo_numero INTEGER;
+BEGIN
+  INSERT INTO tenant_pedido_counters (tenant_id, ultimo_numero)
+  VALUES (p_tenant_id, 1)
+  ON CONFLICT (tenant_id) DO UPDATE
+    SET ultimo_numero = tenant_pedido_counters.ultimo_numero + 1,
+        updated_at = NOW()
+  RETURNING tenant_pedido_counters.ultimo_numero INTO nuevo_numero;
+
+  RETURN nuevo_numero;
+END;
+$$;
+
+-- Trigger: asignar número de pedido automáticamente
+CREATE OR REPLACE FUNCTION asignar_numero_pedido()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.numero_pedido IS NULL THEN
+    NEW.numero_pedido := obtener_siguiente_numero_pedido(NEW.tenant_id);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_asignar_numero_pedido ON pedidos;
+CREATE TRIGGER trigger_asignar_numero_pedido
+  BEFORE INSERT ON pedidos
+  FOR EACH ROW
+  EXECUTE FUNCTION asignar_numero_pedido();
 
 -- ============================================
 -- 7. TABLA ITEMS DE PEDIDO
