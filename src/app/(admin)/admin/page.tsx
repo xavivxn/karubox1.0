@@ -1,15 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Loader2,
   TrendingUp,
   Package2,
   Users2,
   Coins,
-  Moon,
-  Sun,
   Warehouse,
   AlertTriangle,
   PlusCircle,
@@ -17,7 +15,6 @@ import {
   Activity,
   Droplet,
   ShieldCheck,
-  ArrowLeft,
   Package,
   Percent
 } from 'lucide-react'
@@ -33,7 +30,6 @@ interface PedidoRecord {
   total: number
   created_at: string
   tipo: 'local' | 'delivery' | 'para_llevar'
-  estado: string
   puntos_generados: number | null
 }
 
@@ -62,6 +58,8 @@ interface ProductRanking {
   producto_nombre: string
   unidades: number
   ingresos: number
+  costo_estimado: number
+  margen_estimado: number
 }
 
 interface IngredientUsage {
@@ -87,19 +85,25 @@ const buildWeekLabels = () => {
 }
 
 const normalizeNumber = (value: number | null | undefined) => Number(value ?? 0)
+const ESTIMATED_COST_RATIO = 0.48
+const estimateCostFromAmount = (value: number) =>
+  Math.round(normalizeNumber(value) * ESTIMATED_COST_RATIO)
 
 export default function AdminPage() {
-  const { tenant, usuario, darkMode, toggleDarkMode } = useTenant()
+  const { tenant, usuario, darkMode } = useTenant()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     todayOrders: 0,
     todayRevenue: 0,
+    todayCost: 0,
+    todayProfit: 0,
     monthRevenue: 0,
+    monthCost: 0,
+    monthProfit: 0,
     avgTicket: 0,
     itemsPerOrder: 0,
     loyaltyRate: 0,
     activeClients: 0,
-    pendingOrders: 0,
     loyaltyPoints: 0,
     weeklyTrend: buildWeekLabels().map((item) => ({ label: item.label, value: 0 })),
     channelSplit: {
@@ -130,7 +134,7 @@ export default function AdminPage() {
       const [pedidosRes, clientesRes, topClientsRes, inventoryRes, itemsRes] = await Promise.all([
         supabase
           .from('pedidos')
-          .select('id,total,created_at,tipo,estado,puntos_generados')
+          .select('id,total,created_at,tipo,puntos_generados')
           .eq('tenant_id', tenant.id)
           .gte('created_at', monthStart.toISOString()),
         supabase
@@ -217,6 +221,11 @@ export default function AdminPage() {
       setInventory(inventoryData ?? [])
 
       const items = (itemsRes.data as any[]) ?? []
+      const todayItems = items.filter((item) => {
+        const createdAt = item.pedidos?.created_at
+        if (!createdAt) return false
+        return new Date(createdAt) >= todayStart
+      })
       const productTotals = new Map<string, ProductRanking>()
 
       items.forEach((item) => {
@@ -225,11 +234,18 @@ export default function AdminPage() {
           producto_id: item.producto_id,
           producto_nombre: item.producto_nombre,
           unidades: 0,
-          ingresos: 0
+          ingresos: 0,
+          costo_estimado: 0,
+          margen_estimado: 0
         }
 
+        const lineRevenue = normalizeNumber(item.subtotal)
+        const lineCost = estimateCostFromAmount(lineRevenue)
+
         existing.unidades += item.cantidad ?? 0
-        existing.ingresos += normalizeNumber(item.subtotal)
+        existing.ingresos += lineRevenue
+        existing.costo_estimado += lineCost
+        existing.margen_estimado = existing.ingresos - existing.costo_estimado
         productTotals.set(key, existing)
       })
 
@@ -245,11 +261,16 @@ export default function AdminPage() {
       const loyaltyOrders = pedidos.filter((pedido) => normalizeNumber(pedido.puntos_generados) > 0).length
       const loyaltyRate = pedidos.length ? loyaltyOrders / pedidos.length : 0
 
-      const todayItems = items.filter((item) => {
-        const createdAt = item.pedidos?.created_at
-        if (!createdAt) return false
-        return new Date(createdAt) >= todayStart
-      })
+      const estimatedMonthCost = items.reduce(
+        (sum, item) => sum + estimateCostFromAmount(item.subtotal),
+        0
+      )
+      const estimatedTodayCost = todayItems.reduce(
+        (sum, item) => sum + estimateCostFromAmount(item.subtotal),
+        0
+      )
+      const todayProfit = todayRevenue - estimatedTodayCost
+      const monthProfit = monthRevenue - estimatedMonthCost
 
       const usageEstimate = await getIngredientEstimationFromItems(tenant.id, todayItems)
       setIngredientsUsage(usageEstimate)
@@ -257,14 +278,15 @@ export default function AdminPage() {
       setStats({
         todayOrders: todayOrders.length,
         todayRevenue,
+        todayCost: estimatedTodayCost,
+        todayProfit,
         monthRevenue,
+        monthCost: estimatedMonthCost,
+        monthProfit,
         avgTicket,
         itemsPerOrder,
         loyaltyRate,
         activeClients: clientesRes.count ?? 0,
-        pendingOrders: pedidos.filter(
-          (pedido) => pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'
-        ).length,
         loyaltyPoints,
         weeklyTrend,
         channelSplit
@@ -289,7 +311,7 @@ export default function AdminPage() {
 
   if (!tenant) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
       </div>
     )
@@ -297,13 +319,7 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div
-        className={`min-h-screen flex items-center justify-center ${
-          darkMode
-            ? 'bg-gradient-to-br from-gray-900 to-gray-800'
-            : 'bg-gradient-to-br from-orange-50 via-white to-orange-50'
-        }`}
-      >
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto mb-4" />
           <p className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-700'}`}>
@@ -314,56 +330,82 @@ export default function AdminPage() {
     )
   }
 
+  const todayLabel = new Intl.DateTimeFormat('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  }).format(new Date())
+
   return (
-    <div
-      className={`min-h-screen px-4 py-6 ${
-        darkMode
-          ? 'bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 text-gray-100'
-          : 'bg-gradient-to-br from-orange-50 via-white to-orange-50 text-gray-900'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto space-y-10">
-        <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-orange-600 hover:text-orange-500 mb-4"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Volver al menú principal
-            </Link>
-            <p className="text-sm uppercase tracking-[0.3em] text-orange-500 mb-2">Atlas Burger</p>
-            <h1 className="text-4xl lg:text-5xl font-black tracking-tight">
-              Control maestro de tu lomitería
-            </h1>
-            <p className="text-gray-500 dark:text-gray-300 mt-2">
-              Ventas, clientes e inventario unidos en un solo dashboard.
+    <>
+      <section className="rounded-3xl border border-white/40 dark:border-gray-900 bg-white/80 dark:bg-gray-900/70 backdrop-blur p-6 shadow-lg shadow-black/5 space-y-6">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-[0.3em] text-orange-500">
+              Resumen diario • {todayLabel}
             </p>
+            <h1 className="text-3xl lg:text-4xl font-black tracking-tight">
+              Operación integral de {tenant.nombre}
+            </h1>
+            <p className="text-gray-500 dark:text-gray-300">
+              Ka&apos;u Manager centraliza ventas, inventario, clientes y caja en un único panel.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+              <div className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+                <p className="text-xs text-gray-500 uppercase">Ingresos</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">
+                  {formatGuaranies(stats.todayRevenue)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+                <p className="text-xs text-gray-500 uppercase">Costo estimado</p>
+                <p className="text-xl font-bold text-purple-600 dark:text-purple-300">
+                  {formatGuaranies(stats.todayCost)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+                <p className="text-xs text-gray-500 uppercase">Ganancia estimada</p>
+                <p className="text-xl font-bold text-emerald-600 dark:text-emerald-300">
+                  {formatGuaranies(stats.todayProfit)}
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={toggleDarkMode}
-              className="p-3 rounded-2xl bg-white/80 dark:bg-gray-800 shadow-lg border border-gray-100 dark:border-gray-700 hover:scale-105 transition"
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/pos"
+              className="inline-flex items-center gap-2 rounded-2xl bg-gray-900 text-white px-5 py-3 font-semibold hover:bg-gray-800 transition"
             >
-              {darkMode ? <Sun className="w-5 h-5 text-yellow-300" /> : <Moon className="w-5 h-5 text-gray-700" />}
-            </button>
+              <BarChart3 className="w-5 h-5" />
+              Abrir POS
+            </Link>
             <button
               onClick={() => setShowInventoryDrawer(true)}
               className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-5 py-3 font-semibold text-white shadow-xl shadow-orange-500/40 hover:bg-orange-600 transition"
             >
               <PlusCircle className="w-5 h-5" />
-              Cargar inventario
+              Registrar inventario
             </button>
           </div>
-        </header>
-
-        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           <KpiCard
             title="Ventas de hoy"
             value={formatGuaranies(stats.todayRevenue)}
             subtitle={`${stats.todayOrders} pedidos • Ticket prom. ${formatGuaranies(stats.avgTicket)}`}
             accent="orange"
           />
+          <KpiCard
+            title="Ganancia estimada"
+            value={formatGuaranies(stats.todayProfit)}
+            subtitle={`Costo aprox. ${formatGuaranies(stats.todayCost)}`}
+            accent="purple"
+          >
+            <div className="text-xs text-gray-500 flex items-center gap-1">
+              <Coins className="w-4 h-4 text-purple-500" />
+              Ratio aplicado: {(ESTIMATED_COST_RATIO * 100).toFixed(0)}% del precio
+            </div>
+          </KpiCard>
           <KpiCard
             title="Clientes activos"
             value={formatNumber(stats.activeClients)}
@@ -375,17 +417,78 @@ export default function AdminPage() {
             </div>
           </KpiCard>
           <KpiCard
-            title="Pedidos pendientes"
-            value={stats.pendingOrders.toString()}
-            subtitle="Seguimiento en cocina y entrega"
-            accent="purple"
-          />
-          <KpiCard
             title="Stock monitoreado"
             value={`${totalInventoryItems - lowStockItems.length}/${totalInventoryItems}`}
             subtitle={`${lowStockItems.length} insumos con alertas`}
             accent="blue"
           />
+        </div>
+      </section>
+
+        <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="rounded-3xl border border-white/40 dark:border-gray-800 bg-white/80 dark:bg-gray-900/70 backdrop-blur p-6 shadow-lg shadow-black/5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-orange-500">Cierre de caja</p>
+                <h2 className="text-2xl font-bold">Resumen diario</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Usa estos números como base antes de contar efectivo.
+                </p>
+              </div>
+              <TrendingUp className="w-6 h-6 text-orange-500" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+              <div className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+                <p className="text-xs text-gray-500 uppercase">Cobrado hoy</p>
+                <p className="text-xl font-bold">{formatGuaranies(stats.todayRevenue)}</p>
+              </div>
+              <div className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+                <p className="text-xs text-gray-500 uppercase">Costo estimado</p>
+                <p className="text-xl font-bold text-purple-600 dark:text-purple-300">
+                  {formatGuaranies(stats.todayCost)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+                <p className="text-xs text-gray-500 uppercase">Ganancia estimada</p>
+                <p className="text-xl font-bold text-emerald-600 dark:text-emerald-300">
+                  {formatGuaranies(stats.todayProfit)}
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-gray-500">
+                * Costos calculados automáticamente con recetas y un ratio estándar. Podrás ajustarlos cuando
+                carguemos los costos reales.
+              </p>
+              <button className="rounded-2xl bg-gray-900 text-white px-4 py-2 text-sm font-semibold hover:bg-gray-800 transition">
+                Iniciar cierre de caja
+              </button>
+            </div>
+          </div>
+          <div className="rounded-3xl border border-white/40 dark:border-gray-800 bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 shadow-xl shadow-black/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Ka'u Manager</p>
+                <h2 className="text-2xl font-bold">Balance del mes</h2>
+                <p className="text-sm text-white/70">Controlá margen y costos acumulados.</p>
+              </div>
+              <Activity className="w-6 h-6 text-white/70" />
+            </div>
+            <div className="grid grid-cols-1 gap-4 mt-6">
+              <div className="rounded-2xl bg-white/10 border border-white/10 p-4">
+                <p className="text-xs uppercase text-white/60">Ingresos del mes</p>
+                <p className="text-2xl font-bold">{formatGuaranies(stats.monthRevenue)}</p>
+              </div>
+              <div className="rounded-2xl bg-white/10 border border-white/10 p-4">
+                <p className="text-xs uppercase text-white/60">Costo estimado del mes</p>
+                <p className="text-2xl font-bold">{formatGuaranies(stats.monthCost)}</p>
+              </div>
+              <div className="rounded-2xl bg-white text-gray-900 p-4">
+                <p className="text-xs uppercase text-gray-500">Ganancia estimada</p>
+                <p className="text-2xl font-bold text-emerald-600">{formatGuaranies(stats.monthProfit)}</p>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -397,7 +500,7 @@ export default function AdminPage() {
           >
             <div className="text-xs text-gray-500 flex items-center gap-2">
               <Coins className="w-4 h-4 text-green-500" />
-              Proyección semanal: {formatGuaranies(stats.monthRevenue / Math.max(1, new Date().getDate()) * 7)}
+              Costo: {formatGuaranies(stats.monthCost)} • Ganancia: {formatGuaranies(stats.monthProfit)}
             </div>
           </KpiCard>
           <KpiCard
@@ -505,7 +608,7 @@ export default function AdminPage() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="rounded-3xl border border-white/60 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 backdrop-blur p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold flex items-center gap-2">
@@ -546,9 +649,16 @@ export default function AdminPage() {
                 <div key={product.producto_id ?? product.producto_nombre} className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold">{product.producto_nombre}</p>
-                    <p className="text-xs text-gray-500">{product.unidades} unidades</p>
+                    <p className="text-xs text-gray-500">
+                      {product.unidades} unidades · Costo {formatGuaranies(product.costo_estimado)}
+                    </p>
                   </div>
-                  <p className="text-sm font-bold">{formatGuaranies(product.ingresos)}</p>
+                  <div className="text-right">
+                    <p className="text-sm font-bold">{formatGuaranies(product.ingresos)}</p>
+                    <p className="text-xs text-emerald-500">
+                      Margen {formatGuaranies(product.margen_estimado)}
+                    </p>
+                  </div>
                 </div>
               ))}
               {!topProducts.length && (
@@ -591,7 +701,7 @@ export default function AdminPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-white/60 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-6">
+      <section className="rounded-3xl border border-white/60 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-orange-500">
@@ -670,9 +780,7 @@ export default function AdminPage() {
               </div>
             )}
           </div>
-        </section>
-      </div>
-
+      </section>
       <InventoryDrawer
         open={showInventoryDrawer}
         onClose={() => setShowInventoryDrawer(false)}
@@ -683,7 +791,6 @@ export default function AdminPage() {
           fetchDashboard()
         }}
       />
-    </div>
+    </>
   )
 }
-

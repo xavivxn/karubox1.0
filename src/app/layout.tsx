@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { TenantProvider } from "@/contexts/TenantContext";
+import { AppFrame } from "@/components/layout/AppFrame";
 
 export const metadata: Metadata = {
-  title: "POS Lomitería - Sistema de Punto de Venta",
-  description: "Sistema integral de punto de venta para lomitería con gestión de pedidos, cocina y fidelización",
+  title: "Ka'u Manager - Plataforma POS para lomiterías",
+  description: "Ka'u Manager unifica ventas, caja e inventario en un solo panel multi-tenant.",
 };
 
 export default function RootLayout({
@@ -16,7 +17,7 @@ export default function RootLayout({
     <html lang="es">
       <body>
         <TenantProvider>
-          {children}
+          <AppFrame>{children}</AppFrame>
         </TenantProvider>
       </body>
     </html>
