@@ -468,7 +468,7 @@ export default function AdminPage() {
           <div className="rounded-3xl border border-white/40 dark:border-gray-800 bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 shadow-xl shadow-black/30">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Ka'u Manager</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Ka&apos;u Manager</p>
                 <h2 className="text-2xl font-bold">Balance del mes</h2>
                 <p className="text-sm text-white/70">Controlá margen y costos acumulados.</p>
               </div>
