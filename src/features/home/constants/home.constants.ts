@@ -25,7 +25,7 @@ export const DASHBOARD_CARDS: DashboardCard[] = [
   {
     title: 'Administración',
     description: 'Panel con ventas, inventario, fidelización y cierres de caja.',
-    href: ROUTES.PROTECTED.DASHBOARD,
+    href: ROUTES.PROTECTED.ADMIN,
     icon: 'admin',
     color: 'blue'
   }

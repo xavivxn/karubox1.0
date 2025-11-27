@@ -12,7 +12,7 @@ export const ROUTES = {
   PROTECTED: {
     HOME: '/home',
     POS: '/home/pos',
-    DASHBOARD: '/home/dashboard',
+    ADMIN: '/home/admin',
     // KDS: '/home/kds',
     // CLIENTES: '/home/dashboard/clientes',
     // INVENTARIO: '/home/dashboard/inventario',
