@@ -57,12 +57,26 @@ export const useAdminDashboard = (tenantId: string | null): UseAdminDashboardRet
   const [ingredientsUsage, setIngredientsUsage] = useState<IngredientUsage[]>([])
 
   const fetchDashboard = useCallback(async () => {
-    if (!tenantId) return
+    if (!tenantId) {
+      console.warn('⚠️ fetchDashboard: tenantId es null')
+      setLoading(false)
+      return
+    }
     
+    console.log('🔍 Iniciando carga de dashboard para tenant:', tenantId)
     setLoading(true)
 
     try {
+      console.log('📡 Llamando fetchDashboardData...')
       const data = await fetchDashboardData(tenantId)
+      
+      console.log('✅ Datos recibidos:', {
+        stats: data.stats ? '✓' : '✗',
+        topClients: data.topClients?.length ?? 0,
+        topProducts: data.topProducts?.length ?? 0,
+        inventory: data.inventory?.length ?? 0,
+        ingredientsUsage: data.ingredientsUsage?.length ?? 0
+      })
       
       setStats(data.stats)
       setTopClients(data.topClients)
@@ -70,7 +84,13 @@ export const useAdminDashboard = (tenantId: string | null): UseAdminDashboardRet
       setInventory(data.inventory)
       setIngredientsUsage(data.ingredientsUsage)
     } catch (error) {
-      console.error('Error cargando dashboard:', error)
+      console.error('❌ Error cargando dashboard:', error)
+      console.error('📋 Detalles del error:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : JSON.stringify(error),
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        tenantId
+      })
     } finally {
       setLoading(false)
     }

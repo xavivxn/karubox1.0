@@ -52,17 +52,28 @@ export const fetchActiveClientsCount = async (tenantId: string): Promise<number>
 }
 
 /**
- * Obtiene el top 5 de clientes
+ * Obtiene el top 5 de clientes ordenados por puntos
  */
 export const fetchTopClients = async (tenantId: string): Promise<ClientRanking[]> => {
   const { data, error } = await supabase
-    .from('vista_top_clientes')
-    .select('*')
+    .from('clientes')
+    .select('id, nombre, telefono, puntos_totales')
     .eq('tenant_id', tenantId)
+    .eq('is_deleted', false)
+    .order('puntos_totales', { ascending: false })
     .limit(5)
 
   if (error) throw error
-  return (data as ClientRanking[]) ?? []
+  
+  // Transformar a formato ClientRanking con valores calculados
+  return (data ?? []).map(cliente => ({
+    id: cliente.id,
+    nombre: cliente.nombre,
+    telefono: cliente.telefono,
+    puntos_totales: cliente.puntos_totales,
+    total_pedidos: 0, // TODO: calcular desde pedidos
+    total_gastado: cliente.puntos_totales * 100 // 1 punto = 100 GS
+  }))
 }
 
 /**
@@ -287,50 +298,68 @@ export const fetchDashboardData = async (
   inventory: InventoryRecord[]
   ingredientsUsage: IngredientUsage[]
 }> => {
+  console.log('🔄 fetchDashboardData - tenantId:', tenantId)
+  
   // Fetch paralelo de todos los datos
-  const [pedidos, activeClients, topClients, inventory, items] = await Promise.all([
-    fetchPedidos(tenantId),
-    fetchActiveClientsCount(tenantId),
-    fetchTopClients(tenantId),
-    fetchInventory(tenantId),
-    fetchOrderItems(tenantId)
-  ])
+  try {
+    console.log('📊 Iniciando queries paralelas...')
+    const [pedidos, activeClients, topClients, inventory, items] = await Promise.all([
+      fetchPedidos(tenantId).catch(e => { console.error('❌ Error en fetchPedidos:', e); throw e; }),
+      fetchActiveClientsCount(tenantId).catch(e => { console.error('❌ Error en fetchActiveClientsCount:', e); throw e; }),
+      fetchTopClients(tenantId).catch(e => { console.error('❌ Error en fetchTopClients:', e); throw e; }),
+      fetchInventory(tenantId).catch(e => { console.error('❌ Error en fetchInventory:', e); throw e; }),
+      fetchOrderItems(tenantId).catch(e => { console.error('❌ Error en fetchOrderItems:', e); throw e; })
+    ])
+    
+    console.log('✅ Queries completadas:', {
+      pedidos: pedidos.length,
+      activeClients,
+      topClients: topClients.length,
+      inventory: inventory.length,
+      items: items.length
+    })
 
-  // Procesar estadísticas
-  const dailyStats = processDailyStats(pedidos)
-  const monthlyStats = processMonthlyStats(pedidos)
-  const weeklyTrend = processWeeklyTrend(pedidos)
-  const channelSplit = processChannelSplit(pedidos)
-  const topProducts = processTopProducts(items)
-  const itemsMetrics = processItemsMetrics(items, pedidos)
-  const ingredientsUsage = await fetchIngredientUsage(tenantId, itemsMetrics.todayItems)
+    // Procesar estadísticas
+    console.log('🧮 Procesando estadísticas...')
+    const dailyStats = processDailyStats(pedidos)
+    const monthlyStats = processMonthlyStats(pedidos)
+    const weeklyTrend = processWeeklyTrend(pedidos)
+    const channelSplit = processChannelSplit(pedidos)
+    const topProducts = processTopProducts(items)
+    const itemsMetrics = processItemsMetrics(items, pedidos)
+    const ingredientsUsage = await fetchIngredientUsage(tenantId, itemsMetrics.todayItems)
 
-  // Calcular ganancias
-  const todayProfit = dailyStats.todayRevenue - itemsMetrics.estimatedTodayCost
-  const monthProfit = monthlyStats.monthRevenue - itemsMetrics.estimatedMonthCost
+    // Calcular ganancias
+    const todayProfit = dailyStats.todayRevenue - itemsMetrics.estimatedTodayCost
+    const monthProfit = monthlyStats.monthRevenue - itemsMetrics.estimatedMonthCost
 
-  const stats: DashboardStats = {
-    todayOrders: dailyStats.todayOrders,
-    todayRevenue: dailyStats.todayRevenue,
-    todayCost: itemsMetrics.estimatedTodayCost,
-    todayProfit,
-    monthRevenue: monthlyStats.monthRevenue,
-    monthCost: itemsMetrics.estimatedMonthCost,
-    monthProfit,
-    avgTicket: dailyStats.avgTicket,
-    itemsPerOrder: itemsMetrics.itemsPerOrder,
-    loyaltyRate: itemsMetrics.loyaltyRate,
-    activeClients,
-    loyaltyPoints: monthlyStats.loyaltyPoints,
-    weeklyTrend,
-    channelSplit
-  }
+    const stats: DashboardStats = {
+      todayOrders: dailyStats.todayOrders,
+      todayRevenue: dailyStats.todayRevenue,
+      todayCost: itemsMetrics.estimatedTodayCost,
+      todayProfit,
+      monthRevenue: monthlyStats.monthRevenue,
+      monthCost: itemsMetrics.estimatedMonthCost,
+      monthProfit,
+      avgTicket: dailyStats.avgTicket,
+      itemsPerOrder: itemsMetrics.itemsPerOrder,
+      loyaltyRate: itemsMetrics.loyaltyRate,
+      activeClients,
+      loyaltyPoints: monthlyStats.loyaltyPoints,
+      weeklyTrend,
+      channelSplit
+    }
 
-  return {
-    stats,
-    topClients,
-    topProducts,
-    inventory,
-    ingredientsUsage
+    console.log('✅ Dashboard procesado exitosamente')
+    return {
+      stats,
+      topClients,
+      topProducts,
+      inventory,
+      ingredientsUsage
+    }
+  } catch (error) {
+    console.error('❌ Error fatal en fetchDashboardData:', error)
+    throw error
   }
 }
