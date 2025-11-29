@@ -12,7 +12,7 @@ export function HomeHeader({ tenantInfo, darkMode }: HomeHeaderProps) {
         Sistema de Gestión
       </h1>
       <p className={`text-lg md:text-xl max-w-2xl mx-auto ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-        Control total de tu lomitería: ventas, pedidos y reportes en tiempo real.
+        Control total de tus ventas, pedidos y reportes en tiempo real.
       </p>
     </section>
   )
