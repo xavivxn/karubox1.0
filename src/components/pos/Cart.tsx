@@ -65,7 +65,7 @@ export default function Cart({
   const itemCount = items.reduce((sum, item) => sum + item.cantidad, 0)
 
   return (
-    <div className={`rounded-2xl shadow-2xl flex flex-col h-full max-h-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+    <div className={`rounded-2xl shadow-2xl flex flex-col h-full overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
       {/* Header fijo */}
       <div className="flex items-center gap-3 p-3 border-b flex-shrink-0">
         <ShoppingBag className="text-orange-600" size={20} />
@@ -74,8 +74,8 @@ export default function Cart({
         </h2>
       </div>
 
-      {/* Lista de items - scrollable (max 3 items visibles) */}
-      <div className="overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200" style={{ maxHeight: '420px', minHeight: '0' }}>
+      {/* Lista de items - scrollable */}
+      <div className="overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-orange-500 scrollbar-track-transparent hover:scrollbar-thumb-orange-600" style={{ maxHeight: '350px' }}>
         {items.length === 0 ? (
           <div className={`text-center py-8 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
             <div className="text-4xl mb-2">🛒</div>

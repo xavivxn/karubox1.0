@@ -5,8 +5,8 @@ import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
 import { usePOSData } from '../hooks/usePOSData'
 import { useOrderConfirmation } from '../hooks/useOrderConfirmation'
-import { POSHeader } from './POSHeader'
-import { POSLoading } from './POSLoading'
+import { POSHeader } from '../components/POSHeader'
+import { POSLoading } from '../components/POSLoading'
 import CategoryList from '@/components/pos/CategoryList'
 import ProductGrid from '@/components/pos/ProductGrid'
 import Cart from '@/components/pos/Cart'
@@ -45,21 +45,10 @@ export default function POSView() {
   }
 
   return (
-    <div className={`min-h-screen p-4 md:p-6 transition-colors ${
-      darkMode
-        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
-        : 'bg-gradient-to-br from-orange-50 via-white to-orange-50'
-    }`}>
-      <POSHeader
-        tenantName={tenant?.nombre}
-        userName={usuario?.nombre}
-        darkMode={darkMode}
-        onToggleDarkMode={toggleDarkMode}
-        onSignOut={signOut}
-      />
-
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="h-full flex flex-col">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
             <CategoryList
               categories={categorias}
@@ -78,7 +67,7 @@ export default function POSView() {
 
           <div className="lg:col-span-1">
             <div className="sticky top-6">
-              <div style={{ maxHeight: 'calc(100vh - 140px)' }} className="h-full">
+              <div style={{ maxHeight: 'calc(100vh - 200px)' }}>
                 <Cart
                   onOpenClientModal={() => setIsClientModalOpen(true)}
                   onConfirmOrder={onConfirmOrder}
@@ -90,6 +79,7 @@ export default function POSView() {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       <ClientModal

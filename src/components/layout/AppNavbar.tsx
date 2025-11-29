@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useEffect, useRef } from 'react'
 import { LogOut, Menu, UserCircle2, Sun, Moon, BarChart3, ChevronDown } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 
@@ -13,6 +13,23 @@ interface AppNavbarProps {
 export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarProps) {
   const { tenant, usuario, signOut, darkMode, toggleDarkMode } = useTenant()
   const [showMenu, setShowMenu] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMenu])
 
   return (
     <header
@@ -26,7 +43,7 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
             KM
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-orange-500">KarúFastPOS</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-orange-500">KarúPOS+</p>
             <div className="flex items-center gap-2 text-sm">
               <span className={`${darkMode ? 'font-semibold text-lg text-white' : 'font-semibold text-lg text-gray-900'}`}>{pageTitle}</span>
               <span className="text-gray-500 dark:text-gray-400 text-lg">•</span>
@@ -40,7 +57,7 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
           {actionsSlot}
           
           {/* User Menu con Dropdown */}
-          <div className="relative">
+          <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowMenu(!showMenu)}
               className={`flex items-center gap-2 rounded-xl border border-orange-500 px-3 py-2 ${darkMode ? 'hover:bg-gray-900/50' : 'hover:bg-gray-50'} dark:transition`}
