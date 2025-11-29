@@ -19,8 +19,7 @@ const PAGE_MAP: Array<{ test: (pathname: string) => boolean; info: PageInfo }> =
   {
     test: (path) => path === '/home',
     info: {
-      title: 'Ka\'u Manager',
-      subtitle: 'Elegí el módulo que querés usar.'
+      title: 'AtlasBurger',
     }
   },
   {

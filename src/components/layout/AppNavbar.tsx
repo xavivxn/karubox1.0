@@ -1,8 +1,7 @@
 'use client'
 
-import { ReactNode } from 'react'
-import Link from 'next/link'
-import { LogOut, Menu, UserCircle2, Sun, Moon, BarChart3 } from 'lucide-react'
+import { ReactNode, useState } from 'react'
+import { LogOut, Menu, UserCircle2, Sun, Moon, BarChart3, ChevronDown } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 
 interface AppNavbarProps {
@@ -13,6 +12,7 @@ interface AppNavbarProps {
 
 export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarProps) {
   const { tenant, usuario, signOut, darkMode, toggleDarkMode } = useTenant()
+  const [showMenu, setShowMenu] = useState(false)
 
   return (
     <header
@@ -26,47 +26,63 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
             KM
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-orange-500">Ka&apos;u Manager</p>
-            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-300">
-              <span className="font-semibold text-lg text-gray-900 dark:text-white">{pageTitle}</span>
-              <Menu className="w-4 h-4 text-gray-400" />
-              <span>{pageSubtitle}</span>
+            <p className="text-xs uppercase tracking-[0.35em] text-orange-500">KarúFastPOS</p>
+            <div className="flex items-center gap-2 text-sm">
+              <span className={`${darkMode ? 'font-semibold text-lg text-white' : 'font-semibold text-lg text-gray-900'}`}>{pageTitle}</span>
+              <span className="text-gray-500 dark:text-gray-400 text-lg">•</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 text-lg">
+                Operando: <strong className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{tenant?.nombre ?? '—'}</strong>
+              </span>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Operando: <strong>{tenant?.nombre ?? '—'}</strong> • Usuario:{' '}
-              <strong>{usuario?.nombre ?? '—'}</strong>
-            </p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {actionsSlot}
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-orange-600 hover:text-orange-500"
-          >
-            <BarChart3 className="w-4 h-4" />
-            Panel general
-          </Link>
-          <button
-            onClick={toggleDarkMode}
-            className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-100 hover:scale-105 transition"
-            aria-label="Cambiar tema"
-          >
-            {darkMode ? <Sun className="w-5 h-5 text-yellow-300" /> : <Moon className="w-5 h-5" />}
-          </button>
-          <button
-            onClick={() => signOut()}
-            className="inline-flex items-center gap-1 rounded-xl bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 px-4 py-2 text-sm font-semibold shadow"
-          >
-            <LogOut className="w-4 h-4" />
-            Salir
-          </button>
-          <div className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2">
-            <UserCircle2 className="w-5 h-5 text-gray-400" />
-            <div className="text-xs leading-tight">
-              <p className="font-semibold text-gray-900 dark:text-white">{usuario?.nombre ?? 'Usuario'}</p>
-              <p className="text-gray-500 dark:text-gray-400">{tenant?.slug ?? ''}</p>
-            </div>
+          
+          {/* User Menu con Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className={`flex items-center gap-2 rounded-xl border border-orange-500 px-3 py-2 ${darkMode ? 'hover:bg-gray-900/50' : 'hover:bg-gray-50'} dark:transition`}
+            >
+              <UserCircle2 className="w-5 h-5 text-gray-400" />
+              <div className="text-xs leading-tight text-left">
+                <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{usuario?.nombre ?? 'Usuario'}</p>
+                <p className="text-gray-500 dark:text-gray-400">{tenant?.slug ?? ''}</p>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown Menu */}
+            {showMenu && (
+              <div className={`absolute right-0 mt-2 w-48 rounded-xl border border-gray-200 dark:border-gray-200 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg overflow-hidden z-50`}>
+                <button
+                  onClick={() => {
+                    toggleDarkMode()
+                    setShowMenu(false)
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm ${darkMode ? 'text-gray-200 hover:text-black' : 'text-gray-700'} hover:bg-gray-50 dark:hover:bg-transparent dark:hover:border-l-2 dark:hover:border-orange-500 transition`}
+                >
+                  {darkMode ? (
+                    <Sun className="w-4 h-4 text-yellow-500" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-gray-600" />
+                  )}
+                  <span>{darkMode ? 'Modo claro' : 'Modo oscuro'}</span>
+                </button>
+                
+                <button
+                  onClick={() => {
+                    signOut()
+                    setShowMenu(false)
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition border-t border-gray-200 dark:border-gray-700"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Cerrar sesión</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
