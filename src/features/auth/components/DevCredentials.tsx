@@ -1,19 +1,19 @@
-import { DEV_CREDENTIALS } from '../constants/auth.constants'
+import { FEATURES } from '@/utils/strings'
 
 export function DevCredentials() {
-  if (process.env.NODE_ENV !== 'development') return null
-  
   return (
-    <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <p className="text-xs font-semibold text-gray-700 mb-2">
-        🧪 Datos de prueba:
-      </p>
-      <p className="text-xs text-gray-600">
-        Email: <code className="bg-gray-200 px-1 rounded">{DEV_CREDENTIALS.email}</code>
-      </p>
-      <p className="text-xs text-gray-600">
-        Pass: <code className="bg-gray-200 px-1 rounded">{DEV_CREDENTIALS.password}</code>
-      </p>
+    <div className="mt-8 pt-6 border-t border-gray-200">
+      <ul className="space-y-2">
+        {FEATURES.map((feature, index) => (
+          <li key={index} className="flex items-center gap-2 text-sm text-gray-600">
+            <span className="text-lg">{feature.icon}</span>
+            <div>
+              <span className="font-medium text-gray-700">{feature.title}</span>{' '}
+              {feature.description}
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

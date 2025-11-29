@@ -1,16 +1,20 @@
 'use client'
 
 import { useHomeAuth } from '../hooks/useHomeAuth'
-import { HomeHeader } from './HomeHeader'
-import { DashboardCards } from './DashboardCards'
-import { FeaturesList } from './FeaturesList'
-import { HomeLoading } from './HomeLoading'
+import { HomeHeader } from '../components/HomeHeader'
+import { DashboardCards } from '../components/DashboardCards'
+import { FeaturesList } from '../components/FeaturesList'
+import { HomeLoading } from '../components/HomeLoading'
 
 export default function HomeView() {
   const { tenant, usuario, darkMode, loading, isAuthenticated } = useHomeAuth()
 
   if (loading) {
-    return <HomeLoading />
+    return (
+      <div className="absolute inset-0 flex items-center justify-center">
+        <HomeLoading />
+      </div>
+    )
   }
 
   if (!isAuthenticated) {
@@ -23,10 +27,10 @@ export default function HomeView() {
   }
 
   return (
-    <div className="space-y-16 py-4">
+    <div className="h-full flex flex-col justify-center space-y-16 py-8">
       <HomeHeader tenantInfo={tenantInfo} darkMode={darkMode} />
       <DashboardCards darkMode={darkMode} />
-      <FeaturesList darkMode={darkMode} />
+      {/* <FeaturesList darkMode={darkMode} /> */}
     </div>
   )
 }
