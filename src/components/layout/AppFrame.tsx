@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { AppNavbar } from './AppNavbar'
 import { AppFooter } from './AppFooter'
 import { useTenant } from '@/contexts/TenantContext'
+import { THEME_CONFIG } from '@/utils/constants'
 
 type PageInfo = {
   title: string
@@ -55,8 +56,8 @@ const PAGE_MAP: Array<{ test: (pathname: string) => boolean; info: PageInfo }> =
 ]
 
 const DEFAULT_INFO: PageInfo = {
-  title: 'Ka\'u Manager',
-  subtitle: 'Gestión centralizada para lomiterías.'
+  title: 'LomiPos',
+  subtitle: 'La solución todo en uno para tu negocio.'
 }
 
 export function AppFrame({ children }: { children: ReactNode }) {
@@ -73,10 +74,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
   return (
     <div
       className={`min-h-screen flex flex-col ${
-        darkMode
-          ? "bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 text-gray-100"
-          : "bg-gradient-to-br from-orange-50 via-white to-orange-50 text-gray-900"
-      }`}
+        hideNavbar
+          ? THEME_CONFIG.DARK.background
+          : darkMode
+          ? THEME_CONFIG.DARK.background
+          : THEME_CONFIG.LIGHT.background
+      } ${darkMode ? "text-gray-100" : "text-gray-900"}`}
     >
       {!hideNavbar && (
         <AppNavbar pageTitle={pageInfo.title} pageSubtitle={pageInfo.subtitle} />
@@ -88,7 +91,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <div className="max-w-7xl mx-auto space-y-10">{children}</div>
         )}
       </main>
-      {<AppFooter />}
+      {!hideNavbar && <AppFooter />}
     </div>
   );
 }

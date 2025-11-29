@@ -17,7 +17,10 @@ export function LoginFields({
     <>
       {/* Email */}
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+        <label
+          htmlFor="email"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
           Correo electrónico
         </label>
         <input
@@ -27,7 +30,7 @@ export function LoginFields({
           onChange={(e) => onEmailChange(e.target.value)}
           required
           autoComplete="email"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+          className="w-full px-4 py-3 border border-orange-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none transition text-gray-900 placeholder:text-gray-400"
           placeholder="tu@email.com"
           disabled={disabled}
         />
@@ -35,7 +38,10 @@ export function LoginFields({
 
       {/* Password */}
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+        <label
+          htmlFor="password"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
           Contraseña
         </label>
         <input
@@ -45,11 +51,11 @@ export function LoginFields({
           onChange={(e) => onPasswordChange(e.target.value)}
           required
           autoComplete="current-password"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+          className="w-full px-4 py-3 border border-orange-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none transition text-gray-900 placeholder:text-gray-400"
           placeholder="••••••••"
           disabled={disabled}
         />
       </div>
     </>
-  )
+  );
 }
