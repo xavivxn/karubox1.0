@@ -45,7 +45,7 @@ export async function getPedidosActivos() {
   const { data, error } = await supabase
     .from('vista_pedidos_completos')
     .select('*')
-    .in('estado', ['pendiente', 'preparando'])
+    .in('estado', ['pendiente', 'en_preparacion'])
     .order('fecha_creacion', { ascending: true })
   
   if (error) throw error
@@ -56,13 +56,13 @@ export async function getPedidosActivos() {
  * Obtener pedidos por estado
  */
 export async function getPedidosPorEstado(
-  estado: 'pendiente' | 'preparando' | 'listo' | 'entregado' | 'cancelado'
+  estado: 'pendiente' | 'en_preparacion' | 'listo' | 'entregado' | 'cancelado'
 ) {
   const { data, error } = await supabase
     .from('pedidos')
     .select('*')
     .eq('estado', estado)
-    .order('fecha_creacion', { ascending: false })
+    .order('created_at', { ascending: false })
   
   if (error) throw error
   return data as Pedido[]
@@ -104,17 +104,14 @@ export async function getItemsPedido(pedidoId: string) {
  */
 export async function actualizarEstadoPedido(
   pedidoId: string,
-  nuevoEstado: 'pendiente' | 'preparando' | 'listo' | 'entregado' | 'cancelado'
+  nuevoEstado: 'pendiente' | 'en_preparacion' | 'listo' | 'entregado' | 'cancelado'
 ) {
   const updates: Partial<Pedido> = {
     estado: nuevoEstado,
-    fecha_actualizado: new Date().toISOString()
+    updated_at: new Date().toISOString()
   }
   
-  // Si se marca como entregado, guardar la fecha
-  if (nuevoEstado === 'entregado') {
-    updates.fecha_entregado = new Date().toISOString()
-  }
+  // Nota: La fecha de entrega se maneja automáticamente por triggers en la BD
   
   const { data, error } = await supabase
     .from('pedidos')
@@ -163,7 +160,7 @@ export async function getEstadisticasDelDia() {
     porTipo: {
       delivery: pedidos.filter(p => p.tipo === 'delivery').length,
       local: pedidos.filter(p => p.tipo === 'local').length,
-      takeaway: pedidos.filter(p => p.tipo === 'takeaway').length,
+      para_llevar: pedidos.filter(p => p.tipo === 'para_llevar').length,
     }
   }
 }

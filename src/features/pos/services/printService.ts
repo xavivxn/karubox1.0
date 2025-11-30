@@ -135,8 +135,8 @@ export const printService = {
         cliente: pedido.tipo === 'delivery' && pedido.cliente_id
           ? {
               nombre: '', // Se puede obtener del pedido si es necesario
-              telefono: null,
-              direccion: null
+              telefono: undefined,
+              direccion: undefined
             }
           : null,
         fecha: (pedido as any).created_at || new Date().toISOString(),
@@ -360,9 +360,9 @@ export const printService = {
           cliente: facturaData.cliente
             ? {
                 nombre: facturaData.cliente.nombre,
-                direccion: facturaData.cliente.direccion || null,
-                ci: facturaData.cliente.ci || null,
-                telefono: facturaData.cliente.telefono || null
+                direccion: facturaData.cliente.direccion || undefined,
+                ci: facturaData.cliente.ci || undefined,
+                telefono: facturaData.cliente.telefono || undefined
               }
             : null,
           subtotal: facturaData.subtotal,
@@ -371,8 +371,8 @@ export const printService = {
           metodoPago: facturaData.metodoPago,
           fecha: (facturaData.pedido as any).created_at || new Date().toISOString(),
           lomiteriaName: facturaData.lomiteria.nombre,
-          lomiteriaAddress: facturaData.lomiteria.direccion || null,
-          lomiteriaTaxId: facturaData.lomiteria.cuit || null
+          lomiteriaAddress: facturaData.lomiteria.direccion || undefined,
+          lomiteriaTaxId: facturaData.lomiteria.cuit || undefined
         }
       }
 
