@@ -5,6 +5,7 @@ import type { Cliente } from '@/types/supabase'
 import type { TipoPedido, FeedbackDetail } from '../types/pos.types'
 import { calcularPuntos, formatTipoPedido } from '../utils/pos.utils'
 import { formatGuaranies } from '@/lib/utils/format'
+import { printService } from './printService'
 
 interface ConfirmOrderParams {
   tenantId: string
@@ -96,6 +97,13 @@ export const orderService = {
     }).catch((consumptionError) => {
       console.warn('No se pudo descontar inventario automáticamente', consumptionError)
     })
+
+    // Imprimir ticket de cocina (no crítico - si falla, el pedido se guarda igual)
+    printService
+      .printKitchenTicket(tenantId, pedido, items, tenantNombre)
+      .catch((printError) => {
+        console.warn('No se pudo imprimir el ticket de cocina', printError)
+      })
 
     // Construir detalles del feedback
     const successDetails: FeedbackDetail[] = [

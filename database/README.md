@@ -42,7 +42,29 @@
 
 ---
 
-### **3️⃣ (Opcional) Aplicar Mejoras de Escalabilidad**
+### **3️⃣ Configurar Impresoras**
+
+```sql
+-- Ejecutar en Supabase SQL Editor
+-- Archivo: 02_printer_config.sql
+```
+
+**¿Qué hace?**
+- ✅ Crea la tabla `printer_config` para conectar lomiterías con impresoras
+- ✅ Inserta configuración de ejemplo para Atlas Burger
+- ⚠️ **IMPORTANTE:** Antes de ejecutar, ajusta la IP en el script (línea ~60)
+
+**Configuración requerida:**
+1. Obtener la IP de tu PC: `ipconfig` en PowerShell
+2. Editar `02_printer_config.sql` y cambiar `v_agent_ip` por tu IP real
+3. Ejecutar el script en Supabase SQL Editor
+4. Verificar con: `SELECT * FROM vista_printer_config WHERE lomiteria_slug = 'atlas-burger'`
+
+**Más información:** Ver `docs/ARQUITECTURA_IMPRESION.md`
+
+---
+
+### **4️⃣ (Opcional) Aplicar Mejoras de Escalabilidad**
 
 ```sql
 -- Ejecutar en Supabase SQL Editor
@@ -67,7 +89,9 @@
 2. Abrir **SQL Editor**
 3. Copiar y ejecutar `00_initial_schema.sql` ✅
 4. Copiar y ejecutar `../seeds/atlas-burger.sql` ✅
-5. Listo! 🎉
+5. Editar `02_printer_config.sql` y cambiar la IP (línea ~60) ⚠️
+6. Copiar y ejecutar `02_printer_config.sql` ✅
+7. Listo! 🎉
 
 ---
 
@@ -139,6 +163,7 @@
 | # | Archivo | Fecha | Descripción | Estado |
 |---|---------|-------|-------------|--------|
 | 00 | `00_initial_schema.sql` | 2024-11-24 | Schema base multi-tenant v1.1 (Ultra Profesional) | ✅ Listo |
+| 02 | `02_printer_config.sql` | 2024-12-XX | Tabla de configuración de impresoras | ✅ Listo |
 | 01 | `01_migration_escalabilidad.sql` | 2024-11-24 | RLS completo y optimizaciones adicionales | ⏸️ Opcional |
 
 ### **Changelog v1.1 (Mejoras Ultra Profesionales)**

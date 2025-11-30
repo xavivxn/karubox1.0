@@ -119,45 +119,45 @@ export interface Database {
       pedidos: {
         Row: {
           id: string
+          tenant_id: string
           numero_pedido: number
           cliente_id: string | null
-          tipo: 'delivery' | 'local' | 'takeaway'
-          estado: 'pendiente' | 'preparando' | 'listo' | 'entregado' | 'cancelado'
+          usuario_id: string | null
+          tipo: 'local' | 'delivery' | 'para_llevar'
+          estado: 'pendiente' | 'en_preparacion' | 'listo' | 'entregado' | 'cancelado'
           total: number
           puntos_generados: number
           notas: string | null
-          direccion_entrega: string | null
-          fecha_creacion: string
-          fecha_actualizado: string
-          fecha_entregado: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
+          tenant_id: string
           numero_pedido?: number
           cliente_id?: string | null
-          tipo: 'delivery' | 'local' | 'takeaway'
-          estado?: 'pendiente' | 'preparando' | 'listo' | 'entregado' | 'cancelado'
+          usuario_id?: string | null
+          tipo: 'local' | 'delivery' | 'para_llevar'
+          estado?: 'pendiente' | 'en_preparacion' | 'listo' | 'entregado' | 'cancelado'
           total: number
           puntos_generados?: number
           notas?: string | null
-          direccion_entrega?: string | null
-          fecha_creacion?: string
-          fecha_actualizado?: string
-          fecha_entregado?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
+          tenant_id?: string
           numero_pedido?: number
           cliente_id?: string | null
-          tipo?: 'delivery' | 'local' | 'takeaway'
-          estado?: 'pendiente' | 'preparando' | 'listo' | 'entregado' | 'cancelado'
+          usuario_id?: string | null
+          tipo?: 'local' | 'delivery' | 'para_llevar'
+          estado?: 'pendiente' | 'en_preparacion' | 'listo' | 'entregado' | 'cancelado'
           total?: number
           puntos_generados?: number
           notas?: string | null
-          direccion_entrega?: string | null
-          fecha_creacion?: string
-          fecha_actualizado?: string
-          fecha_entregado?: string | null
+          created_at?: string
+          updated_at?: string
         }
       }
       items_pedido: {
@@ -277,6 +277,47 @@ export interface Database {
           updated_at?: string
         }
       }
+      printer_config: {
+        Row: {
+          id: string
+          lomiteria_id: string
+          printer_id: string
+          agent_ip: string
+          agent_port: number
+          tipo_impresora: 'usb' | 'network' | 'bluetooth' | null
+          nombre_impresora: string | null
+          ubicacion: string | null
+          activo: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          lomiteria_id: string
+          printer_id: string
+          agent_ip: string
+          agent_port?: number
+          tipo_impresora?: 'usb' | 'network' | 'bluetooth' | null
+          nombre_impresora?: string | null
+          ubicacion?: string | null
+          activo?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          lomiteria_id?: string
+          printer_id?: string
+          agent_ip?: string
+          agent_port?: number
+          tipo_impresora?: 'usb' | 'network' | 'bluetooth' | null
+          nombre_impresora?: string | null
+          ubicacion?: string | null
+          activo?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       vista_productos_completos: {
@@ -337,6 +378,7 @@ export type Pedido = Database['public']['Tables']['pedidos']['Row']
 export type ItemPedido = Database['public']['Tables']['items_pedido']['Row']
 export type TransaccionPuntos = Database['public']['Tables']['transacciones_puntos']['Row']
 export type Promocion = Database['public']['Tables']['promociones']['Row']
+export type PrinterConfig = Database['public']['Tables']['printer_config']['Row']
 
 export type ProductoCompleto = Database['public']['Views']['vista_productos_completos']['Row']
 export type PedidoCompleto = Database['public']['Views']['vista_pedidos_completos']['Row']
