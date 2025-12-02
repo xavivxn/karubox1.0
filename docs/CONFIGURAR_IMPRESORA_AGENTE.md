@@ -128,3 +128,4 @@ Ahora intenta confirmar un pedido desde la app web. Debería imprimir correctame
 - Ver `docs/INSTRUCCIONES_AGENTE_IMPRESION.md` para más detalles
 - Ver `docs/ARQUITECTURA_IMPRESION.md` para el flujo completo
 
+

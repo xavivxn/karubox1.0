@@ -3,28 +3,72 @@
 -- Actualiza el tenant "Lomitería Don Juan" a "Atlas Burger"
 -- ============================================
 
--- Paso 1: Actualizar el nombre del tenant
-UPDATE tenants 
-SET 
-  nombre = 'Atlas Burger',
-  slug = 'atlas-burger',
-  updated_at = NOW()
-WHERE slug = 'lomiteria-don-juan';
-
--- Paso 2: Obtener el ID del tenant Atlas Burger
+-- Paso 1: Crear o actualizar el tenant Atlas Burger
 DO $$
 DECLARE
   v_tenant_id UUID;
+  v_tenant_exists BOOLEAN;
 BEGIN
+  -- Verificar si el tenant atlas-burger ya existe
   SELECT id INTO v_tenant_id FROM tenants WHERE slug = 'atlas-burger';
+  v_tenant_exists := (v_tenant_id IS NOT NULL);
   
-  IF v_tenant_id IS NULL THEN
-    RAISE EXCEPTION 'No se encontró el tenant atlas-burger';
+  IF v_tenant_exists THEN
+    -- Si existe, solo actualizar nombre y datos
+    UPDATE tenants 
+    SET 
+      nombre = 'Atlas Burger',
+      updated_at = NOW()
+    WHERE id = v_tenant_id;
+    
+    -- Actualizar RUC si la columna existe
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'tenants' AND column_name = 'ruc'
+    ) THEN
+      UPDATE tenants 
+      SET ruc = NULL -- TODO: Agregar RUC real de Atlas Burger
+      WHERE id = v_tenant_id;
+    END IF;
+  ELSE
+    -- Si no existe atlas-burger, intentar actualizar desde lomiteria-don-juan
+    -- PERO primero verificar que atlas-burger no exista (por si acaso)
+    SELECT id INTO v_tenant_id FROM tenants WHERE slug = 'atlas-burger';
+    
+    IF v_tenant_id IS NULL THEN
+      -- Solo actualizar si atlas-burger realmente no existe
+      -- Usar subquery para verificar que no exista antes de actualizar
+      UPDATE tenants 
+      SET 
+        nombre = 'Atlas Burger',
+        slug = 'atlas-burger',
+        updated_at = NOW()
+      WHERE slug = 'lomiteria-don-juan'
+        AND NOT EXISTS (SELECT 1 FROM tenants WHERE slug = 'atlas-burger');
+      
+      SELECT id INTO v_tenant_id FROM tenants WHERE slug = 'atlas-burger';
+      
+      -- Si tampoco existe lomiteria-don-juan, crear nuevo tenant
+      IF v_tenant_id IS NULL THEN
+        INSERT INTO tenants (nombre, slug, telefono, email, activo)
+        VALUES ('Atlas Burger', 'atlas-burger', NULL, NULL, true)
+        ON CONFLICT (slug) DO UPDATE SET nombre = 'Atlas Burger', updated_at = NOW()
+        RETURNING id INTO v_tenant_id;
+        
+        -- Si hubo conflicto, obtener el tenant existente
+        IF v_tenant_id IS NULL THEN
+          SELECT id INTO v_tenant_id FROM tenants WHERE slug = 'atlas-burger';
+        END IF;
+      END IF;
+    END IF;
   END IF;
 
   -- Paso 3: Eliminar productos y categorías existentes
   DELETE FROM productos WHERE tenant_id = v_tenant_id;
   DELETE FROM categorias WHERE tenant_id = v_tenant_id;
+  
+  -- Paso 3.1: Limpiar empleados existentes (opcional, comentado para mantener datos)
+  -- DELETE FROM empleados WHERE tenant_id = v_tenant_id;
 
   -- Paso 4: Insertar categorías de Atlas Burger
   INSERT INTO categorias (tenant_id, nombre, descripcion, orden, activa) VALUES
@@ -300,8 +344,24 @@ BEGIN
   WHERE ing.tenant_id = v_tenant_id
     AND ing.slug = 'coca-15';
 
+  -- Paso 7: Insertar empleados de ejemplo (cajeros para app móvil)
+  -- NOTA: Estos son empleados de ejemplo. Ajustar con datos reales.
+  -- Si ya existen empleados, se insertarán duplicados. Para evitarlo, descomentar la línea DELETE de arriba.
+  INSERT INTO empleados (tenant_id, nombre, ci, telefono, email, rol, activo)
+  SELECT v_tenant_id, 'Juan Pérez', '1234567', '+595981234567', 'juan.perez@atlasburger.com', 'cajero', true
+  WHERE NOT EXISTS (SELECT 1 FROM empleados WHERE tenant_id = v_tenant_id AND ci = '1234567');
+  
+  INSERT INTO empleados (tenant_id, nombre, ci, telefono, email, rol, activo)
+  SELECT v_tenant_id, 'María González', '7654321', '+595981234568', 'maria.gonzalez@atlasburger.com', 'cajero', true
+  WHERE NOT EXISTS (SELECT 1 FROM empleados WHERE tenant_id = v_tenant_id AND ci = '7654321');
+  
+  INSERT INTO empleados (tenant_id, nombre, ci, telefono, email, rol, activo)
+  SELECT v_tenant_id, 'Carlos Rodríguez', '1122334', '+595981234569', NULL, 'repartidor', true
+  WHERE NOT EXISTS (SELECT 1 FROM empleados WHERE tenant_id = v_tenant_id AND ci = '1122334');
+
   RAISE NOTICE '✅ Atlas Burger: Datos insertados correctamente';
   RAISE NOTICE 'Tenant ID: %', v_tenant_id;
+  RAISE NOTICE 'Empleados: 2 cajeros y 1 repartidor insertados';
 END $$;
 
 -- Verificar datos insertados
@@ -336,8 +396,12 @@ ORDER BY c.orden, p.nombre;
 -- 3. ✅ Inserta todas las categorías del menú real
 -- 4. ✅ Inserta todos los productos con precios en Guaraníes (GS)
 -- 5. ✅ Mantiene el usuario existente vinculado
+-- 6. ✅ Inserta empleados de ejemplo (cajeros y repartidores)
 --
--- IMPORTANTE: El usuario de login existente sigue funcionando
--- Solo cambió el nombre del tenant y los productos
+-- IMPORTANTE: 
+-- - El usuario de login existente sigue funcionando
+-- - Solo cambió el nombre del tenant y los productos
+-- - Agregar RUC real en el UPDATE del tenant (línea ~10)
+-- - Ajustar datos de empleados según necesidades reales
 -- ============================================
 

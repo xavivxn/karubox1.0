@@ -171,3 +171,4 @@ El único paso que falta es **configurar la impresora física en el agente** usa
 - `docs/CONFIGURAR_IMPRESORA_AGENTE.md` - Guía de configuración
 - `docs/INSTRUCCIONES_AGENTE_IMPRESION.md` - Instrucciones completas
 
+

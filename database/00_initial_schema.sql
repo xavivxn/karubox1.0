@@ -1,7 +1,7 @@
 -- ============================================
 -- SISTEMA POS MULTI-TENANT - SCHEMA BASE
--- Version: 1.1 (Nivel Ultra Profesional)
--- Fecha: 2024-11-24
+-- Version: 1.2 (Nivel Ultra Profesional)
+-- Fecha: 2024-12-XX
 -- ============================================
 -- 
 -- Este script crea el schema completo para un sistema POS
@@ -17,6 +17,9 @@
 -- ✅ Soft Delete en tablas críticas
 -- ✅ Config JSON flexible por tenant
 -- ✅ Auditoría completa
+-- ✅ Tabla de empleados para cajeros móviles
+-- ✅ RUC en tenants y clientes
+-- ✅ Estado de pedido contable (EDIT, FACT, ANUL)
 -- 
 -- ============================================
 
@@ -31,6 +34,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nombre TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
+  ruc TEXT,
   logo_url TEXT,
   direccion TEXT,
   telefono TEXT,
@@ -51,21 +55,52 @@ CREATE TABLE IF NOT EXISTS tenants (
 
 COMMENT ON TABLE tenants IS 'Lomiterías registradas en el sistema - MULTI-TENANT';
 COMMENT ON COLUMN tenants.slug IS 'Identificador único para URLs (ej: atlas-burger)';
+COMMENT ON COLUMN tenants.ruc IS 'RUC (Registro Único del Contribuyente) de la lomitería';
 COMMENT ON COLUMN tenants.config_json IS 'Configuraciones personalizadas por tenant (módulos, features, etc)';
 COMMENT ON COLUMN tenants.is_deleted IS 'Soft delete: true = eliminado lógicamente';
 
 CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug);
 CREATE INDEX IF NOT EXISTS idx_tenants_activo ON tenants(activo);
 CREATE INDEX IF NOT EXISTS idx_tenants_deleted ON tenants(is_deleted) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_tenants_ruc ON tenants(ruc) WHERE is_deleted = false;
 
 -- ============================================
--- 2. TABLA USUARIOS
+-- 2. TABLA EMPLEADOS
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS empleados (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  nombre TEXT NOT NULL,
+  ci TEXT,
+  telefono TEXT,
+  email TEXT,
+  rol TEXT NOT NULL CHECK (rol IN ('cajero', 'repartidor', 'cocinero')),
+  activo BOOLEAN DEFAULT true,
+  is_deleted BOOLEAN DEFAULT false,
+  deleted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE empleados IS 'Empleados de la lomitería (cajeros, repartidores, cocineros)';
+COMMENT ON COLUMN empleados.rol IS 'cajero: toma pedidos desde app móvil, repartidor: entrega pedidos, cocinero: prepara pedidos';
+COMMENT ON COLUMN empleados.is_deleted IS 'Soft delete: permite auditoría de empleados eliminados';
+
+CREATE INDEX IF NOT EXISTS idx_empleados_tenant ON empleados(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_empleados_rol ON empleados(tenant_id, rol) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_empleados_activos ON empleados(tenant_id, activo) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_empleados_ci ON empleados(tenant_id, ci) WHERE is_deleted = false;
+
+-- ============================================
+-- 3. TABLA USUARIOS
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS usuarios (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   auth_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  empleado_id UUID REFERENCES empleados(id) ON DELETE SET NULL,
   email TEXT NOT NULL UNIQUE,
   nombre TEXT NOT NULL,
   rol TEXT NOT NULL CHECK (rol IN ('admin', 'cajero', 'cocinero', 'repartidor')),
@@ -76,17 +111,19 @@ CREATE TABLE IF NOT EXISTS usuarios (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-COMMENT ON TABLE usuarios IS 'Usuarios del sistema por tenant';
+COMMENT ON TABLE usuarios IS 'Usuarios del sistema por tenant (login web/app)';
 COMMENT ON COLUMN usuarios.rol IS 'admin: dueño, cajero: POS, cocinero: KDS, repartidor: delivery';
+COMMENT ON COLUMN usuarios.empleado_id IS 'Vincula usuario con empleado (opcional: para cajeros móviles)';
 COMMENT ON COLUMN usuarios.is_deleted IS 'Soft delete: permite auditoría de usuarios eliminados';
 
 CREATE INDEX IF NOT EXISTS idx_usuarios_tenant ON usuarios(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_auth ON usuarios(auth_user_id);
+CREATE INDEX IF NOT EXISTS idx_usuarios_empleado ON usuarios(empleado_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
 CREATE INDEX IF NOT EXISTS idx_usuarios_activos ON usuarios(tenant_id, activo) WHERE is_deleted = false;
 
 -- ============================================
--- 3. TABLA CATEGORÍAS
+-- 4. TABLA CATEGORÍAS
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS categorias (
@@ -106,7 +143,7 @@ CREATE INDEX IF NOT EXISTS idx_categorias_tenant ON categorias(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_categorias_orden ON categorias(tenant_id, orden);
 
 -- ============================================
--- 4. TABLA PRODUCTOS
+-- 5. TABLA PRODUCTOS
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS productos (
@@ -132,7 +169,7 @@ CREATE INDEX IF NOT EXISTS idx_productos_categoria ON productos(categoria_id);
 CREATE INDEX IF NOT EXISTS idx_productos_disponible ON productos(tenant_id, disponible) WHERE is_deleted = false;
 
 -- ============================================
--- 5. TABLA CLIENTES
+-- 6. TABLA CLIENTES
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS clientes (
@@ -140,6 +177,7 @@ CREATE TABLE IF NOT EXISTS clientes (
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   nombre TEXT NOT NULL,
   ci TEXT,
+  ruc TEXT,
   telefono TEXT,
   email TEXT,
   direccion TEXT,
@@ -153,16 +191,18 @@ CREATE TABLE IF NOT EXISTS clientes (
 
 COMMENT ON TABLE clientes IS 'Clientes por tenant con sistema de puntos';
 COMMENT ON COLUMN clientes.ci IS 'Cédula de identidad del cliente';
+COMMENT ON COLUMN clientes.ruc IS 'RUC (Registro Único del Contribuyente) del cliente';
 COMMENT ON COLUMN clientes.puntos_totales IS 'Puntos acumulados (1 punto = 100 GS)';
 COMMENT ON COLUMN clientes.is_deleted IS 'Soft delete: mantiene historial de clientes y sus puntos';
 
 CREATE INDEX IF NOT EXISTS idx_clientes_tenant ON clientes(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_clientes_ci ON clientes(tenant_id, ci) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_clientes_ruc ON clientes(tenant_id, ruc) WHERE is_deleted = false;
 CREATE INDEX IF NOT EXISTS idx_clientes_telefono ON clientes(tenant_id, telefono) WHERE is_deleted = false;
 CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON clientes(tenant_id, nombre) WHERE is_deleted = false;
 
 -- ============================================
--- 6. TABLA PEDIDOS
+-- 7. TABLA PEDIDOS
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS pedidos (
@@ -171,8 +211,10 @@ CREATE TABLE IF NOT EXISTS pedidos (
   numero_pedido INTEGER NOT NULL,
   cliente_id UUID REFERENCES clientes(id) ON DELETE SET NULL,
   usuario_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+  empleado_id UUID REFERENCES empleados(id) ON DELETE SET NULL,
   tipo TEXT NOT NULL CHECK (tipo IN ('local', 'delivery', 'para_llevar')),
   estado TEXT NOT NULL DEFAULT 'entregado' CHECK (estado IN ('pendiente', 'en_preparacion', 'listo', 'entregado', 'cancelado')),
+  estado_pedido TEXT NOT NULL DEFAULT 'EDIT' CHECK (estado_pedido IN ('EDIT', 'FACT', 'ANUL')),
   total NUMERIC(10,2) NOT NULL CHECK (total >= 0),
   puntos_generados INTEGER DEFAULT 0,
   notas TEXT,
@@ -183,11 +225,15 @@ CREATE TABLE IF NOT EXISTS pedidos (
 
 COMMENT ON TABLE pedidos IS 'Pedidos por tenant';
 COMMENT ON COLUMN pedidos.numero_pedido IS 'Número secuencial por tenant';
-COMMENT ON COLUMN pedidos.estado IS 'Flujo del pedido (por defecto se marca entregado al confirmar el pago)';
+COMMENT ON COLUMN pedidos.estado IS 'Flujo del pedido (pendiente, en_preparacion, listo, entregado, cancelado)';
+COMMENT ON COLUMN pedidos.estado_pedido IS 'Estado contable: EDIT=edición, FACT=facturado, ANUL=anulado';
+COMMENT ON COLUMN pedidos.empleado_id IS 'Empleado cajero que tomó el pedido (para delivery desde vehículo)';
 
 CREATE INDEX IF NOT EXISTS idx_pedidos_tenant ON pedidos(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_pedidos_estado ON pedidos(tenant_id, estado);
+CREATE INDEX IF NOT EXISTS idx_pedidos_estado_pedido ON pedidos(tenant_id, estado_pedido);
 CREATE INDEX IF NOT EXISTS idx_pedidos_cliente ON pedidos(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_empleado ON pedidos(empleado_id);
 CREATE INDEX IF NOT EXISTS idx_pedidos_fecha ON pedidos(tenant_id, created_at DESC);
 
 -- Tabla de secuencias por tenant para pedidos
@@ -247,7 +293,7 @@ CREATE TRIGGER trigger_asignar_numero_pedido
   EXECUTE FUNCTION asignar_numero_pedido();
 
 -- ============================================
--- 7. TABLA ITEMS DE PEDIDO
+-- 8. TABLA ITEMS DE PEDIDO
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS items_pedido (
@@ -268,7 +314,7 @@ CREATE INDEX IF NOT EXISTS idx_items_pedido ON items_pedido(pedido_id);
 CREATE INDEX IF NOT EXISTS idx_items_producto ON items_pedido(producto_id);
 
 -- ============================================
--- 8. TABLA INGREDIENTES
+-- 9. TABLA INGREDIENTES
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS ingredientes (
@@ -296,7 +342,7 @@ CREATE INDEX IF NOT EXISTS idx_ingredientes_slug ON ingredientes(tenant_id, slug
 CREATE INDEX IF NOT EXISTS idx_ingredientes_activo ON ingredientes(tenant_id, activo);
 
 -- ============================================
--- 9. TABLA RECETAS DE PRODUCTOS
+-- 10. TABLA RECETAS DE PRODUCTOS
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS recetas_producto (
@@ -320,7 +366,7 @@ CREATE INDEX IF NOT EXISTS idx_recetas_producto ON recetas_producto(producto_id)
 CREATE INDEX IF NOT EXISTS idx_recetas_ingrediente ON recetas_producto(ingrediente_id);
 
 -- ============================================
--- 10. TABLA INVENTARIO
+-- 11. TABLA INVENTARIO
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS inventario (
@@ -345,7 +391,7 @@ CREATE INDEX IF NOT EXISTS idx_inventario_stock_bajo ON inventario(tenant_id, st
   WHERE controlar_stock = true AND stock_actual <= stock_minimo;
 
 -- ============================================
--- 11. TABLA MOVIMIENTOS DE INVENTARIO
+-- 12. TABLA MOVIMIENTOS DE INVENTARIO
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS movimientos_inventario (
@@ -372,7 +418,7 @@ CREATE INDEX IF NOT EXISTS idx_movimientos_pedido ON movimientos_inventario(pedi
 CREATE INDEX IF NOT EXISTS idx_movimientos_fecha ON movimientos_inventario(tenant_id, created_at DESC);
 
 -- ============================================
--- 12. TABLA TRANSACCIONES DE PUNTOS
+-- 13. TABLA TRANSACCIONES DE PUNTOS
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS transacciones_puntos (
@@ -397,7 +443,7 @@ CREATE INDEX IF NOT EXISTS idx_transacciones_pedido ON transacciones_puntos(pedi
 CREATE INDEX IF NOT EXISTS idx_transacciones_fecha ON transacciones_puntos(tenant_id, created_at DESC);
 
 -- ============================================
--- 13. TABLA PROMOCIONES
+-- 14. TABLA PROMOCIONES
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS promociones (
@@ -423,7 +469,7 @@ CREATE INDEX IF NOT EXISTS idx_promociones_tenant ON promociones(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_promociones_activa ON promociones(tenant_id, activa);
 
 -- ============================================
--- 14. FUNCIONES Y TRIGGERS
+-- 15. FUNCIONES Y TRIGGERS
 -- ============================================
 
 -- Función: Calcular puntos según monto (1 punto = 100 GS)
@@ -554,7 +600,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
--- 15. VISTAS ÚTILES
+-- 16. VISTAS ÚTILES
 -- ============================================
 
 -- Vista: Productos con stock bajo
@@ -596,12 +642,13 @@ WHERE c.is_deleted = false
 GROUP BY c.id, c.tenant_id, c.nombre, c.telefono, c.puntos_totales;
 
 -- ============================================
--- 16. ROW LEVEL SECURITY (DESHABILITADO)
+-- 17. ROW LEVEL SECURITY (DESHABILITADO)
 -- ============================================
 -- RLS deshabilitado para desarrollo
 -- En producción, habilitar con políticas por tenant_id
 
 ALTER TABLE tenants DISABLE ROW LEVEL SECURITY;
+ALTER TABLE empleados DISABLE ROW LEVEL SECURITY;
 ALTER TABLE usuarios DISABLE ROW LEVEL SECURITY;
 ALTER TABLE categorias DISABLE ROW LEVEL SECURITY;
 ALTER TABLE productos DISABLE ROW LEVEL SECURITY;
@@ -619,7 +666,7 @@ ALTER TABLE promociones DISABLE ROW LEVEL SECURITY;
 -- ✅ SCHEMA BASE COMPLETADO
 -- ============================================
 
-COMMENT ON SCHEMA public IS 'Sistema POS Multi-Tenant v1.1 - Nivel Ultra Profesional';
+COMMENT ON SCHEMA public IS 'Sistema POS Multi-Tenant v1.2 - Nivel Ultra Profesional';
 
 -- Insertar tenant de ejemplo (será reemplazado por atlas-burger.sql)
 INSERT INTO tenants (nombre, slug, telefono, email, activo)
@@ -629,14 +676,17 @@ ON CONFLICT (slug) DO NOTHING;
 -- Mensaje de éxito
 DO $$
 BEGIN
-  RAISE NOTICE '✅ Schema base creado exitosamente - v1.1';
+  RAISE NOTICE '✅ Schema base creado exitosamente - v1.2';
   RAISE NOTICE '🔥 Mejoras implementadas:';
-  RAISE NOTICE '  ✅ Soft Delete en tablas críticas (tenants, usuarios, productos, clientes)';
+  RAISE NOTICE '  ✅ Soft Delete en tablas críticas (tenants, usuarios, productos, clientes, empleados)';
   RAISE NOTICE '  ✅ config_json flexible en tenants';
   RAISE NOTICE '  ✅ tenant_id en TODAS las tablas (movimientos_inventario, transacciones_puntos)';
   RAISE NOTICE '  ✅ Índices optimizados con filtros WHERE is_deleted = false';
   RAISE NOTICE '  ✅ Vistas actualizadas para excluir registros eliminados';
   RAISE NOTICE '  ✅ Funciones actualizadas para multi-tenant completo';
+  RAISE NOTICE '  ✅ Tabla empleados para cajeros móviles';
+  RAISE NOTICE '  ✅ RUC agregado a tenants y clientes';
+  RAISE NOTICE '  ✅ Estado de pedido contable (EDIT, FACT, ANUL)';
   RAISE NOTICE '📋 Próximo paso: Ejecutar seeds/atlas-burger.sql';
 END $$;
 
@@ -666,5 +716,22 @@ END $$;
 -- 🔧 5. SEEDS USAN SLUG
 --    - Los seeds buscan por slug en vez de ID
 --    - Beneficio: Más robusto, funciona aunque cambien los UUIDs
+--
+-- 🔧 6. TABLA EMPLEADOS (v1.2)
+--    - Tabla independiente para empleados (cajeros, repartidores, cocineros)
+--    - Vinculación opcional con usuarios para cajeros móviles
+--    - Campo empleado_id en pedidos para tracking de quién tomó el pedido
+--
+-- 🔧 7. RUC EN TENANTS Y CLIENTES (v1.2)
+--    - Campo ruc agregado a tabla tenants (lomiterías)
+--    - Campo ruc agregado a tabla clientes
+--    - Índices creados para búsqueda rápida por RUC
+--
+-- 🔧 8. ESTADO DE PEDIDO CONTABLE (v1.2)
+--    - Campo estado_pedido en tabla pedidos con valores: EDIT, FACT, ANUL
+--    - EDIT: Pedido en edición (borrador)
+--    - FACT: Pedido facturado (confirmado)
+--    - ANUL: Pedido anulado
+--    - Índice optimizado para consultas por estado_pedido y fecha
 --
 -- ============================================

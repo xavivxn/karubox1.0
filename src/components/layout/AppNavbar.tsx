@@ -3,6 +3,7 @@
 import { ReactNode, useState, useEffect, useRef } from 'react'
 import { LogOut, Menu, UserCircle2, Sun, Moon, BarChart3, ChevronDown } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
+import { Breadcrumb } from './Breadcrumb'
 
 interface AppNavbarProps {
   pageTitle: string
@@ -37,27 +38,28 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
         darkMode ? 'bg-gray-950/80 border-gray-800' : 'bg-white/80 border-orange-100'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-orange-500/30">
-            KM
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-orange-500">KarúPOS+</p>
-            <div className="flex items-center gap-2 text-sm">
-              <span className={`${darkMode ? 'font-semibold text-lg text-white' : 'font-semibold text-lg text-gray-900'}`}>{pageTitle}</span>
-              <span className="text-gray-500 dark:text-gray-400 text-lg">•</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 text-lg">
-                Operando: <strong className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{tenant?.nombre ?? '—'}</strong>
-              </span>
+      <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-orange-500/30">
+              KM
+            </div>
+            <div className="flex-1">
+              <p className="text-xs uppercase tracking-[0.35em] text-orange-500 mb-1">KarúPOS+</p>
+              <div className="flex items-center gap-2 text-sm flex-wrap">
+                <span className={`${darkMode ? 'font-semibold text-lg text-white' : 'font-semibold text-lg text-gray-900'}`}>{pageTitle}</span>
+                <span className="text-gray-500 dark:text-gray-400 text-lg">•</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 text-lg">
+                  Operando: <strong className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{tenant?.nombre ?? '—'}</strong>
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          {actionsSlot}
-          
-          {/* User Menu con Dropdown */}
-          <div className="relative" ref={menuRef}>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {actionsSlot}
+            
+            {/* User Menu con Dropdown */}
+            <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowMenu(!showMenu)}
               className={`flex items-center gap-2 rounded-xl border border-orange-500 px-3 py-2 ${darkMode ? 'hover:bg-gray-900/50' : 'hover:bg-gray-50'} dark:transition`}
@@ -100,7 +102,12 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
                 </button>
               </div>
             )}
+            </div>
           </div>
+        </div>
+        {/* Breadcrumb Navigation */}
+        <div className="mt-3 pt-3 border-t border-gray-200/50 dark:border-gray-800/50">
+          <Breadcrumb />
         </div>
       </div>
     </header>
