@@ -16,11 +16,6 @@ export function Breadcrumb() {
   const router = useRouter()
   const { darkMode } = useTenant()
 
-  // No mostrar breadcrumb en la página de inicio
-  if (pathname === ROUTES.PROTECTED.HOME) {
-    return null
-  }
-
   // Construir items del breadcrumb basado en la ruta
   const items: BreadcrumbItem[] = []
   

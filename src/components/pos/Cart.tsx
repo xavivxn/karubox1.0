@@ -142,10 +142,15 @@ export default function Cart({
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => updateQuantity(item.id, item.cantidad - 1)}
+                    disabled={item.cantidad <= 1}
                     className={`p-1.5 rounded transition-colors ${
-                      darkMode
-                        ? 'bg-gray-600 hover:bg-gray-500'
-                        : 'bg-gray-200 hover:bg-gray-300'
+                      item.cantidad <= 1
+                        ? darkMode
+                          ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : darkMode
+                          ? 'bg-gray-600 hover:bg-gray-500'
+                          : 'bg-gray-200 hover:bg-gray-300'
                     }`}
                   >
                     <Minus size={12} />
