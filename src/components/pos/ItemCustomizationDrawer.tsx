@@ -240,7 +240,7 @@ export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: Ite
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-6 space-y-8">
+        <div className="flex-1 overflow-y-auto px-5 py-6 space-y-8 scrollbar-thin scrollbar-thumb-orange-500 scrollbar-track-transparent hover:scrollbar-thumb-orange-600">
           <section>
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -338,7 +338,7 @@ export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: Ite
                 Todavía no tenés ingredientes configurados.
               </p>
             ) : (
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-orange-500 scrollbar-track-transparent hover:scrollbar-thumb-orange-600">
                 {filteredCatalog.map((ingredient) => {
                   const draft = extras[ingredient.slug]
                   const quantity = draft?.quantity ?? 0
