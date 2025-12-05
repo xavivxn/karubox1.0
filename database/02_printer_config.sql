@@ -174,5 +174,5 @@ GRANT SELECT ON vista_printer_config TO authenticated;
 -- 
 -- SELECT * FROM vista_printer_config WHERE lomiteria_slug = 'atlas-burger';
 -- 
--- ============================================
+-- =============================================
 
