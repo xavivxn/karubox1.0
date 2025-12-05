@@ -5,7 +5,7 @@
 
 import { Coins, Package, Percent } from 'lucide-react'
 import { formatGuaranies, formatNumber } from '@/lib/utils/format'
-import { KpiCard } from '@/components/admin/KpiCard'
+import { KpiCard } from './KpiCard'
 import type { DashboardStats } from '../types/admin.types'
 
 interface AdditionalKpisProps {

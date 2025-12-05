@@ -5,7 +5,7 @@
 
 import { Coins, ShieldCheck, Package, Percent } from 'lucide-react'
 import { formatGuaranies, formatNumber } from '@/lib/utils/format'
-import { KpiCard } from '@/components/admin/KpiCard'
+import { KpiCard } from './KpiCard'
 import { ESTIMATED_COST_RATIO } from '../utils/admin.utils'
 import type { DashboardStats } from '../types/admin.types'
 

@@ -8,7 +8,7 @@
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
-import { InventoryDrawer } from '@/components/admin/InventoryDrawer'
+import { InventoryDrawer } from './InventoryDrawer'
 import { useAdminDashboard } from '../hooks/useAdminDashboard'
 import { AdminHeader } from './AdminHeader'
 import { AdminLoading } from './AdminLoading'

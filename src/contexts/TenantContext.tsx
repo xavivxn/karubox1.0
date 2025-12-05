@@ -54,9 +54,14 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     setDarkMode(savedMode)
   }, [])
 
-  // Guardar dark mode en localStorage
+  // Guardar dark mode en localStorage y aplicar clase al documento
   useEffect(() => {
     localStorage.setItem('darkMode', darkMode.toString())
+    if (darkMode) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
   }, [darkMode])
 
   const toggleDarkMode = () => {

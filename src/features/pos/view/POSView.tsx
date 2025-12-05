@@ -6,13 +6,13 @@ import { useTenant } from '@/contexts/TenantContext'
 import { usePOSData } from '../hooks/usePOSData'
 import { useOrderConfirmation } from '../hooks/useOrderConfirmation'
 import { POSLoading } from '../components/POSLoading'
-import CategoryList from '@/components/pos/CategoryList'
-import ProductGrid from '@/components/pos/ProductGrid'
-import Cart from '@/components/pos/Cart'
-import ClientModal from '@/components/pos/ClientModal'
-import { ItemCustomizationDrawer } from '@/components/pos/ItemCustomizationDrawer'
 import { FeedbackModal } from '@/components/ui/FeedbackModal'
 import type { FeedbackState } from '../types/pos.types'
+import { ItemCustomizationDrawer } from '../components/ItemCustomizationDrawer'
+import Cart from '../components/Cart'
+import ClientModal from '../components/ClientModal'
+import CategoryList from '../components/CategoryList'
+import ProductGrid from '../components/ProductGrid'
 
 export default function POSView() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)

@@ -29,8 +29,14 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    --scrollbar-color-thumb: rgb(249 115 22);
+    --scrollbar-color-thumb-hover: rgb(234 88 12);
+    --scrollbar-color-track: rgb(254 242 242);
+    --scrollbar-width: thin;
+    --scrollbar-width-legacy: 10px;
   }
 
+  html.dark,
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -56,6 +62,11 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    --scrollbar-color-thumb: rgb(249 115 22);
+    --scrollbar-color-thumb-hover: rgb(234 88 12);
+    --scrollbar-color-track: rgb(17 24 39);
+    --scrollbar-width: thin;
+    --scrollbar-width-legacy: 10px;
   }
 }
 
@@ -63,8 +74,71 @@
   * {
     @apply border-border;
   }
+
+  html {
+    @apply h-full;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground h-full;
   }
 }
 
+/* Custom scrollbar styles */
+@layer utilities {
+
+  /* Modern browsers with `scrollbar-*` support */
+  @supports (scrollbar-width: auto) {
+
+    body,
+    * {
+      scrollbar-color: var(--scrollbar-color-thumb) var(--scrollbar-color-track);
+      scrollbar-width: var(--scrollbar-width);
+    }
+  }
+
+  /* Legacy browsers with `::-webkit-scrollbar-*` support */
+    @supports selector(::-webkit-scrollbar) {
+  
+      html::-webkit-scrollbar {
+        width: var(--scrollbar-width-legacy);
+        height: var(--scrollbar-width-legacy);
+      }
+  
+      html::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-color-thumb);
+        border-radius: 9999px;
+      }
+  
+      html::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-color-thumb-hover);
+      }
+  
+      html::-webkit-scrollbar-track {
+        background: var(--scrollbar-color-track) !important;
+      }
+  
+      html::-webkit-scrollbar-corner {
+        background: var(--scrollbar-color-track) !important;
+      }
+
+    /* For utility classes */
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .scrollbar-thumb-orange-500::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-color-thumb);
+      border-radius: 9999px;
+    }
+
+    .scrollbar-thumb-orange-500:hover::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-color-thumb-hover);
+    }
+
+    .scrollbar-track-transparent::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  }
+}
