@@ -8,6 +8,10 @@ DO $$
 DECLARE
   v_tenant_id UUID;
   v_tenant_exists BOOLEAN;
+  -- Variables para configuración de impresora
+  v_agent_ip TEXT := '192.168.100.2';  -- ⚠️ IP local de la PC del agente (SIN http://)
+  v_agent_port INTEGER := 3001;  -- 3001 para HTTP (IP local), 443 para HTTPS (túnel)
+  v_printer_id TEXT := 'atlas-burger-printer-1';
 BEGIN
   -- Verificar si el tenant atlas-burger ya existe
   SELECT id INTO v_tenant_id FROM tenants WHERE slug = 'atlas-burger';
@@ -358,6 +362,62 @@ BEGIN
   INSERT INTO empleados (tenant_id, nombre, ci, telefono, email, rol, activo)
   SELECT v_tenant_id, 'Carlos Rodríguez', '1122334', '+595981234569', NULL, 'repartidor', true
   WHERE NOT EXISTS (SELECT 1 FROM empleados WHERE tenant_id = v_tenant_id AND ci = '1122334');
+
+  -- Paso 8: Configurar impresora para Atlas Burger
+  -- ⚠️ IMPORTANTE: Antes de ejecutar, ajusta la IP en la variable v_agent_ip (línea 11)
+  -- 
+  -- Opciones:
+  -- 1. IP local (ej: '192.168.100.2') con puerto 3001 (HTTP) ← RECOMENDADO
+  -- 2. URL pública del agente (ej: 'fruity-carrots-report.loca.lt') con puerto 443 (HTTPS)
+  -- 3. URL Cloudflare Tunnel (ej: 'abc123.trycloudflare.com') con puerto 443 (HTTPS)
+  -- 
+  -- ⚠️ IMPORTANTE: El campo agent_ip debe tener SOLO el dominio/IP (SIN https:// o http://)
+  -- La función buildAgentUrl en el código agregará el protocolo automáticamente
+  -- 
+  -- Para obtener tu IP local en Windows:
+  -- PowerShell: Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -like "192.168.*" }
+  
+  -- Insertar o actualizar configuración de impresora
+  INSERT INTO printer_config (
+    lomiteria_id,
+    printer_id,
+    agent_ip,
+    agent_port,
+    tipo_impresora,
+    nombre_impresora,
+    ubicacion,
+    activo
+  ) VALUES (
+    v_tenant_id,
+    v_printer_id,
+    v_agent_ip,
+    v_agent_port,
+    'usb',
+    'Impresora Térmica Cocina',
+    'Cocina',
+    true
+  )
+  ON CONFLICT (lomiteria_id) DO UPDATE
+  SET
+    printer_id = EXCLUDED.printer_id,
+    agent_ip = EXCLUDED.agent_ip,
+    agent_port = EXCLUDED.agent_port,
+    tipo_impresora = EXCLUDED.tipo_impresora,
+    nombre_impresora = EXCLUDED.nombre_impresora,
+    ubicacion = EXCLUDED.ubicacion,
+    activo = EXCLUDED.activo,
+    updated_at = NOW();
+
+  RAISE NOTICE '✅ Configuración de impresora actualizada para Atlas Burger';
+  RAISE NOTICE '   - Printer ID: %', v_printer_id;
+  RAISE NOTICE '   - Agent IP: % (IP local)', v_agent_ip;
+  RAISE NOTICE '   - Agent Port: % (HTTP)', v_agent_port;
+  RAISE NOTICE '   - Agent URL: http://%:%/print', v_agent_ip, v_agent_port;
+  RAISE NOTICE '';
+  RAISE NOTICE '⚠️  Asegúrate de que:';
+  RAISE NOTICE '   1. El agente esté corriendo en http://%:% (red local)', v_agent_ip, v_agent_port;
+  RAISE NOTICE '   2. El celular/PC esté en la misma red WiFi que la PC del agente';
+  RAISE NOTICE '   3. La impresora esté configurada en el agente con printer_id: %', v_printer_id;
 
   RAISE NOTICE '✅ Atlas Burger: Datos insertados correctamente';
   RAISE NOTICE 'Tenant ID: %', v_tenant_id;

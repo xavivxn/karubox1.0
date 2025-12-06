@@ -48,21 +48,72 @@ export const orderService = {
 
     if (errorPedido) throw errorPedido
 
-    // Insertar items del pedido
-    const itemsToInsert = items.map((item) => ({
-      pedido_id: pedido.id,
-      producto_id: item.producto_id,
-      producto_nombre: item.nombre,
-      cantidad: item.cantidad,
-      precio_unitario: item.precio,
-      subtotal: item.subtotal
-    }))
+    // Verificar que los productos existen antes de insertar
+    const productoIds = items.map(item => item.producto_id).filter(Boolean)
+    let validProductIds: Set<string> = new Set()
+    
+    if (productoIds.length > 0) {
+      const { data: productosExistentes, error: errorProductos } = await supabase
+        .from('productos')
+        .select('id')
+        .in('id', productoIds)
+        .eq('tenant_id', tenantId)
+        .eq('is_deleted', false)
+      
+      if (errorProductos) {
+        console.warn('⚠️ Error al verificar productos existentes:', errorProductos)
+      } else {
+        validProductIds = new Set(productosExistentes?.map(p => p.id) || [])
+      }
+    }
 
-    const { error: errorItems } = await supabase
+    // Insertar items del pedido
+    // Si el producto no existe, usar null para producto_id pero mantener producto_nombre
+    const itemsToInsert = items.map((item) => {
+      const productoExiste = validProductIds.has(item.producto_id)
+      return {
+        pedido_id: pedido.id,
+        producto_id: productoExiste ? item.producto_id : null, // NULL si el producto no existe
+        producto_nombre: item.nombre,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio,
+        subtotal: item.subtotal
+      }
+    })
+
+    console.log('📦 Insertando items del pedido:', {
+      pedido_id: pedido.id,
+      items_count: itemsToInsert.length,
+      productos_validos: validProductIds.size,
+      productos_invalidos: productoIds.length - validProductIds.size,
+      items: itemsToInsert
+    })
+
+    const { data: insertedItems, error: errorItems } = await supabase
       .from('items_pedido')
       .insert(itemsToInsert)
+      .select()
 
-    if (errorItems) throw errorItems
+    if (errorItems) {
+      console.error('❌ Error al insertar items del pedido:', {
+        error: errorItems,
+        code: errorItems.code,
+        message: errorItems.message,
+        details: errorItems.details,
+        hint: errorItems.hint
+      })
+      throw errorItems
+    }
+
+    console.log('✅ Items del pedido insertados correctamente:', insertedItems)
+    
+    // Advertir si algún producto no existía
+    const productosInvalidos = items.filter(item => !validProductIds.has(item.producto_id))
+    if (productosInvalidos.length > 0) {
+      console.warn('⚠️ Algunos productos no se encontraron en la base de datos:', {
+        productos: productosInvalidos.map(p => ({ id: p.producto_id, nombre: p.nombre }))
+      })
+    }
 
     // Actualizar puntos del cliente
     if (cliente && puntosGenerados > 0) {

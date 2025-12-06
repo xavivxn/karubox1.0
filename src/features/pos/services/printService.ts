@@ -3,6 +3,7 @@ import type { PrinterConfig } from '@/types/supabase'
 import type { CartItem } from '@/store/cartStore'
 import type { Pedido } from '@/types/supabase'
 import type { TipoPedido } from '../types/pos.types'
+import axios from 'axios'
 
 /**
  * Datos que se envían al agente de impresión
@@ -55,6 +56,38 @@ interface PrintResponse {
 }
 
 /**
+ * Construye la URL del agente de impresión
+ * Detecta automáticamente si debe usar HTTP (IP local) o HTTPS (túnel público)
+ * 
+ * - IP Local (puerto 3001): http://192.168.100.2:3001/print
+ * - Túnel Público (puerto 443): https://abc123.loca.lt/print
+ */
+function buildAgentUrl(agentIp: string, agentPort: number): string {
+  // Limpiar agent_ip si ya tiene protocolo o barras al final
+  let cleanIp = agentIp.trim()
+  cleanIp = cleanIp.replace(/^https?:\/\//, '') // Remover http:// o https://
+  cleanIp = cleanIp.replace(/\/$/, '') // Remover / al final
+  
+  // Si el puerto es 3001, es IP local (HTTP)
+  // Si el puerto es 443, es túnel público (HTTPS)
+  // Si agent_ip contiene dominios de túnel, es túnel (HTTPS)
+  const isTunnel =
+    agentPort === 443 ||
+    cleanIp.includes('.loca.lt') || // localtunnel
+    cleanIp.includes('.serveo.net') || // serveo
+    cleanIp.includes('.trycloudflare.com') || // cloudflare tunnel
+    cleanIp.includes('.lhr.life') // localhost.run
+
+  const protocol = isTunnel ? 'https' : 'http'
+
+  // Para HTTPS en puerto 443, no incluir el puerto (es el default)
+  // Para HTTP en puerto 3001 u otros, sí incluirlo
+  const port = isTunnel && agentPort === 443 ? '' : `:${agentPort}`
+
+  return `${protocol}://${cleanIp}${port}/print`
+}
+
+/**
  * Servicio para manejar la impresión de tickets
  */
 export const printService = {
@@ -70,7 +103,7 @@ export const printService = {
       .single()
 
     if (error) {
-      console.warn('No se encontró configuración de impresora:', error.message)
+      console.warn('⚠️ No se encontró configuración de impresora:', error.message)
       return null
     }
 
@@ -87,7 +120,30 @@ export const printService = {
     tipoImpresion: 'cocina' | 'cliente' = 'cocina',
     tenantNombre?: string
   ): Promise<PrintResponse> {
-    const agentUrl = `http://${printerConfig.agent_ip}:${printerConfig.agent_port}/print`
+    // Validar que agent_ip no esté vacío
+    if (!printerConfig.agent_ip || printerConfig.agent_ip.trim() === '') {
+      console.error('❌ agent_ip no configurado en printer_config')
+      return {
+        success: false,
+        error: 'La IP del agente no está configurada'
+      }
+    }
+
+    // Asegurar que agent_port sea un número
+    const port = typeof printerConfig.agent_port === 'number'
+      ? printerConfig.agent_port
+      : parseInt(String(printerConfig.agent_port), 10)
+
+    // Construir URL del agente usando la función helper
+    const agentUrl = buildAgentUrl(printerConfig.agent_ip, port)
+
+    // Log para debugging
+    console.log('🔧 Configuración de impresión:', {
+      agent_ip: printerConfig.agent_ip,
+      agent_port: printerConfig.agent_port,
+      port_parsed: port,
+      agentUrl
+    })
 
     // Formatear personalizaciones para cocina (solo lo esencial)
     const formatCustomizations = (item: CartItem) => {
@@ -155,94 +211,77 @@ export const printService = {
       })
       console.log('📦 Datos completos del request:', JSON.stringify(printData, null, 2))
 
-      const response = await fetch(agentUrl, {
-        method: 'POST',
+      // Usar API route de Next.js como proxy para evitar problemas de CORS
+      // El servidor de Next.js hace la petición al agente, no el navegador
+      const response = await axios.post<PrintResponse>('/api/print', {
+        lomiteriaId: printerConfig.lomiteria_id,
+        pedido,
+        items,
+        tipoImpresion,
+        tenantNombre
+      }, {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(printData),
-        // Timeout de 5 segundos
-        signal: AbortSignal.timeout(5000)
+        timeout: 15000, // Timeout más largo porque pasa por el servidor
       })
 
-      // Intentar leer la respuesta (puede ser JSON o texto)
-      let responseText = ''
-      let responseData: any = null
+      console.log('respuesta de api/print: ', response)
+      // La respuesta del API route ya viene en el formato correcto
+      const responseData = response.data
 
-      try {
-        responseText = await response.text()
-        if (responseText) {
-          try {
-            responseData = JSON.parse(responseText)
-          } catch (parseError) {
-            // Si no es JSON válido, usar el texto como mensaje
-            responseData = { 
-              message: responseText,
-              rawResponse: responseText 
-            }
-          }
-        } else {
-          responseData = { message: 'Respuesta vacía del servidor' }
-        }
-      } catch (readError) {
-        // Error al leer la respuesta
-        console.error('❌ Error al leer respuesta del agente:', readError)
-        responseData = { 
-          message: 'Error al leer respuesta del servidor',
-          readError: readError instanceof Error ? readError.message : String(readError)
-        }
-      }
-
-      if (!response.ok) {
-        const errorInfo = {
-          status: response.status,
-          statusText: response.statusText,
+      if (!responseData.success) {
+        console.error('❌ Error del agente de impresión:', {
           url: agentUrl,
           printerId: printData.printerId,
-          response: responseData,
-          responseText: responseText || '(vacía)'
-        }
-        
-        console.error('❌ Error del agente de impresión:', errorInfo)
-        
-        // Construir mensaje de error más descriptivo
-        let errorMessage = `Error HTTP ${response.status}: ${response.statusText}`
-        
-        if (responseData) {
-          if (responseData.error) {
-            errorMessage = responseData.error
-          } else if (responseData.message) {
-            errorMessage = responseData.message
-          } else if (typeof responseData === 'string') {
-            errorMessage = responseData
-          }
-        } else if (responseText) {
-          errorMessage = responseText
-        }
+          response: responseData
+        })
         
         return {
           success: false,
-          error: errorMessage
+          error: responseData.error || 'Error al imprimir'
         }
       }
 
       console.log('✅ Respuesta del agente:', responseData)
       return {
         success: true,
-        message: responseData?.message || 'Ticket impreso correctamente'
+        message: responseData.message || 'Ticket impreso correctamente'
       }
     } catch (error) {
       // Si el agente no está disponible, no es crítico
       // El pedido se guarda igual, solo falla la impresión
       console.error('❌ Error al enviar orden de impresión:', error)
+      
+      let errorMessage = 'Error de conexión con el agente de impresión'
+      
+      // Si es un error de axios, extraer el mensaje del API route
+      if (axios.isAxiosError(error)) {
+        const apiError = error.response?.data
+        if (apiError?.error) {
+          errorMessage = apiError.error
+        } else if (error.code === 'ECONNABORTED') {
+          errorMessage = 'Timeout al conectar con el agente. El túnel puede estar inactivo.'
+        } else {
+          errorMessage = error.message || 'Error de conexión con el agente'
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      
       console.error('📋 Detalles del error:', {
         name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : 'No stack trace'
+        message: errorMessage,
+        axiosError: axios.isAxiosError(error) ? {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data
+        } : undefined
       })
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Error de conexión con el agente'
+        error: errorMessage
       }
     }
   },
@@ -344,7 +383,21 @@ export const printService = {
         }
       }
 
-      const agentUrl = `http://${printerConfig.agent_ip}:${printerConfig.agent_port}/print`
+      // Validar que agent_ip esté configurado
+      if (!printerConfig.agent_ip || printerConfig.agent_ip.trim() === '') {
+        return {
+          success: false,
+          error: 'La IP del agente no está configurada'
+        }
+      }
+
+      // Asegurar que agent_port sea un número
+      const port = typeof printerConfig.agent_port === 'number'
+        ? printerConfig.agent_port
+        : parseInt(String(printerConfig.agent_port), 10)
+
+      // Construir URL del agente usando la función helper
+      const agentUrl = buildAgentUrl(printerConfig.agent_ip, port)
 
       const printData: PrintRequest = {
         printerId: printerConfig.printer_id,
@@ -382,43 +435,45 @@ export const printService = {
         numeroFactura: printData.data.numeroFactura
       })
 
-      const response = await fetch(agentUrl, {
-        method: 'POST',
+      // Usar API route de Next.js como proxy para evitar problemas de CORS
+      const response = await axios.post<any>('/api/print', {
+        lomiteriaId,
+        pedido: facturaData.pedido,
+        items: facturaData.items,
+        tipoImpresion: 'factura',
+        tenantNombre: facturaData.lomiteria.nombre,
+        facturaData: {
+          numeroFactura: facturaData.numeroFactura,
+          cliente: facturaData.cliente,
+          subtotal: facturaData.subtotal,
+          impuestos: facturaData.impuestos,
+          total: facturaData.total,
+          metodoPago: facturaData.metodoPago,
+          lomiteria: facturaData.lomiteria
+        }
+      }, {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(printData),
-        signal: AbortSignal.timeout(5000)
       })
 
-      let responseText = ''
-      let responseData: any = null
+      // La respuesta del API route ya viene en el formato correcto
+      const responseData = response.data
 
-      try {
-        responseText = await response.text()
-        if (responseText) {
-          responseData = JSON.parse(responseText)
-        }
-      } catch (parseError) {
-        responseData = { message: responseText || 'Sin respuesta del servidor' }
-      }
-
-      if (!response.ok) {
+      if (!responseData.success) {
         console.error('❌ Error del agente al imprimir factura:', {
-          status: response.status,
-          statusText: response.statusText,
           response: responseData
         })
         return {
           success: false,
-          error: responseData?.error || responseData?.message || `Error HTTP ${response.status}: ${response.statusText}`
+          error: responseData.error || 'Error al imprimir factura'
         }
       }
 
       console.log('✅ Factura impresa:', responseData)
       return {
         success: true,
-        message: responseData?.message || 'Factura impresa correctamente'
+        message: responseData.message || 'Factura impresa correctamente'
       }
     } catch (error) {
       console.error('❌ Error al imprimir factura:', error)

@@ -31,8 +31,8 @@ CREATE TABLE IF NOT EXISTS printer_config (
 COMMENT ON TABLE printer_config IS 'Configuración de impresoras por lomitería';
 COMMENT ON COLUMN printer_config.lomiteria_id IS 'FK a tenants - una configuración por lomitería';
 COMMENT ON COLUMN printer_config.printer_id IS 'ID único de la impresora en el agente (se envía en el request)';
-COMMENT ON COLUMN printer_config.agent_ip IS 'IP de la PC donde corre el agente de impresión';
-COMMENT ON COLUMN printer_config.agent_port IS 'Puerto del agente (default: 3001)';
+COMMENT ON COLUMN printer_config.agent_ip IS 'IP o URL del agente (ej: 192.168.1.50 o fruity-carrots-report.loca.lt)';
+COMMENT ON COLUMN printer_config.agent_port IS 'Puerto del agente (3001 para HTTP local, 443 para HTTPS/URLs públicas)';
 COMMENT ON COLUMN printer_config.tipo_impresora IS 'Tipo de conexión: usb, network, bluetooth';
 COMMENT ON COLUMN printer_config.ubicacion IS 'Dónde está la impresora (ej: "Cocina", "Caja")';
 
@@ -56,76 +56,9 @@ CREATE TRIGGER trigger_update_printer_config_updated_at
   EXECUTE FUNCTION update_printer_config_updated_at();
 
 -- ============================================
--- DATOS DE EJEMPLO PARA ATLAS BURGER
+-- NOTA: Los datos específicos de cada tenant (como Atlas Burger)
+-- deben estar en sus respectivos archivos de seed (ej: seeds/atlas-burger.sql)
 -- ============================================
--- 
--- ⚠️ IMPORTANTE: Antes de ejecutar, ajusta la IP en la variable v_agent_ip
--- 
--- Para obtener tu IP en Windows:
--- PowerShell: ipconfig
--- Busca "Dirección IPv4" en "Adaptador de LAN inalámbrica Wi-Fi"
--- 
--- ============================================
-
-DO $$
-DECLARE
-  v_tenant_id UUID;
-  v_agent_ip TEXT := '192.168.100.2';  -- ⚠️ CAMBIA ESTA IP POR LA DE TU PC
-  v_agent_port INTEGER := 3001;
-  v_printer_id TEXT := 'atlas-burger-printer-1';
-BEGIN
-  -- Buscar el tenant de Atlas Burger
-  SELECT id INTO v_tenant_id
-  FROM tenants
-  WHERE slug = 'atlas-burger'
-  LIMIT 1;
-
-  -- Si no existe, crear uno de ejemplo
-  IF v_tenant_id IS NULL THEN
-    INSERT INTO tenants (nombre, slug, activo)
-    VALUES ('Atlas Burger', 'atlas-burger', true)
-    RETURNING id INTO v_tenant_id;
-  END IF;
-
-  -- Insertar o actualizar configuración de impresora
-  INSERT INTO printer_config (
-    lomiteria_id,
-    printer_id,
-    agent_ip,
-    agent_port,
-    tipo_impresora,
-    nombre_impresora,
-    ubicacion,
-    activo
-  ) VALUES (
-    v_tenant_id,
-    v_printer_id,
-    v_agent_ip,
-    v_agent_port,
-    'usb',
-    'Impresora Térmica Cocina',
-    'Cocina',
-    true
-  )
-  ON CONFLICT (lomiteria_id) DO UPDATE
-  SET
-    printer_id = EXCLUDED.printer_id,
-    agent_ip = EXCLUDED.agent_ip,
-    agent_port = EXCLUDED.agent_port,
-    tipo_impresora = EXCLUDED.tipo_impresora,
-    nombre_impresora = EXCLUDED.nombre_impresora,
-    ubicacion = EXCLUDED.ubicacion,
-    activo = EXCLUDED.activo,
-    updated_at = NOW();
-
-  RAISE NOTICE '✅ Configuración de impresora creada para Atlas Burger';
-  RAISE NOTICE '   - Printer ID: %', v_printer_id;
-  RAISE NOTICE '   - Agent URL: http://%:%', v_agent_ip, v_agent_port;
-  RAISE NOTICE '';
-  RAISE NOTICE '⚠️  Asegúrate de que:';
-  RAISE NOTICE '   1. El agente esté corriendo en http://%:%', v_agent_ip, v_agent_port;
-  RAISE NOTICE '   2. La impresora esté configurada en el agente con printer_id: %', v_printer_id;
-END $$;
 
 -- ============================================
 -- VISTA PARA VERIFICAR CONFIGURACIÓN
@@ -139,7 +72,10 @@ SELECT
   pc.printer_id,
   pc.agent_ip,
   pc.agent_port,
-  CONCAT('http://', pc.agent_ip, ':', pc.agent_port, '/print') as agent_url,
+  CASE 
+    WHEN pc.agent_port = 443 THEN CONCAT('https://', pc.agent_ip, '/print')
+    ELSE CONCAT('http://', pc.agent_ip, ':', pc.agent_port, '/print')
+  END as agent_url,
   pc.tipo_impresora,
   pc.nombre_impresora,
   pc.ubicacion,
@@ -173,6 +109,20 @@ GRANT SELECT ON vista_printer_config TO authenticated;
 -- Ejecuta esto para verificar que todo esté configurado:
 -- 
 -- SELECT * FROM vista_printer_config WHERE lomiteria_slug = 'atlas-burger';
+-- 
+-- O para ver la URL completa:
+-- 
+-- SELECT 
+--   t.nombre as lomiteria_nombre,
+--   pc.agent_ip,
+--   pc.agent_port,
+--   CASE 
+--     WHEN pc.agent_port = 443 THEN CONCAT('https://', pc.agent_ip, '/print')
+--     ELSE CONCAT('http://', pc.agent_ip, ':', pc.agent_port, '/print')
+--   END as url_completa
+-- FROM printer_config pc
+-- JOIN tenants t ON pc.lomiteria_id = t.id
+-- WHERE t.slug = 'atlas-burger';
 -- 
 -- =============================================
 

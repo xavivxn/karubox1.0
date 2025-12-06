@@ -313,6 +313,10 @@ COMMENT ON TABLE items_pedido IS 'Items individuales de cada pedido';
 CREATE INDEX IF NOT EXISTS idx_items_pedido ON items_pedido(pedido_id);
 CREATE INDEX IF NOT EXISTS idx_items_producto ON items_pedido(producto_id);
 
+-- Permisos para items_pedido
+GRANT SELECT, INSERT, UPDATE, DELETE ON items_pedido TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON items_pedido TO authenticated;
+
 -- ============================================
 -- 9. TABLA INGREDIENTES
 -- ============================================
