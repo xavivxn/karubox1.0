@@ -5,7 +5,8 @@ import type { Cliente } from '@/types/supabase'
 import type { TipoPedido, FeedbackDetail } from '../types/pos.types'
 import { calcularPuntos, formatTipoPedido } from '../utils/pos.utils'
 import { formatGuaranies } from '@/lib/utils/format'
-import { printService } from './printService'
+// ✅ Ya NO necesitamos printService - el agente imprime automáticamente vía Realtime
+// import { printService } from './printService'
 
 interface ConfirmOrderParams {
   tenantId: string
@@ -32,7 +33,8 @@ export const orderService = {
 
     const puntosGenerados = calcularPuntos(total)
 
-    // Crear pedido
+    // Crear pedido con estado_pedido = 'FACT' para disparar impresión automática vía Realtime
+    // El agente detectará este cambio y imprimirá automáticamente
     const { data: pedido, error: errorPedido } = await supabase
       .from('pedidos')
       .insert({
@@ -41,7 +43,8 @@ export const orderService = {
         usuario_id: usuarioId,
         tipo,
         total,
-        puntos_generados: cliente ? puntosGenerados : 0
+        puntos_generados: cliente ? puntosGenerados : 0,
+        estado_pedido: 'FACT' // ✅ Esto dispara la impresión automática vía Supabase Realtime
       })
       .select()
       .single()
@@ -149,12 +152,11 @@ export const orderService = {
       console.warn('No se pudo descontar inventario automáticamente', consumptionError)
     })
 
-    // Imprimir ticket de cocina (no crítico - si falla, el pedido se guarda igual)
-    printService
-      .printKitchenTicket(tenantId, pedido, items, tenantNombre)
-      .catch((printError) => {
-        console.warn('No se pudo imprimir el ticket de cocina', printError)
-      })
+    // ✅ Impresión automática vía Supabase Realtime
+    // El agente detectará el cambio en estado_pedido = 'FACT' e imprimirá automáticamente
+    // Ya NO necesitamos llamar a printService.printKitchenTicket()
+    // El agente escucha cambios en la tabla 'pedidos' y procesa la impresión localmente
+    console.log('✅ Pedido confirmado con estado_pedido = FACT. El agente imprimirá automáticamente vía Realtime.')
 
     // Construir detalles del feedback
     const successDetails: FeedbackDetail[] = [

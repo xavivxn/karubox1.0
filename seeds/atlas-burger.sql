@@ -9,8 +9,11 @@ DECLARE
   v_tenant_id UUID;
   v_tenant_exists BOOLEAN;
   -- Variables para configuración de impresora
-  v_agent_ip TEXT := '192.168.100.2';  -- ⚠️ IP local de la PC del agente (SIN http://)
-  v_agent_port INTEGER := 3001;  -- 3001 para HTTP (IP local), 443 para HTTPS (túnel)
+  -- NOTA: Con Supabase Realtime, NO se necesitan túneles
+  -- El agente se conecta directamente a Supabase y escucha cambios
+  -- Estos valores son solo para referencia (no se usan con Realtime)
+  v_agent_ip TEXT := 'localhost';  -- No se usa con Realtime, pero se mantiene para compatibilidad
+  v_agent_port INTEGER := 3001;  -- No se usa con Realtime, pero se mantiene para compatibilidad
   v_printer_id TEXT := 'atlas-burger-printer-1';
 BEGIN
   -- Verificar si el tenant atlas-burger ya existe
@@ -364,18 +367,23 @@ BEGIN
   WHERE NOT EXISTS (SELECT 1 FROM empleados WHERE tenant_id = v_tenant_id AND ci = '1122334');
 
   -- Paso 8: Configurar impresora para Atlas Burger
-  -- ⚠️ IMPORTANTE: Antes de ejecutar, ajusta la IP en la variable v_agent_ip (línea 11)
+  -- ✅ CONFIGURACIÓN PARA SUPABASE REALTIME (SIN TÚNELES)
   -- 
-  -- Opciones:
-  -- 1. IP local (ej: '192.168.100.2') con puerto 3001 (HTTP) ← RECOMENDADO
-  -- 2. URL pública del agente (ej: 'fruity-carrots-report.loca.lt') con puerto 443 (HTTPS)
-  -- 3. URL Cloudflare Tunnel (ej: 'abc123.trycloudflare.com') con puerto 443 (HTTPS)
+  -- Con Supabase Realtime, el agente escucha cambios directamente en la tabla pedidos.
+  -- Cuando estado_pedido = 'FACT' (facturado/confirmado), imprime automáticamente.
   -- 
-  -- ⚠️ IMPORTANTE: El campo agent_ip debe tener SOLO el dominio/IP (SIN https:// o http://)
-  -- La función buildAgentUrl en el código agregará el protocolo automáticamente
+  -- Flujo:
+  -- 1. Vendedor confirma pedido → estado_pedido = 'FACT' en tabla pedidos
+  -- 2. Supabase Realtime notifica al agente (WebSocket en tiempo real)
+  -- 3. Agente consulta printer_config por lomiteria_id (tenant_id)
+  -- 4. Agente obtiene items desde items_pedido
+  -- 5. Agente imprime automáticamente usando el printer_id
   -- 
-  -- Para obtener tu IP local en Windows:
-  -- PowerShell: Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -like "192.168.*" }
+  -- ⚠️ IMPORTANTE: 
+  -- 1. El agente debe tener configurado SUPABASE_URL y SUPABASE_ANON_KEY en .env
+  -- 2. Realtime debe estar habilitado en Supabase para la tabla 'pedidos'
+  -- 3. La impresora debe estar configurada en el agente con printer_id = 'atlas-burger-printer-1'
+  -- 4. El campo agent_ip y agent_port NO se usan con Realtime (se mantienen para compatibilidad)
   
   -- Insertar o actualizar configuración de impresora
   INSERT INTO printer_config (
@@ -410,14 +418,17 @@ BEGIN
 
   RAISE NOTICE '✅ Configuración de impresora actualizada para Atlas Burger';
   RAISE NOTICE '   - Printer ID: %', v_printer_id;
-  RAISE NOTICE '   - Agent IP: % (IP local)', v_agent_ip;
-  RAISE NOTICE '   - Agent Port: % (HTTP)', v_agent_port;
-  RAISE NOTICE '   - Agent URL: http://%:%/print', v_agent_ip, v_agent_port;
+  RAISE NOTICE '   - Tenant ID: %', v_tenant_id;
+  RAISE NOTICE '';
+  RAISE NOTICE '✅ Configuración para Supabase Realtime (SIN TÚNELES)';
+  RAISE NOTICE '   - El agente escucha cambios en tabla pedidos';
+  RAISE NOTICE '   - Imprime automáticamente cuando estado_pedido = ''FACT''';
   RAISE NOTICE '';
   RAISE NOTICE '⚠️  Asegúrate de que:';
-  RAISE NOTICE '   1. El agente esté corriendo en http://%:% (red local)', v_agent_ip, v_agent_port;
-  RAISE NOTICE '   2. El celular/PC esté en la misma red WiFi que la PC del agente';
+  RAISE NOTICE '   1. El agente tenga SUPABASE_URL y SUPABASE_ANON_KEY en .env';
+  RAISE NOTICE '   2. Realtime esté habilitado en Supabase para la tabla ''pedidos''';
   RAISE NOTICE '   3. La impresora esté configurada en el agente con printer_id: %', v_printer_id;
+  RAISE NOTICE '   4. ENABLE_SUPABASE_LISTENER=true en .env del agente';
 
   RAISE NOTICE '✅ Atlas Burger: Datos insertados correctamente';
   RAISE NOTICE 'Tenant ID: %', v_tenant_id;
