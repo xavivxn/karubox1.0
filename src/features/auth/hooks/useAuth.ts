@@ -1,15 +1,12 @@
 import { useState } from 'react'
-import { useTenant } from '@/contexts/TenantContext'
+import { signIn as signInAction } from '@/app/actions/auth'
 import { validateLoginForm } from '../utils/validators'
-import { REDIRECT_URLS } from '../constants/auth.constants'
 
 export function useAuth() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  
-  const { signIn } = useTenant()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,17 +22,21 @@ export function useAuth() {
     setLoading(true)
 
     try {
-      const result = await signIn(email, password)
+      // Llamar Server Action
+      const result = await signInAction(email, password)
       
-      if (result.error) {
+      // Si hay error, mostrarlo
+      if (result?.error) {
         setError(result.error)
         setLoading(false)
         return
       }
-
-      // El middleware se encargará de redirigir según el rol
-      // Forzamos recarga de página para que el middleware actúe
-      window.location.href = REDIRECT_URLS.DEFAULT
+      
+      // Si es exitoso, hacer redirección completa para sincronizar cookies
+      // Esto es CRÍTICO con @supabase/ssr
+      if (result?.success && result?.redirectTo) {
+        window.location.href = result.redirectTo
+      }
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión')
       setLoading(false)

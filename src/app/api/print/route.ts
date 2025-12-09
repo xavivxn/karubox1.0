@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 import axios, { AxiosError } from 'axios'
 
 interface PrintResponse {
@@ -14,6 +14,7 @@ interface PrintResponse {
  */
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient()
     const body = await request.json()
     const { lomiteriaId, pedido, items, tipoImpresion, tenantNombre, facturaData } = body
 

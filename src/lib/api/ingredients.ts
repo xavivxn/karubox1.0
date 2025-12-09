@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { IngredientDefinition, IngredientRequirement, IngredientUnit } from '@/types/ingredients'
 
 interface RecipeRow {
@@ -14,6 +14,7 @@ interface RecipeRow {
 }
 
 export async function fetchTenantIngredients(tenantId: string): Promise<IngredientDefinition[]> {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('ingredientes')
     .select(
@@ -38,6 +39,7 @@ export async function fetchRecipesForProducts(
     return new Map()
   }
 
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('recetas_producto')
     .select(

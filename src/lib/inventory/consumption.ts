@@ -1,6 +1,6 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { CartItem } from '@/store/cartStore'
 import { fetchRecipesForProducts } from '@/lib/api/ingredients'
 import type { IngredientConsumption, IngredientRequirement, IngredientUnit } from '@/types/ingredients'
@@ -96,6 +96,7 @@ export async function applyInventoryConsumption({
 }: ApplyInventoryArgs) {
   if (!tenantId || !items.length) return
 
+  const supabase = createClient()
   const totalsMap = new Map<string, IngredientConsumption>()
   const productIds = Array.from(
     new Set(

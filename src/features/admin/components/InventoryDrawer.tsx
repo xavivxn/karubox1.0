@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Loader2, X, PlusCircle, Search } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { IngredientDefinition } from '@/types/ingredients'
 
 type Operation = 'entrada' | 'salida' | 'ajuste'
@@ -37,6 +37,7 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
 
     let isMounted = true
     const loadIngredients = async () => {
+      const supabase = createClient()
       setLoadingIngredients(true)
       const { data, error } = await supabase
         .from('ingredientes')
@@ -106,6 +107,7 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
     }
 
     const loadInventory = async () => {
+      const supabase = createClient()
       setLoadingInventory(true)
       setErrorMessage(null)
 
@@ -148,6 +150,7 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
   }, [selectedIngredient, tenantId, open])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    const supabase = createClient()
     event.preventDefault()
     setErrorMessage(null)
 
@@ -507,6 +510,7 @@ async function ensureIngredientProduct(
     createIfMissing: boolean
   }
 ): Promise<string | null> {
+  const supabase = createClient()
   const { data: existing, error } = await supabase
     .from('productos')
     .select('id, categoria_id')

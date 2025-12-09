@@ -1,7 +1,8 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
+import { signOut as signOutAction } from '@/app/actions/auth'
 import { User } from '@supabase/supabase-js'
 
 interface Tenant {
@@ -31,7 +32,6 @@ interface TenantContextType {
   loading: boolean
   darkMode: boolean
   toggleDarkMode: () => void
-  signIn: (email: string, password: string) => Promise<{ error?: string }>
   signOut: () => Promise<void>
   isAdmin: boolean
   isCajero: boolean
@@ -69,6 +69,8 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    const supabase = createClient()
+
     // Verificar sesión actual
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
@@ -98,7 +100,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserData = async (authUserId: string) => {
     try {
-      console.log('🔍 Buscando usuario con auth_user_id:', authUserId)
+      setLoading(true)
+      const supabase = createClient()
+      console.log('🔍 Cargando datos del usuario:', authUserId)
       
       // Obtener datos del usuario y su tenant
       const { data: userData, error: userError } = await supabase
@@ -156,26 +160,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (error) {
-        return { error: error.message }
-      }
-
-      // loadUserData se llamará automáticamente por onAuthStateChange
-      return {}
-    } catch (error: any) {
-      return { error: error.message }
-    }
-  }
-
   const signOut = async () => {
-    await supabase.auth.signOut()
+    await signOutAction()
+    // Forzar recarga completa para sincronizar cookies
     window.location.href = '/'
   }
 
@@ -186,7 +173,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     loading,
     darkMode,
     toggleDarkMode,
-    signIn,
     signOut,
     isAdmin: usuario?.rol === 'admin',
     isCajero: usuario?.rol === 'cajero',
@@ -204,4 +190,3 @@ export function useTenant() {
   }
   return context
 }
-

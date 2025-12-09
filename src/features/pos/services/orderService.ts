@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { applyInventoryConsumption } from '@/lib/inventory/consumption'
 import type { CartItem } from '@/store/cartStore'
 import type { Cliente } from '@/types/supabase'
@@ -21,6 +21,7 @@ interface ConfirmOrderParams {
 
 export const orderService = {
   async confirmOrder(params: ConfirmOrderParams) {
+    const supabase = createClient()
     const { tenantId, usuarioId, tenantNombre, usuarioNombre, cliente, tipo, items, total } = params
 
     if (!tipo) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { supabase, testConnection } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 
 export default function TestPage() {
   const [connectionStatus, setConnectionStatus] = useState<any>(null)
@@ -13,9 +13,15 @@ export default function TestPage() {
   useEffect(() => {
     async function testSupabase() {
       try {
+        const supabase = createClient()
+        
         // Test de conexión
-        const conn = await testConnection()
-        setConnectionStatus(conn)
+        const { data: testData, error: testError } = await supabase
+          .from('categorias')
+          .select('count')
+        
+        if (testError) throw testError
+        setConnectionStatus({ success: true, message: 'Conexión exitosa con Supabase' })
 
         // Traer productos
         const { data: prods, error: errorProds } = await supabase

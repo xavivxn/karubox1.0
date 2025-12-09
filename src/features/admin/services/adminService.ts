@@ -3,7 +3,7 @@
  * Servicios para obtener y procesar datos del dashboard
  */
 
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { getIngredientEstimationFromItems } from '@/lib/inventory/consumption'
 import type {
   PedidoRecord,
@@ -26,6 +26,7 @@ import { getTodayStart, getMonthStart } from '../utils/date.utils'
  * Obtiene todos los pedidos del mes actual
  */
 export const fetchPedidos = async (tenantId: string): Promise<PedidoRecord[]> => {
+  const supabase = createClient()
   const monthStart = getMonthStart()
   
   const { data, error } = await supabase
@@ -42,6 +43,7 @@ export const fetchPedidos = async (tenantId: string): Promise<PedidoRecord[]> =>
  * Obtiene el conteo de clientes activos
  */
 export const fetchActiveClientsCount = async (tenantId: string): Promise<number> => {
+  const supabase = createClient()
   const { count, error } = await supabase
     .from('clientes')
     .select('id', { count: 'exact', head: true })
@@ -55,6 +57,7 @@ export const fetchActiveClientsCount = async (tenantId: string): Promise<number>
  * Obtiene el top 5 de clientes ordenados por puntos
  */
 export const fetchTopClients = async (tenantId: string): Promise<ClientRanking[]> => {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('clientes')
     .select('id, nombre, telefono, puntos_totales')
@@ -80,6 +83,7 @@ export const fetchTopClients = async (tenantId: string): Promise<ClientRanking[]
  * Obtiene el inventario completo
  */
 export const fetchInventory = async (tenantId: string): Promise<InventoryRecord[]> => {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('inventario')
     .select(
@@ -112,6 +116,7 @@ export const fetchInventory = async (tenantId: string): Promise<InventoryRecord[
  * Obtiene los items de pedidos del mes
  */
 export const fetchOrderItems = async (tenantId: string): Promise<any[]> => {
+  const supabase = createClient()
   const monthStart = getMonthStart()
   
   const { data, error } = await supabase

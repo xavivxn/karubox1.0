@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { PrinterConfig } from '@/types/supabase'
 import type { CartItem } from '@/store/cartStore'
 import type { Pedido } from '@/types/supabase'
@@ -95,6 +95,7 @@ export const printService = {
    * Obtiene la configuración de impresora para una lomitería
    */
   async getPrinterConfig(lomiteriaId: string): Promise<PrinterConfig | null> {
+    const supabase = createClient()
     const { data, error } = await supabase
       .from('printer_config')
       .select('*')

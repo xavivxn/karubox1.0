@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { X, Search, UserPlus } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
 import type { Cliente } from '@/types/supabase'
@@ -27,6 +27,7 @@ export default function ClientModal({ isOpen, onClose }: Props) {
   const buscarCliente = async () => {
     if ((!telefono.trim() && !ci.trim()) || !tenant) return
     
+    const supabase = createClient()
     setSearching(true)
     try {
       let query = supabase
@@ -78,6 +79,7 @@ export default function ClientModal({ isOpen, onClose }: Props) {
 
     setSearching(true)
     try {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from('clientes')
         .insert({
