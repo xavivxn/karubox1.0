@@ -234,96 +234,54 @@ export async function POST(request: NextRequest) {
         const status = axiosError.response?.status || 503
         const statusText = axiosError.response?.statusText || 'Service Unavailable'
         
-        // Log detallado del error para debugging
         console.error('❌ Error de conexión con el agente:', {
           agentUrl,
-          agent_ip_original: printerConfig.agent_ip,
-          agent_port: printerConfig.agent_port,
-          isTunnel,
-          protocol,
           status,
           statusText,
           message: axiosError.message,
           code: axiosError.code,
-          responseData: axiosError.response?.data,
-          responseStatus: axiosError.response?.status,
-          // Información adicional para diagnóstico
-          isLocalIp: cleanIp.startsWith('192.168.') || cleanIp.startsWith('10.') || cleanIp.startsWith('172.'),
-          isTunnelDomain: isTunnel
+          responseData: axiosError.response?.data
         })
 
         // Mensajes más descriptivos según el tipo de error
         let errorMessage = 'Error de conexión con el agente de impresión'
-        let diagnosticInfo = ''
         
-        // Determinar el tipo de error y proporcionar diagnóstico específico
-        if (axiosError.code === 'ECONNREFUSED') {
-          errorMessage = `No se pudo conectar con el agente en ${agentUrl}`
-          if (isTunnel) {
-            diagnosticInfo = `\n\n🔍 Diagnóstico:\n` +
-              `- El túnel puede estar inactivo o el subdomain no coincide\n` +
-              `- Verifica que el agente esté corriendo con TUNNEL_SUBDOMAIN=${cleanIp}\n` +
-              `- URL configurada en Supabase: ${printerConfig.agent_ip}:${port}\n` +
-              `- URL construida: ${agentUrl}`
+        if (status === 503) {
+          // Mensaje más específico según si es IP local o túnel
+          if (port === 3001) {
+            errorMessage = `El agente de impresión no está disponible (503). Verifica que:\n` +
+              `1. El agente esté corriendo en ${printerConfig.agent_ip}:${port}\n` +
+              `2. El celular/PC esté en la misma red WiFi\n` +
+              `3. El firewall no esté bloqueando el puerto ${port}`
           } else {
-            diagnosticInfo = `\n\n🔍 Diagnóstico:\n` +
-              `- IP local no accesible desde Vercel (solo funciona en red local)\n` +
-              `- Para usar desde Vercel, necesitas un túnel público (loca.lt, cloudflare, etc.)\n` +
-              `- URL configurada: ${printerConfig.agent_ip}:${port}\n` +
-              `- URL construida: ${agentUrl}`
+            errorMessage = `El agente de impresión no está disponible (503). Verifica que:\n` +
+              `1. El túnel esté activo (ejecuta: npx localtunnel --port 3001)\n` +
+              `2. El agente esté corriendo\n` +
+              `3. La URL del agente en Supabase sea correcta: ${agentUrl}`
           }
+        } else if (axiosError.code === 'ECONNREFUSED') {
+          errorMessage = `No se pudo conectar con el agente en ${agentUrl}. Verifica que:\n` +
+            `1. El agente esté corriendo\n` +
+            `2. La IP/puerto sea correcto: ${printerConfig.agent_ip}:${port}\n` +
+            `3. Si es IP local, que estés en la misma red WiFi`
         } else if (axiosError.code === 'ETIMEDOUT') {
-          errorMessage = `Timeout al conectar con el agente (${agentUrl})`
-          diagnosticInfo = `\n\n🔍 El agente no respondió en 10 segundos. Verifica que:\n` +
-            `- El agente esté corriendo\n` +
-            `- El túnel esté activo (si es túnel público)\n` +
-            `- La conexión a internet sea estable`
+          errorMessage = `Timeout al conectar con el agente (${agentUrl}). El agente puede estar lento o inactivo.`
         } else if (axiosError.code === 'ENOTFOUND') {
-          errorMessage = `No se pudo resolver la URL del agente: ${printerConfig.agent_ip}`
-          diagnosticInfo = `\n\n🔍 Diagnóstico:\n` +
-            `- El dominio ${printerConfig.agent_ip} no existe o no es accesible\n` +
-            `- Verifica la configuración en Supabase\n` +
-            `- Si es un túnel, verifica que el subdomain sea correcto`
+          errorMessage = `No se pudo resolver la URL del agente: ${printerConfig.agent_ip}. Verifica la configuración en Supabase.`
         } else if (axiosError.code === 'ECONNABORTED') {
-          errorMessage = `La conexión con el agente fue cancelada o excedió el timeout`
-          diagnosticInfo = `\n\n🔍 El agente no respondió a tiempo. Verifica que esté activo.`
-        } else if (status === 503 || axiosError.response?.status === 503) {
-          // 503 puede venir del agente o de la conexión
-          errorMessage = `El agente de impresión no está disponible (503)`
-          if (isTunnel) {
-            diagnosticInfo = `\n\n🔍 Diagnóstico (Túnel Público):\n` +
-              `- URL intentada: ${agentUrl}\n` +
-              `- El túnel puede estar inactivo o el subdomain no coincide\n` +
-              `- Verifica que el agente esté corriendo con TUNNEL_SUBDOMAIN=${cleanIp.replace('.loca.lt', '')}\n` +
-              `- Ejecuta en el agente: npx localtunnel --port 3001 --subdomain ${cleanIp.replace('.loca.lt', '')}`
-          } else {
-            diagnosticInfo = `\n\n🔍 Diagnóstico (IP Local):\n` +
-              `- URL intentada: ${agentUrl}\n` +
-              `- ⚠️ IPs locales (192.168.x.x) NO son accesibles desde Vercel (internet)\n` +
-              `- Para usar desde Vercel, necesitas configurar un túnel público\n` +
-              `- Configuración actual en Supabase: ${printerConfig.agent_ip}:${port}`
-          }
+          errorMessage = `La conexión con el agente fue cancelada o excedió el timeout.`
         } else if (axiosError.response?.data) {
           // Si el agente responde con un mensaje de error, usarlo
           errorMessage = axiosError.response.data.error || axiosError.response.data.message || axiosError.message
-          diagnosticInfo = `\n\n🔍 El agente respondió con error HTTP ${axiosError.response.status}`
         } else {
           errorMessage = `${axiosError.message || 'Error desconocido'} (código: ${axiosError.code || 'N/A'})`
-          diagnosticInfo = `\n\n🔍 Error inesperado. Código: ${axiosError.code || 'N/A'}`
         }
-        
-        // Combinar mensaje con diagnóstico
-        const fullErrorMessage = errorMessage + diagnosticInfo
 
         return NextResponse.json(
           {
             success: false,
-            error: fullErrorMessage,
+            error: errorMessage,
             agentUrl, // Incluir la URL para debugging
-            agent_ip: printerConfig.agent_ip,
-            agent_port: printerConfig.agent_port,
-            isTunnel,
-            errorCode: axiosError.code,
             status
           },
           { status }

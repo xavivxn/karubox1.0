@@ -68,13 +68,6 @@ export function useOrderConfirmation() {
       }
     } catch (error) {
       console.error('Error confirmando pedido:', error)
-      console.error('Error details:', {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        code: (error as any)?.code,
-        details: (error as any)?.details,
-        hint: (error as any)?.hint
-      })
       return buildUnexpectedErrorState('No pudimos confirmar el pedido', error)
     } finally {
       setIsProcessing(false)
