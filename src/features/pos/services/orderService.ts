@@ -41,7 +41,8 @@ export const orderService = {
         usuario_id: usuarioId,
         tipo,
         total,
-        puntos_generados: cliente ? puntosGenerados : 0
+        puntos_generados: cliente ? puntosGenerados : 0,
+        estado_pedido: 'FACT' // ← Dispara impresión automática vía Realtime
       })
       .select()
       .single()
