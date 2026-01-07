@@ -58,12 +58,9 @@ export function hasRoleAccess(role: UserRole, pathname: string): boolean {
   const roleConfig = ROLE_ACCESS[role]
   if (!roleConfig) return false
 
-  // Admin tiene acceso a todo
-  if (role === 'admin') return true
-
-  // Verificar si la ruta está en las permitidas
+  // Verificar si la ruta está en las permitidas para este rol
   return roleConfig.allowedRoutes.some(route => 
-    pathname === route || pathname.startsWith(route)
+    pathname === route || pathname.startsWith(route + '/')
   )
 }
 

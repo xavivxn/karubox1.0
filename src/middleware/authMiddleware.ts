@@ -61,10 +61,18 @@ export async function authMiddleware(req: NextRequest) {
 
     // Verificar si el rol tiene acceso a esta ruta
     const userRole = usuario.rol as UserRole
-    if (!hasRoleAccess(userRole, pathname)) {
+    console.log('🔒 Middleware - Verificando acceso:', { userRole, pathname })
+    
+    const hasAccess = hasRoleAccess(userRole, pathname)
+    console.log('🔒 Resultado hasRoleAccess:', hasAccess)
+    
+    if (!hasAccess) {
       const redirectUrl = getUnauthorizedRedirect(userRole)
+      console.log('❌ Acceso denegado. Redirigiendo a:', redirectUrl)
       return NextResponse.redirect(new URL(redirectUrl, req.url))
     }
+    
+    console.log('✅ Acceso permitido a:', pathname)
   }
 
   return response

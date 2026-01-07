@@ -14,17 +14,19 @@ interface BreadcrumbItem {
 export function Breadcrumb() {
   const pathname = usePathname()
   const router = useRouter()
-  const { darkMode } = useTenant()
+  const { darkMode, isAdmin } = useTenant()
 
   // Construir items del breadcrumb basado en la ruta
   const items: BreadcrumbItem[] = []
   
-  // Siempre agregar "Inicio" como primer item
-  items.push({
-    label: 'Inicio',
-    path: ROUTES.PROTECTED.HOME,
-    icon: <Home className="w-4 h-4" />,
-  })
+  // Solo agregar "Inicio" si el usuario es admin
+  if (isAdmin) {
+    items.push({
+      label: 'Inicio',
+      path: ROUTES.PROTECTED.HOME,
+      icon: <Home className="w-4 h-4" />,
+    })
+  }
 
   // Construir breadcrumb dinámicamente según la ruta
   if (pathname.startsWith('/home/admin')) {
