@@ -2,8 +2,14 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 /**
- * Cliente de Supabase para Middleware
- * Maneja la actualización de sesiones en cada request
+ * Cliente de Supabase para Middleware (DEPRECADO - Ya no se usa)
+ * 
+ * NOTA: Este proyecto ahora usa Guards en Server Components
+ * en lugar de middleware para validación de roles.
+ * Ver: src/lib/auth/guard.ts
+ * 
+ * Esta función se mantiene por si se necesita en el futuro,
+ * pero actualmente NO está en uso.
  */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -32,10 +38,6 @@ export async function updateSession(request: NextRequest) {
       },
     }
   )
-
-  // IMPORTANTE: Evita escribir lógica entre createServerClient y
-  // supabase.auth.getUser(). Un bug simple podría hacer que tu aplicación
-  // sea vulnerable a ataques de exfiltración de datos.
 
   const {
     data: { user },
