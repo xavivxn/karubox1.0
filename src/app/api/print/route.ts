@@ -9,10 +9,6 @@ interface PrintResponse {
 }
 
 /**
- * API Route que actúa como proxy para el agente de impresión
- * Esto evita problemas de CORS porque el servidor hace la petición, no el navegador
-
-/**
  * ============================================
  * API ROUTE DEPRECADO - NO USAR
  * ============================================
