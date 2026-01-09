@@ -3,7 +3,6 @@
  * Encabezado principal del dashboard con resumen diario
  */
 
-import Link from 'next/link'
 import { BarChart3, PlusCircle } from 'lucide-react'
 import { formatGuaranies } from '@/lib/utils/format'
 import { getTodayLabel } from '../utils/admin.utils'
@@ -13,12 +12,14 @@ interface AdminHeaderProps {
   tenantName: string
   stats: DashboardStats
   onOpenInventoryDrawer: () => void
+  onOpenProductModal: () => void
 }
 
 export const AdminHeader = ({
   tenantName,
   stats,
-  onOpenInventoryDrawer
+  onOpenInventoryDrawer,
+  onOpenProductModal
 }: AdminHeaderProps) => {
   const todayLabel = getTodayLabel()
 
@@ -57,13 +58,13 @@ export const AdminHeader = ({
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link
-            href="/pos"
+          <button
+            onClick={onOpenProductModal}
             className="inline-flex items-center gap-2 rounded-2xl bg-gray-900 text-white px-5 py-3 font-semibold hover:bg-gray-800 transition"
           >
             <BarChart3 className="w-5 h-5" />
-            Abrir POS
-          </Link>
+            Cargar productos en POS
+          </button>
           <button
             onClick={onOpenInventoryDrawer}
             className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-5 py-3 font-semibold text-white shadow-xl shadow-orange-500/40 hover:bg-orange-600 transition"

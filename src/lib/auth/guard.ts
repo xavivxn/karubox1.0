@@ -12,25 +12,32 @@ import type { UserRole } from '@/config/routing'
  * Verifica autenticación y retorna usuario
  */
 export async function requireAuth() {
+  console.log('🚀 [GUARD] requireAuth iniciado')
   const supabase = await createClient()
   
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  console.log('👤 [GUARD] Usuario de Supabase:', user ? user.email : 'null', 'Error:', error)
   
   if (!user) {
+    console.log('❌ [GUARD] No hay usuario, redirigiendo a login')
     redirect(ROUTES.PUBLIC.LOGIN)
   }
   
-  const { data: usuario } = await supabase
+  const { data: usuario, error: usuarioError } = await supabase
     .from('usuarios')
     .select('*')
     .eq('auth_user_id', user.id)
     .eq('is_deleted', false)
     .single()
   
+  console.log('📋 [GUARD] Usuario de DB:', usuario ? `${usuario.email} (${usuario.rol})` : 'null', 'Error:', usuarioError)
+  
   if (!usuario || !usuario.activo) {
+    console.log('❌ [GUARD] Usuario no encontrado o inactivo, redirigiendo a login')
     redirect(ROUTES.PUBLIC.LOGIN)
   }
   
+  console.log('✅ [GUARD] Usuario autenticado:', usuario.email, 'Rol:', usuario.rol)
   return { user, usuario }
 }
 

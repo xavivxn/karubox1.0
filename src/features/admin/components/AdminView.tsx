@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { InventoryDrawer } from './InventoryDrawer'
+import { ProductModal } from './ProductModal'
 import { useAdminDashboard } from '../hooks/useAdminDashboard'
 import { AdminHeader } from './AdminHeader'
 import { AdminLoading } from './AdminLoading'
@@ -26,6 +27,7 @@ import { InventoryGrid } from './InventoryGrid'
 export const AdminView = () => {
   const { tenant, usuario, darkMode } = useTenant()
   const [showInventoryDrawer, setShowInventoryDrawer] = useState(false)
+  const [showProductModal, setShowProductModal] = useState(false)
   
   const {
     loading,
@@ -62,6 +64,11 @@ export const AdminView = () => {
     refetch()
   }
 
+  const handleProductSaved = () => {
+    setShowProductModal(false)
+    refetch()
+  }
+
   return (
     <>
       {/* Header con resumen diario */}
@@ -69,6 +76,7 @@ export const AdminView = () => {
         tenantName={tenant.nombre}
         stats={stats}
         onOpenInventoryDrawer={() => setShowInventoryDrawer(true)}
+        onOpenProductModal={() => setShowProductModal(true)}
       />
 
       {/* KPI Cards principales */}
@@ -79,43 +87,51 @@ export const AdminView = () => {
       />
 
       {/* Resumen diario y balance mensual */}
-      <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      {/* <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <DailySummary stats={stats} />
         <MonthlyBalance stats={stats} />
-      </section>
+      </section> */}
 
       {/* KPIs adicionales */}
-      <AdditionalKpis stats={stats} />
+      {/* <AdditionalKpis stats={stats} /> */}
 
       {/* Tendencia semanal y alertas de inventario */}
-      <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
+      {/* <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
         <WeeklyTrend stats={stats} />
         <InventoryAlerts
           lowStockItems={lowStockItems}
           onOpenInventoryDrawer={() => setShowInventoryDrawer(true)}
         />
-      </section>
+      </section> */}
 
       {/* Top clientes, productos y consumo de ingredientes */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <TopClients topClients={topClients} />
         <TopProducts topProducts={topProducts} />
-        <IngredientConsumption ingredientsUsage={ingredientsUsage} />
+        {/* <IngredientConsumption ingredientsUsage={ingredientsUsage} /> */}
       </section>
 
       {/* Grid completo de inventario */}
-      <InventoryGrid
+      {/* <InventoryGrid
         inventory={inventory}
         onOpenInventoryDrawer={() => setShowInventoryDrawer(true)}
-      />
+      /> */}
 
       {/* Drawer para registrar movimientos de inventario */}
-      <InventoryDrawer
+      {/* <InventoryDrawer
         open={showInventoryDrawer}
         onClose={handleInventoryDrawerClose}
         tenantId={tenant.id}
         usuarioId={usuario?.id ?? null}
         onSaved={handleInventorySaved}
+      /> */}
+
+      {/* Modal para registrar nuevos productos */}
+      <ProductModal
+        open={showProductModal}
+        onClose={() => setShowProductModal(false)}
+        tenantId={tenant.id}
+        onSaved={handleProductSaved}
       />
     </>
   )

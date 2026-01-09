@@ -11,12 +11,17 @@ export interface Categoria {
 
 export interface Producto {
   id: string
+  tenant_id: string
   nombre: string
   descripcion?: string
   precio: number
   categoria_id?: string
   disponible: boolean
   imagen_url?: string
+  is_deleted: boolean
+  deleted_at?: string
+  created_at: string
+  updated_at: string
 }
 
 export interface Cliente {
