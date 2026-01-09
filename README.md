@@ -289,3 +289,6 @@ Desarrollado para **Atlas Burger** y preparado para escalar a todas las lomiter�
 ---
 
 **¡Buen provecho! 🍔🍟**
+
+---
+*Última actualización: Diciembre 2024*
