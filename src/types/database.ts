@@ -18,6 +18,7 @@ export interface Producto {
   categoria_id?: string
   disponible: boolean
   imagen_url?: string
+  tiene_receta: boolean
   is_deleted: boolean
   deleted_at?: string
   created_at: string
@@ -54,4 +55,59 @@ export interface ItemPedido {
   subtotal: number
 }
 
+export interface Ingrediente {
+  id: string
+  tenant_id: string
+  slug: string
+  nombre: string
+  tipo_inventario: 'discreto' | 'fraccionable'
+  unidad: string
+  stock_actual: number
+  stock_minimo: number
+  icono?: string
+  precio_publico?: number
+  controlar_stock: boolean
+  descripcion?: string
+  activo: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface RecetaProducto {
+  id: string
+  tenant_id: string
+  producto_id: string
+  ingrediente_id: string
+  cantidad: number
+  unidad: string
+  obligatorio: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface MovimientoIngrediente {
+  id: string
+  tenant_id: string
+  ingrediente_id: string
+  pedido_id?: string
+  tipo: 'entrada' | 'salida' | 'ajuste' | 'inicial'
+  cantidad: number
+  stock_anterior: number
+  stock_nuevo: number
+  motivo?: string
+  usuario_id?: string
+  created_at: string
+}
+
+export interface ItemPedidoCustomizacion {
+  id: string
+  tenant_id: string
+  pedido_id: string
+  item_pedido_id: string
+  ingrediente_id: string
+  tipo: 'extra' | 'removido' | 'modificado'
+  cantidad_original: number
+  cantidad_ajustada: number
+  created_at: string
+}
 

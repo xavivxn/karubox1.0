@@ -87,143 +87,149 @@ BEGIN
   (v_tenant_id, 'Agregados', 'Extras y aderezos', 6, true);
 
   -- Paso 5: Insertar productos de Burger Atlas
-  INSERT INTO productos (tenant_id, categoria_id, nombre, descripcion, precio, disponible) VALUES
+  -- NOTA: tiene_receta = true para productos fabricados, false para productos comprados
+  INSERT INTO productos (tenant_id, categoria_id, nombre, descripcion, precio, disponible, tiene_receta) VALUES
   
-  -- BURGER ATLAS
+  -- BURGER ATLAS (tiene_receta = true: productos fabricados)
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Burger Atlas'), 
-   'Cheese Kids', 'Pan, Carne, queso cheddar', 17000, true),
-  
-  (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Burger Atlas'), 
-   'Clasica', 'Pan, aderezo, carne premium, lechuga, cebolla, queso cheddar', 20000, true),
+   'Cheese Kids', 'Pan, Carne, queso cheddar', 17000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Burger Atlas'), 
-   'Mega de Luxe', 'Pan, aderezo, carne premium, lechuga, cebolla, queso cheddar, Jamon', 23000, true),
+   'Clasica', 'Pan, aderezo, carne premium, lechuga, cebolla, queso cheddar', 20000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Burger Atlas'), 
-   'Mega BBQ', 'Pan, salsa barbacoa, carne premium, lechuga, cebolla, queso cheddar, bacon', 23000, true),
+   'Mega de Luxe', 'Pan, aderezo, carne premium, lechuga, cebolla, queso cheddar, Jamon', 23000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Burger Atlas'), 
-   'Mega Onion', 'Pan, aderezo, carne premium, lechuga, cebolla salteada, pepinillos, queso cheddar, bacon', 23000, true),
+   'Mega BBQ', 'Pan, salsa barbacoa, carne premium, lechuga, cebolla, queso cheddar, bacon', 23000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Burger Atlas'), 
-   'Mega Bacon', 'Pan, aderezo, carne premium, lechuga, cebolla, queso cheddar, doble bacon', 23000, true),
+   'Mega Onion', 'Pan, aderezo, carne premium, lechuga, cebolla salteada, pepinillos, queso cheddar, bacon', 23000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Burger Atlas'), 
-   'Burcheddar', 'Pan, aderezo, carne premium, lechuga, cebolla, queso cheddar, bacon. Cheddar cremoso por encima del pan + bacon picado', 27000, true),
+   'Mega Bacon', 'Pan, aderezo, carne premium, lechuga, cebolla, queso cheddar, doble bacon', 23000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Burger Atlas'), 
-   'Big Atlas Doble Libra', 'Pan, aderezo, cebolla, doble carne premium, doble queso cheddar', 27000, true),
+   'Burcheddar', 'Pan, aderezo, carne premium, lechuga, cebolla, queso cheddar, bacon. Cheddar cremoso por encima del pan + bacon picado', 27000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Burger Atlas'), 
-   'Big Atlas', 'Pan, aderezo, doble carne premium, cebolla, lechuga, doble queso cheddar, doble bacon', 30000, true),
+   'Big Atlas Doble Libra', 'Pan, aderezo, cebolla, doble carne premium, doble queso cheddar', 27000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Burger Atlas'), 
-   'Yaguamboom', 'Exclusivo Patronales de Yaguaron. Bro, pan brioche, aderezo, lechuga, tomate, huevo, carne premium, cheddar, panceta', 25000, true),
+   'Big Atlas', 'Pan, aderezo, doble carne premium, cebolla, lechuga, doble queso cheddar, doble bacon', 30000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Burger Atlas'), 
-   'Resacona', 'La resacona exclusivo de los dias domingo. Pan, salsa picante, carne premium, cebolla morada, lechuga repolla, queso cheddar, bacon', 25000, true),
+   'Yaguamboom', 'Exclusivo Patronales de Yaguaron. Bro, pan brioche, aderezo, lechuga, tomate, huevo, carne premium, cheddar, panceta', 25000, true, true),
+  
+  (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Burger Atlas'), 
+   'Resacona', 'La resacona exclusivo de los dias domingo. Pan, salsa picante, carne premium, cebolla morada, lechuga repolla, queso cheddar, bacon', 25000, true, true),
 
-  -- SMASH ATLAS
+  -- SMASH ATLAS (tiene_receta = true: productos fabricados)
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Smash Atlas'), 
-   'Smash Atlas', 'Pan, aderezo, doble carne smash, cebolla, doble queso cheddar', 20000, true),
-  
-  (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Smash Atlas'), 
-   'Smash Bacon', 'Pan, aderezo, doble carne smash, cebolla, doble queso cheddar, bacon', 23000, true),
+   'Smash Atlas', 'Pan, aderezo, doble carne smash, cebolla, doble queso cheddar', 20000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Smash Atlas'), 
-   'Smash American Cuadruple', 'Pan, salsa atlas, lechuga Repollada, pepinillos, cuadruple, cuadruple carne Smash, cheddar', 32000, true),
+   'Smash Bacon', 'Pan, aderezo, doble carne smash, cebolla, doble queso cheddar, bacon', 23000, true, true),
+  
+  (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Smash Atlas'), 
+   'Smash American Cuadruple', 'Pan, salsa atlas, lechuga Repollada, pepinillos, cuadruple, cuadruple carne Smash, cheddar', 32000, true, true),
 
-  -- ENTRADAS
+  -- ENTRADAS (tiene_receta = true si se fabrican, false si se compran listos)
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Entradas'), 
-   'Papas Chicas', 'Porcion chica de papas fritas', 8000, true),
+   'Papas Chicas', 'Porcion chica de papas fritas', 8000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Entradas'), 
-   'Papas Medianas', 'Porcion mediana de papas fritas', 10000, true),
+   'Papas Medianas', 'Porcion mediana de papas fritas', 10000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Entradas'), 
-   'Papas Grandes', 'Porcion grande de papas fritas', 12000, true),
+   'Papas Grandes', 'Porcion grande de papas fritas', 12000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Entradas'), 
-   'Nuggets', 'Nuggets de pollo', 12000, true),
+   'Nuggets', 'Nuggets de pollo', 12000, true, false),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Entradas'), 
-   'Agregado de Cheddar y Bacon', 'Agregado de cheddar y bacon para papas', 2000, true),
+   'Agregado de Cheddar y Bacon', 'Agregado de cheddar y bacon para papas', 2000, true, true),
 
-  -- ARABES
+  -- ARABES (tiene_receta = true: productos fabricados)
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Arabes'), 
-   'Arabe Pollo', 'Pan arabe, cebolla, lechuga, repollo, salsa de ajo, pollo', 22000, true),
-  
-  (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Arabes'), 
-   'Arabe Mixto', 'Pan arabe, cebolla, lechuga, repollo, salsa de ajo, pollo, carne', 22000, true),
-  
-  (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Arabes'), 
-   'Arabe de Carne', 'Pan arabe, cebolla, lechuga, repollo, salsa de ajo, huevo, carne', 25000, true),
+   'Arabe Pollo', 'Pan arabe, cebolla, lechuga, repollo, salsa de ajo, pollo', 22000, true, true),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Arabes'), 
-   'Arabe XXL', 'Pan arabe, cebolla, lechuga, repollo, salsa de ajo, carne premium, pollo, jamon, cheddar, bacon', 30000, true),
+   'Arabe Mixto', 'Pan arabe, cebolla, lechuga, repollo, salsa de ajo, pollo, carne', 22000, true, true),
+  
+  (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Arabes'), 
+   'Arabe de Carne', 'Pan arabe, cebolla, lechuga, repollo, salsa de ajo, huevo, carne', 25000, true, true),
+  
+  (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Arabes'), 
+   'Arabe XXL', 'Pan arabe, cebolla, lechuga, repollo, salsa de ajo, carne premium, pollo, jamon, cheddar, bacon', 30000, true, true),
 
-  -- BEBIDAS
+  -- BEBIDAS (tiene_receta = false: productos comprados listos)
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Bebidas'), 
-   'Coca Cola Personal', 'Coca Cola tamaño personal', 5000, true),
+   'Coca Cola Personal', 'Coca Cola tamaño personal', 5000, true, false),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Bebidas'), 
-   'Coca Cola 1/2', 'Coca Cola media litro', 8000, true),
+   'Coca Cola 1/2', 'Coca Cola media litro', 8000, true, false),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Bebidas'), 
-   'Coca Cola Lata', 'Coca Cola en lata', 8000, true),
+   'Coca Cola Lata', 'Coca Cola en lata', 8000, true, false),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Bebidas'), 
-   'Coca Cola 1,5L', 'Coca Cola botella 1.5 litros', 15000, true),
+   'Coca Cola 1,5L', 'Coca Cola botella 1.5 litros', 15000, true, false),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Bebidas'), 
-   'Del Valle Jugo 200ml', 'Jugo Del Valle 200ml', 5000, true),
+   'Del Valle Jugo 200ml', 'Jugo Del Valle 200ml', 5000, true, false),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Bebidas'), 
-   'Del Valle Jugo 1.5LTS', 'Jugo Del Valle 1.5 litros', 15000, true),
+   'Del Valle Jugo 1.5LTS', 'Jugo Del Valle 1.5 litros', 15000, true, false),
 
-  -- AGREGADOS
+  -- AGREGADOS (tiene_receta = false: no son productos principales)
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Agregados'), 
-   'Salsa de Ajo', 'Salsa de ajo (sin costo)', 0, true),
+   'Salsa de Ajo', 'Salsa de ajo (sin costo)', 0, true, false),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Agregados'), 
-   'Ketchup', 'Ketchup (sin costo)', 0, true),
+   'Ketchup', 'Ketchup (sin costo)', 0, true, false),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Agregados'), 
-   'Papitas', 'Papitas (sin costo)', 0, true),
+   'Papitas', 'Papitas (sin costo)', 0, true, false),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Agregados'), 
-   'Barbacoa', 'Salsa barbacoa', 2000, true),
+   'Barbacoa', 'Salsa barbacoa', 2000, true, false),
   
   (v_tenant_id, (SELECT id FROM categorias WHERE tenant_id = v_tenant_id AND nombre = 'Agregados'), 
-   'Cheddar Derretido', 'Cheddar derretido', 3000, true);
+   'Cheddar Derretido', 'Cheddar derretido', 3000, true, false);
 
   -- Paso 6: Ingredientes base y recetas
   DELETE FROM recetas_producto WHERE tenant_id = v_tenant_id;
   DELETE FROM ingredientes WHERE tenant_id = v_tenant_id;
 
-  INSERT INTO ingredientes (tenant_id, slug, nombre, unidad, icono, precio_publico, stock_minimo_sugerido, descripcion, activo)
+  -- NOTA: tipo_inventario = 'discreto' (unidades enteras) o 'fraccionable' (peso/volumen)
+  -- stock_actual y stock_minimo en 0 por defecto (el admin los cargará manualmente)
+  INSERT INTO ingredientes (tenant_id, slug, nombre, tipo_inventario, unidad, stock_actual, stock_minimo, icono, precio_publico, controlar_stock, descripcion, activo)
   VALUES
-    (v_tenant_id, 'pan-brioche', 'Pan Brioche Atlas', 'unidad', '🥖', 4000, 40, 'Panes para burgers premium', true),
-    (v_tenant_id, 'pan-smash', 'Pan Smash', 'unidad', '🍞', 3000, 60, 'Panes chicos para smash burgers', true),
-    (v_tenant_id, 'carne-120', 'Blend 120g', 'g', '🥩', 9000, 6000, 'Carne preparada para burgers clasicas', true),
-    (v_tenant_id, 'carne-160', 'Blend 160g', 'g', '🍔', 11000, 8000, 'Carne premium para burgers especiales', true),
-    (v_tenant_id, 'carne-90', 'Blend Smash 90g', 'g', '🍖', 7500, 5000, 'Carne para smash burgers', true),
-    (v_tenant_id, 'cheddar', 'Queso Cheddar Bloque', 'g', '🧀', 3500, 3000, 'Bloques de cheddar para rallar', true),
-    (v_tenant_id, 'bacon', 'Bacon Premium', 'g', '🥓', 4000, 2000, 'Bacon ahumado premium', true),
-    (v_tenant_id, 'huevo', 'Huevos', 'unidad', '🥚', 2500, 60, 'Huevos frescos para toppings', true),
-    (v_tenant_id, 'mix-verde', 'Mix Verde', 'g', '🥬', 1500, 1500, 'Lechuga, rucula y espinaca frescas', true),
-    (v_tenant_id, 'tomate', 'Tomate Laminado', 'g', '🍅', 1800, 1200, 'Tomates frescos laminados', true),
-    (v_tenant_id, 'cebolla', 'Cebolla Picada', 'g', '🧅', 1200, 1000, 'Cebolla fresca picada', true),
-    (v_tenant_id, 'salsa-house', 'Salsa House', 'ml', '🥣', 1200, 1500, 'Salsa especial de la casa', true),
-    (v_tenant_id, 'salsa-smash', 'Salsa Smash', 'ml', '🔥', 1200, 1200, 'Salsa para smash burgers', true),
-    (v_tenant_id, 'salsa-garlic', 'Salsa de Ajo', 'ml', '🧄', 1500, 1000, 'Salsa de ajo casera', true),
-    (v_tenant_id, 'papa-frita', 'Papa Pre-frita', 'g', '🍟', 3000, 8000, 'Papas congeladas listas para freir', true),
-    (v_tenant_id, 'aceite', 'Aceite de Fritura', 'ml', '🛢️', 1000, 5000, 'Aceite alto rendimiento para freidoras', true),
-    (v_tenant_id, 'sal', 'Sal Especial', 'g', '🧂', 800, 500, 'Sal con mezcla de especias', true),
-    (v_tenant_id, 'nugget', 'Nugget Congelado', 'unidad', '🍗', 2500, 100, 'Nuggets de pollo congelados', true),
-    (v_tenant_id, 'pan-arabe', 'Pan Arabe', 'unidad', '🥙', 4500, 40, 'Pan arabe artesanal', true),
-    (v_tenant_id, 'pollo-mechado', 'Pollo Mechado', 'g', '🍗', 6500, 3000, 'Pollo desmenuzado para rellenos', true),
-    (v_tenant_id, 'coca-15', 'Coca Cola 1.5L', 'unidad', '🥤', 15000, 12, 'Gaseosa Coca Cola 1.5 litros', true);
+    -- INGREDIENTES DISCRETOS (unidades enteras)
+    (v_tenant_id, 'pan-brioche', 'Pan Brioche Atlas', 'discreto', 'unidad', 0, 40, '🥖', 4000, true, 'Panes para burgers premium', true),
+    (v_tenant_id, 'pan-smash', 'Pan Smash', 'discreto', 'unidad', 0, 60, '🍞', 3000, true, 'Panes chicos para smash burgers', true),
+    (v_tenant_id, 'huevo', 'Huevos', 'discreto', 'unidad', 0, 60, '🥚', 2500, true, 'Huevos frescos para toppings', true),
+    (v_tenant_id, 'nugget', 'Nugget Congelado', 'discreto', 'unidad', 0, 100, '🍗', 2500, true, 'Nuggets de pollo congelados', true),
+    (v_tenant_id, 'pan-arabe', 'Pan Arabe', 'discreto', 'unidad', 0, 40, '🥙', 4500, true, 'Pan arabe artesanal', true),
+    (v_tenant_id, 'coca-15', 'Coca Cola 1.5L', 'discreto', 'unidad', 0, 12, '🥤', 15000, true, 'Gaseosa Coca Cola 1.5 litros', true),
+    
+    -- INGREDIENTES FRACCIONABLES (peso/volumen)
+    (v_tenant_id, 'carne-120', 'Blend 120g', 'fraccionable', 'g', 0, 6000, '🥩', 9000, true, 'Carne preparada para burgers clasicas', true),
+    (v_tenant_id, 'carne-160', 'Blend 160g', 'fraccionable', 'g', 0, 8000, '🍔', 11000, true, 'Carne premium para burgers especiales', true),
+    (v_tenant_id, 'carne-90', 'Blend Smash 90g', 'fraccionable', 'g', 0, 5000, '🍖', 7500, true, 'Carne para smash burgers', true),
+    (v_tenant_id, 'cheddar', 'Queso Cheddar Bloque', 'fraccionable', 'g', 0, 3000, '🧀', 3500, true, 'Bloques de cheddar para rallar', true),
+    (v_tenant_id, 'bacon', 'Bacon Premium', 'fraccionable', 'g', 0, 2000, '🥓', 4000, true, 'Bacon ahumado premium', true),
+    (v_tenant_id, 'mix-verde', 'Mix Verde', 'fraccionable', 'g', 0, 1500, '🥬', 1500, true, 'Lechuga, rucula y espinaca frescas', true),
+    (v_tenant_id, 'tomate', 'Tomate Laminado', 'fraccionable', 'g', 0, 1200, '🍅', 1800, true, 'Tomates frescos laminados', true),
+    (v_tenant_id, 'cebolla', 'Cebolla Picada', 'fraccionable', 'g', 0, 1000, '🧅', 1200, true, 'Cebolla fresca picada', true),
+    (v_tenant_id, 'salsa-house', 'Salsa House', 'fraccionable', 'ml', 0, 1500, '🥣', 1200, true, 'Salsa especial de la casa', true),
+    (v_tenant_id, 'salsa-smash', 'Salsa Smash', 'fraccionable', 'ml', 0, 1200, '🔥', 1200, true, 'Salsa para smash burgers', true),
+    (v_tenant_id, 'salsa-garlic', 'Salsa de Ajo', 'fraccionable', 'ml', 0, 1000, '🧄', 1500, true, 'Salsa de ajo casera', true),
+    (v_tenant_id, 'papa-frita', 'Papa Pre-frita', 'fraccionable', 'g', 0, 8000, '🍟', 3000, true, 'Papas congeladas listas para freir', true),
+    (v_tenant_id, 'aceite', 'Aceite de Fritura', 'fraccionable', 'ml', 0, 5000, '🛢️', 1000, true, 'Aceite alto rendimiento para freidoras', true),
+    (v_tenant_id, 'sal', 'Sal Especial', 'fraccionable', 'g', 0, 500, '🧂', 800, true, 'Sal con mezcla de especias', true),
+    (v_tenant_id, 'pollo-mechado', 'Pollo Mechado', 'fraccionable', 'g', 0, 3000, '🍗', 6500, true, 'Pollo desmenuzado para rellenos', true);
 
   -- Recetas Clasica
   INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
