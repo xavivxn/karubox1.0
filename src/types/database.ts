@@ -111,3 +111,12 @@ export interface ItemPedidoCustomizacion {
   created_at: string
 }
 
+export interface ComboItem {
+  id: string
+  tenant_id: string
+  combo_id: string
+  producto_id: string
+  cantidad: number
+  created_at: string
+  updated_at: string
+}

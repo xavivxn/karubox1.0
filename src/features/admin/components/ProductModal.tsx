@@ -35,19 +35,27 @@ export function ProductModal({ open, onClose, tenantId, onSaved }: ProductModalP
   const [activeTab, setActiveTab] = useState<'general' | 'receta'>('general')
 
   // Form fields
+  const [tipoProducto, setTipoProducto] = useState<'con_receta' | 'combo'>('con_receta')
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [precio, setPrecio] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
   const [disponible, setDisponible] = useState(true)
   const [imagenUrl, setImagenUrl] = useState('')
-  const [tieneReceta, setTieneReceta] = useState(true)
+  const [tieneReceta] = useState(true) // Siempre true ahora
   
   // Receta fields
   const [receta, setReceta] = useState<RecetaItem[]>([])
   const [selectedIngredienteId, setSelectedIngredienteId] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [obligatorio, setObligatorio] = useState(true)
+
+  // Combo fields (productos en el combo)
+  const [productos, setProductos] = useState<any[]>([])
+  const [loadingProductos, setLoadingProductos] = useState(false)
+  const [comboItems, setComboItems] = useState<{producto_id: string, cantidad: number}[]>([])
+  const [selectedProductoId, setSelectedProductoId] = useState('')
+  const [cantidadProducto, setCantidadProducto] = useState('')
 
   // Detectar cuando el componente está montado en el cliente
   useEffect(() => {
@@ -60,6 +68,7 @@ export function ProductModal({ open, onClose, tenantId, onSaved }: ProductModalP
     const loadData = async () => {
       setLoadingCategorias(true)
       setLoadingIngredientes(true)
+      setLoadingProductos(true)
       
       try {
         // Cargar categorías
@@ -72,12 +81,25 @@ export function ProductModal({ open, onClose, tenantId, onSaved }: ProductModalP
         // Cargar ingredientes
         const ingredientesData = await getIngredientes(tenantId)
         setIngredientes(ingredientesData)
+
+        // Cargar productos existentes para combos
+        const supabase = createClient()
+        const { data: productosData, error } = await supabase
+          .from('productos')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .eq('is_deleted', false)
+          .eq('disponible', true)
+        
+        if (error) throw error
+        setProductos(productosData || [])
       } catch (error) {
         console.error('Error cargando datos:', error)
         setErrorMessage('No se pudieron cargar los datos')
       } finally {
         setLoadingCategorias(false)
         setLoadingIngredientes(false)
+        setLoadingProductos(false)
       }
     }
 
@@ -87,14 +109,15 @@ export function ProductModal({ open, onClose, tenantId, onSaved }: ProductModalP
   useEffect(() => {
     if (!open) {
       // Reset form
+      setTipoProducto('con_receta')
       setNombre('')
       setDescripcion('')
       setPrecio('')
       setCategoriaId('')
       setDisponible(true)
       setImagenUrl('')
-      setTieneReceta(true)
       setReceta([])
+      setComboItems([])
       setActiveTab('general')
       setSuccessMessage(null)
       setErrorMessage(null)
@@ -134,6 +157,34 @@ export function ProductModal({ open, onClose, tenantId, onSaved }: ProductModalP
     setReceta(receta.filter(r => r.ingrediente_id !== ingredienteId))
   }
 
+  // Funciones para combos
+  const handleAddProducto = () => {
+    if (!selectedProductoId || !cantidadProducto || parseFloat(cantidadProducto) <= 0) {
+      setErrorMessage('Selecciona un producto y especifica una cantidad válida')
+      return
+    }
+
+    // Verificar si ya existe en el combo
+    if (comboItems.some(c => c.producto_id === selectedProductoId)) {
+      setErrorMessage('Este producto ya está en el combo')
+      return
+    }
+
+    setComboItems([...comboItems, {
+      producto_id: selectedProductoId,
+      cantidad: parseFloat(cantidadProducto)
+    }])
+
+    // Reset form
+    setSelectedProductoId('')
+    setCantidadProducto('')
+    setErrorMessage(null)
+  }
+
+  const handleRemoveProducto = (productoId: string) => {
+    setComboItems(comboItems.filter(c => c.producto_id !== productoId))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage(null)
@@ -154,8 +205,13 @@ export function ProductModal({ open, onClose, tenantId, onSaved }: ProductModalP
       return
     }
 
-    if (tieneReceta && receta.length === 0) {
+    if (tipoProducto === 'con_receta' && receta.length === 0) {
       setErrorMessage('Debes agregar al menos un ingrediente a la receta')
+      return
+    }
+
+    if (tipoProducto === 'combo' && comboItems.length === 0) {
+      setErrorMessage('Debes agregar al menos un producto al combo')
       return
     }
 
@@ -173,12 +229,12 @@ export function ProductModal({ open, onClose, tenantId, onSaved }: ProductModalP
         categoria_id: categoriaId || undefined,
         disponible: disponible,
         imagen_url: imagenUrl.trim() || undefined,
-        tiene_receta: tieneReceta,
+        tiene_receta: tipoProducto === 'con_receta', // true para productos, false para combos
         is_deleted: false
       } as any)
 
-      // Si tiene receta, guardar los ingredientes
-      if (tieneReceta && receta.length > 0) {
+      // Si tiene receta (producto con ingredientes)
+      if (tipoProducto === 'con_receta' && receta.length > 0) {
         const recetasToInsert = receta.map(item => ({
           tenant_id: tenantId,
           producto_id: nuevoProducto.id,
@@ -198,8 +254,37 @@ export function ProductModal({ open, onClose, tenantId, onSaved }: ProductModalP
         }
       }
 
+      // Si es combo (producto compuesto de otros productos)
+      if (tipoProducto === 'combo' && comboItems.length > 0) {
+        const comboInserts = comboItems.map(item => ({
+          tenant_id: tenantId,
+          combo_id: nuevoProducto.id,
+          producto_id: item.producto_id,
+          cantidad: item.cantidad
+        }))
+
+        console.log('Insertando combo items:', comboInserts)
+
+        const { data: comboData, error: comboError } = await supabase
+          .from('combo_items')
+          .insert(comboInserts)
+          .select()
+
+        if (comboError) {
+          console.error('Error guardando combo (detalles):', {
+            message: comboError.message,
+            details: comboError.details,
+            hint: comboError.hint,
+            code: comboError.code
+          })
+          throw new Error(`Error al guardar los items del combo: ${comboError.message}`)
+        }
+        
+        console.log('Combo guardado exitosamente:', comboData)
+      }
+
       console.log('Producto creado exitosamente:', nuevoProducto)
-      setSuccessMessage(`¡Producto "${nuevoProducto.nombre}" creado exitosamente!`)
+      setSuccessMessage(`¡${tipoProducto === 'combo' ? 'Combo' : 'Producto'} "${nuevoProducto.nombre}" creado exitosamente!`)
 
       // Esperar un momento para mostrar el mensaje de éxito
       setTimeout(() => {
@@ -226,8 +311,8 @@ export function ProductModal({ open, onClose, tenantId, onSaved }: ProductModalP
               <Package className="w-6 h-6 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold">Nuevo Producto</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Registra un producto en el sistema</p>
+              <h2 className="text-2xl font-bold">Cargar Producto POS</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Productos con receta o combos para el menú</p>
             </div>
           </div>
           <button
@@ -260,15 +345,14 @@ export function ProductModal({ open, onClose, tenantId, onSaved }: ProductModalP
             <button
               type="button"
               onClick={() => setActiveTab('receta')}
-              disabled={!tieneReceta}
               className={`px-4 py-3 font-semibold text-sm transition-colors relative flex items-center gap-2 ${
                 activeTab === 'receta'
                   ? 'text-orange-600 dark:text-orange-400'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               <ChefHat className="w-4 h-4" />
-              Receta
+              {tipoProducto === 'combo' ? 'Items del Combo' : 'Receta'}
               {activeTab === 'receta' && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
               )}
@@ -293,6 +377,53 @@ export function ProductModal({ open, onClose, tenantId, onSaved }: ProductModalP
             {/* Tab: Información General */}
             {activeTab === 'general' && (
               <>
+                {/* Tipo de producto */}
+                <div className="space-y-4 pb-6 border-b border-gray-100 dark:border-gray-800">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                    ¿Qué vas a crear?
+                  </h3>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:border-orange-500 dark:hover:border-orange-500 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:bg-orange-900/20">
+                      <input
+                        type="radio"
+                        value="con_receta"
+                        checked={tipoProducto === 'con_receta'}
+                        onChange={(e) => setTipoProducto(e.target.value as 'con_receta')}
+                        disabled={isSaving}
+                        className="peer sr-only"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                          🍔 Producto con Receta
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Fabricado a partir de materias primas
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:border-orange-500 dark:hover:border-orange-500 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:bg-orange-900/20">
+                      <input
+                        type="radio"
+                        value="combo"
+                        checked={tipoProducto === 'combo'}
+                        onChange={(e) => setTipoProducto(e.target.value as 'combo')}
+                        disabled={isSaving}
+                        className="peer sr-only"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                          🎁 Combo
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Agrupación de productos existentes
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
                 {/* Nombre del producto */}
                 <div>
                   <label htmlFor="nombre" className="block text-sm font-semibold mb-2">
@@ -406,153 +537,252 @@ export function ProductModal({ open, onClose, tenantId, onSaved }: ProductModalP
                       Producto disponible para la venta
                     </label>
                   </div>
-
-                  {/* Tiene receta */}
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-100 dark:border-orange-500/20">
-                    <input
-                      id="tieneReceta"
-                      type="checkbox"
-                      checked={tieneReceta}
-                      onChange={(e) => setTieneReceta(e.target.checked)}
-                      disabled={isSaving}
-                      className="w-5 h-5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 focus:ring-offset-0 disabled:opacity-50"
-                    />
-                    <label htmlFor="tieneReceta" className="text-sm font-semibold cursor-pointer select-none">
-                      Producto fabricado (tiene receta de ingredientes)
-                    </label>
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 pl-4">
-                    Desmarca si es un producto comprado listo (ej: Coca Cola, cerveza)
-                  </p>
                 </div>
               </>
             )}
 
-            {/* Tab: Receta */}
+            {/* Tab: Receta/Combo */}
             {activeTab === 'receta' && (
               <div className="space-y-6">
-                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20">
-                  <p className="text-sm text-blue-600 dark:text-blue-400">
-                    Define qué ingredientes lleva este producto y en qué cantidad
-                  </p>
-                </div>
-
-                {/* Agregar ingrediente */}
-                <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-                  <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Agregar ingrediente</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2">
-                      <label htmlFor="ingrediente" className="block text-sm font-medium mb-2">
-                        Ingrediente
-                      </label>
-                      {loadingIngredientes ? (
-                        <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50 dark:bg-gray-800">
-                          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                        </div>
-                      ) : (
-                        <select
-                          id="ingrediente"
-                          value={selectedIngredienteId}
-                          onChange={(e) => setSelectedIngredienteId(e.target.value)}
-                          disabled={isSaving}
-                          className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
-                        >
-                          <option value="">Seleccionar ingrediente</option>
-                          {ingredientes.filter(ing => !receta.some(r => r.ingrediente_id === ing.id)).map((ing) => (
-                            <option key={ing.id} value={ing.id}>
-                              {ing.nombre} ({ing.unidad})
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                {tipoProducto === 'con_receta' ? (
+                  <>
+                    <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20">
+                      <p className="text-sm text-blue-600 dark:text-blue-400">
+                        Define qué ingredientes lleva este producto y en qué cantidad
+                      </p>
                     </div>
 
-                    <div>
-                      <label htmlFor="cantidad" className="block text-sm font-medium mb-2">
-                        Cantidad
-                      </label>
-                      <input
-                        id="cantidad"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={cantidad}
-                        onChange={(e) => setCantidad(e.target.value)}
-                        placeholder="0"
-                        disabled={isSaving}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <input
-                      id="obligatorio"
-                      type="checkbox"
-                      checked={obligatorio}
-                      onChange={(e) => setObligatorio(e.target.checked)}
-                      disabled={isSaving}
-                      className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500 focus:ring-offset-0 disabled:opacity-50"
-                    />
-                    <label htmlFor="obligatorio" className="text-sm cursor-pointer select-none">
-                      Ingrediente obligatorio (no se puede remover)
-                    </label>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleAddIngrediente}
-                    disabled={isSaving || !selectedIngredienteId || !cantidad}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-500/30 transition disabled:opacity-50"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Agregar a la receta
-                  </button>
-                </div>
-
-                {/* Lista de ingredientes */}
-                {receta.length > 0 ? (
-                  <div className="space-y-2">
-                    <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
-                      Ingredientes de la receta ({receta.length})
-                    </h3>
-                    <div className="space-y-2">
-                      {receta.map((item) => {
-                        const ingrediente = ingredientes.find(i => i.id === item.ingrediente_id)
-                        return (
-                          <div
-                            key={item.ingrediente_id}
-                            className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800"
-                          >
-                            <div className="flex items-center gap-3">
-                              <ChefHat className="w-5 h-5 text-gray-400" />
-                              <div>
-                                <p className="font-semibold text-sm">{ingrediente?.nombre}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {item.cantidad} {item.unidad} {item.obligatorio ? '• Obligatorio' : '• Opcional'}
-                                </p>
-                              </div>
+                    {/* Agregar ingrediente */}
+                    <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                      <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Agregar ingrediente</h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="md:col-span-2">
+                          <label htmlFor="ingrediente" className="block text-sm font-medium mb-2">
+                            Ingrediente
+                          </label>
+                          {loadingIngredientes ? (
+                            <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50 dark:bg-gray-800">
+                              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveIngrediente(item.ingrediente_id)}
+                          ) : (
+                            <select
+                              id="ingrediente"
+                              value={selectedIngredienteId}
+                              onChange={(e) => setSelectedIngredienteId(e.target.value)}
                               disabled={isSaving}
-                              className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/20 text-red-500 transition disabled:opacity-50"
-                              aria-label="Eliminar ingrediente"
+                              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
                             >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )
-                      })}
+                              <option value="">Seleccionar ingrediente</option>
+                              {ingredientes.filter(ing => !receta.some(r => r.ingrediente_id === ing.id)).map((ing) => (
+                                <option key={ing.id} value={ing.id}>
+                                  {ing.nombre} ({ing.unidad})
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+
+                        <div>
+                          <label htmlFor="cantidad" className="block text-sm font-medium mb-2">
+                            Cantidad
+                          </label>
+                          <input
+                            id="cantidad"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={cantidad}
+                            onChange={(e) => setCantidad(e.target.value)}
+                            placeholder="0"
+                            disabled={isSaving}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <input
+                          id="obligatorio"
+                          type="checkbox"
+                          checked={obligatorio}
+                          onChange={(e) => setObligatorio(e.target.checked)}
+                          disabled={isSaving}
+                          className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500 focus:ring-offset-0 disabled:opacity-50"
+                        />
+                        <label htmlFor="obligatorio" className="text-sm cursor-pointer select-none">
+                          Ingrediente obligatorio (no se puede remover)
+                        </label>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleAddIngrediente}
+                        disabled={isSaving || !selectedIngredienteId || !cantidad}
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-500/30 transition disabled:opacity-50"
+                      >
+                        <Plus className="w-5 h-5" />
+                        Agregar a la receta
+                      </button>
                     </div>
-                  </div>
+
+                    {/* Lista de ingredientes */}
+                    {receta.length > 0 ? (
+                      <div className="space-y-2">
+                        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+                          Ingredientes de la receta ({receta.length})
+                        </h3>
+                        <div className="space-y-2">
+                          {receta.map((item) => {
+                            const ingrediente = ingredientes.find(i => i.id === item.ingrediente_id)
+                            return (
+                              <div
+                                key={item.ingrediente_id}
+                                className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <ChefHat className="w-5 h-5 text-gray-400" />
+                                  <div>
+                                    <p className="font-semibold text-sm">{ingrediente?.nombre}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                      {item.cantidad} {item.unidad} {item.obligatorio ? '• Obligatorio' : '• Opcional'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveIngrediente(item.ingrediente_id)}
+                                  disabled={isSaving}
+                                  className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/20 text-red-500 transition disabled:opacity-50"
+                                  aria-label="Eliminar ingrediente"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-400">
+                        <ChefHat className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p className="text-sm">No hay ingredientes en la receta</p>
+                      </div>
+                    )}
+                  </>
                 ) : (
-                  <div className="text-center py-8 text-gray-400">
-                    <ChefHat className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">No hay ingredientes en la receta</p>
-                  </div>
+                  <>
+                    {/* FORMULARIO DE COMBO */}
+                    <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
+                      <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                        Selecciona los productos que incluye este combo
+                      </p>
+                    </div>
+
+                    {/* Agregar producto al combo */}
+                    <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                      <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Agregar producto</h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="md:col-span-2">
+                          <label htmlFor="producto" className="block text-sm font-medium mb-2">
+                            Producto
+                          </label>
+                          {loadingProductos ? (
+                            <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50 dark:bg-gray-800">
+                              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                            </div>
+                          ) : (
+                            <select
+                              id="producto"
+                              value={selectedProductoId}
+                              onChange={(e) => setSelectedProductoId(e.target.value)}
+                              disabled={isSaving}
+                              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                            >
+                              <option value="">Seleccionar producto</option>
+                              {productos.filter(prod => !comboItems.some(c => c.producto_id === prod.id)).map((prod) => (
+                                <option key={prod.id} value={prod.id}>
+                                  {prod.nombre}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+
+                        <div>
+                          <label htmlFor="cantidadProducto" className="block text-sm font-medium mb-2">
+                            Cantidad
+                          </label>
+                          <input
+                            id="cantidadProducto"
+                            type="number"
+                            step="1"
+                            min="1"
+                            value={cantidadProducto}
+                            onChange={(e) => setCantidadProducto(e.target.value)}
+                            placeholder="1"
+                            disabled={isSaving}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleAddProducto}
+                        disabled={isSaving || !selectedProductoId || !cantidadProducto}
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-500/30 transition disabled:opacity-50"
+                      >
+                        <Plus className="w-5 h-5" />
+                        Agregar al combo
+                      </button>
+                    </div>
+
+                    {/* Lista de productos en el combo */}
+                    {comboItems.length > 0 ? (
+                      <div className="space-y-2">
+                        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+                          Productos del combo ({comboItems.length})
+                        </h3>
+                        <div className="space-y-2">
+                          {comboItems.map((item) => {
+                            const producto = productos.find(p => p.id === item.producto_id)
+                            return (
+                              <div
+                                key={item.producto_id}
+                                className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Package className="w-5 h-5 text-gray-400" />
+                                  <div>
+                                    <p className="font-semibold text-sm">{producto?.nombre}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                      Cantidad: {item.cantidad}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveProducto(item.producto_id)}
+                                  disabled={isSaving}
+                                  className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/20 text-red-500 transition disabled:opacity-50"
+                                  aria-label="Eliminar producto"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-400">
+                        <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p className="text-sm">No hay productos en el combo</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

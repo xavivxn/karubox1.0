@@ -8,7 +8,7 @@
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
-import { InventoryDrawer } from './InventoryDrawer'
+import { IngredienteModal } from './IngredienteModal'
 import { ProductModal } from './ProductModal'
 import { useAdminDashboard } from '../hooks/useAdminDashboard'
 import { AdminHeader } from './AdminHeader'
@@ -26,7 +26,7 @@ import { InventoryGrid } from './InventoryGrid'
 
 export const AdminView = () => {
   const { tenant, usuario, darkMode } = useTenant()
-  const [showInventoryDrawer, setShowInventoryDrawer] = useState(false)
+  const [showIngredienteModal, setShowIngredienteModal] = useState(false)
   const [showProductModal, setShowProductModal] = useState(false)
   
   const {
@@ -55,12 +55,8 @@ export const AdminView = () => {
     return <AdminLoading darkMode={darkMode} />
   }
 
-  const handleInventoryDrawerClose = () => {
-    setShowInventoryDrawer(false)
-  }
-
-  const handleInventorySaved = () => {
-    setShowInventoryDrawer(false)
+  const handleIngredienteSaved = () => {
+    setShowIngredienteModal(false)
     refetch()
   }
 
@@ -75,7 +71,7 @@ export const AdminView = () => {
       <AdminHeader
         tenantName={tenant.nombre}
         stats={stats}
-        onOpenInventoryDrawer={() => setShowInventoryDrawer(true)}
+        onOpenInventoryDrawer={() => setShowIngredienteModal(true)}
         onOpenProductModal={() => setShowProductModal(true)}
       />
 
@@ -117,14 +113,13 @@ export const AdminView = () => {
         onOpenInventoryDrawer={() => setShowInventoryDrawer(true)}
       /> */}
 
-      {/* Drawer para registrar movimientos de inventario */}
-      {/* <InventoryDrawer
-        open={showInventoryDrawer}
-        onClose={handleInventoryDrawerClose}
+      {/* Modal para registrar nuevos ingredientes */}
+      <IngredienteModal
+        open={showIngredienteModal}
+        onClose={() => setShowIngredienteModal(false)}
         tenantId={tenant.id}
-        usuarioId={usuario?.id ?? null}
-        onSaved={handleInventorySaved}
-      /> */}
+        onSaved={handleIngredienteSaved}
+      />
 
       {/* Modal para registrar nuevos productos */}
       <ProductModal
