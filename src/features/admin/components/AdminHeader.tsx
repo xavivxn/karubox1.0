@@ -6,6 +6,7 @@
 import Link from 'next/link'
 import { BarChart3, PlusCircle } from 'lucide-react'
 import { formatGuaranies } from '@/lib/utils/format'
+import { ROUTES } from '@/config/routes'
 import { getTodayLabel } from '../utils/admin.utils'
 import type { DashboardStats } from '../types/admin.types'
 
@@ -58,7 +59,7 @@ export const AdminHeader = ({
         </div>
         <div className="flex flex-wrap gap-3">
           <Link
-            href="/pos"
+            href={ROUTES.PROTECTED.POS}
             className="inline-flex items-center gap-2 rounded-2xl bg-gray-900 text-white px-5 py-3 font-semibold hover:bg-gray-800 transition"
           >
             <BarChart3 className="w-5 h-5" />

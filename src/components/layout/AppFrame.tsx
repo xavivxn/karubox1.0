@@ -23,14 +23,14 @@ const PAGE_MAP: Array<{ test: (pathname: string) => boolean; info: PageInfo }> =
     }
   },
   {
-    test: (path) => path.startsWith('/admin'),
+    test: (path) => path.startsWith('/home/admin'),
     info: {
       title: 'Dashboard general',
       subtitle: 'Ventas, inventario y caja en un solo lugar.'
     }
   },
   {
-    test: (path) => path.startsWith('/pos'),
+    test: (path) => path.startsWith('/home/pos'),
     info: {
       title: 'Punto de Venta',
       subtitle: 'Cobrá más rápido y controlá el pedido al detalle.',
