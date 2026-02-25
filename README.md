@@ -65,7 +65,7 @@ npm install
 3. Copiar credenciales de Supabase
 
 ### **4. Configurar Variables de Entorno**
-
+-
 Crear archivo `.env.local`:
 
 ```env
