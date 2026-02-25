@@ -13,24 +13,18 @@ import type { UserRole } from '@/config/routing'
  */
 export async function requireAuth() {
   const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    redirect(ROUTES.PUBLIC.LOGIN)
-  }
-  
-  const { data: usuario } = await supabase
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  if (!user) redirect(ROUTES.PUBLIC.LOGIN)
+
+  const { data: usuario, error: usuarioError } = await supabase
     .from('usuarios')
-    .select('*')
+    .select('id,tenant_id,auth_user_id,email,nombre,rol,activo')
     .eq('auth_user_id', user.id)
     .eq('is_deleted', false)
     .single()
-  
-  if (!usuario || !usuario.activo) {
-    redirect(ROUTES.PUBLIC.LOGIN)
-  }
-  
+
+  if (!usuario || !usuario.activo || usuarioError) redirect(ROUTES.PUBLIC.LOGIN)
   return { user, usuario }
 }
 
@@ -39,27 +33,13 @@ export async function requireAuth() {
  */
 export async function requireRole(allowedRoles: UserRole[], currentPath: string) {
   const { usuario } = await requireAuth()
-  
   const userRole = usuario.rol as UserRole
-  
-  console.log('🔒 [GUARD] Verificando acceso:', { userRole, currentPath, allowedRoles })
-  
-  // Verificar si el rol está en la lista de permitidos
+
   if (!allowedRoles.includes(userRole)) {
-    console.log('❌ [GUARD] Rol no permitido. Redirigiendo...')
-    const redirectUrl = getUnauthorizedRedirect(userRole)
-    redirect(redirectUrl)
+    redirect(getUnauthorizedRedirect(userRole))
   }
-  
-  // Verificar si el rol tiene acceso a esta ruta específica
-  const hasAccess = hasRoleAccess(userRole, currentPath)
-  
-  if (!hasAccess) {
-    console.log('❌ [GUARD] Sin acceso a la ruta. Redirigiendo...')
-    const redirectUrl = getUnauthorizedRedirect(userRole)
-    redirect(redirectUrl)
+  if (!hasRoleAccess(userRole, currentPath)) {
+    redirect(getUnauthorizedRedirect(userRole))
   }
-  
-  console.log('✅ [GUARD] Acceso permitido')
   return { user: usuario }
 }

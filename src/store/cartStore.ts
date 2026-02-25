@@ -18,6 +18,16 @@ export interface CartItemCustomization {
   notes?: string
 }
 
+// Item dentro de un combo (producto con su cantidad y customización)
+export interface ComboProductItem {
+  producto_id: string
+  nombre: string
+  descripcion?: string
+  cantidad: number
+  tiene_receta: boolean
+  customization?: CartItemCustomization
+}
+
 export interface CartItem {
   id: string
   producto_id: string
@@ -28,7 +38,9 @@ export interface CartItem {
   subtotal: number
   notas?: string
   extraCostPerUnit?: number
-  customization?: CartItemCustomization
+  tipo: 'producto' | 'combo' // Identifica si es producto individual o combo
+  customization?: CartItemCustomization // Para productos individuales
+  comboItems?: ComboProductItem[] // Para combos: lista de productos componentes
 }
 
 interface CartState {
@@ -37,10 +49,12 @@ interface CartState {
   tipo: 'delivery' | 'local' | 'para_llevar' | null
   
   // Acciones
-  addItem: (producto: { id: string; nombre: string; descripcion?: string; precio: number }) => void
+  addItem: (producto: { id: string; nombre: string; descripcion?: string; precio: number; tiene_receta?: boolean }) => void
+  addComboItem: (combo: { id: string; nombre: string; descripcion?: string; precio: number; comboItems: ComboProductItem[] }) => void
   removeItem: (itemId: string) => void
   updateQuantity: (itemId: string, cantidad: number) => void
   updateItemCustomization: (itemId: string, customization: CartItemCustomization | null, extraCostPerUnit: number) => void
+  updateComboProductCustomization: (cartItemId: string, productoId: string, customization: CartItemCustomization | null) => void
   clearCart: () => void
   setCliente: (cliente: Cliente | null) => void
   setTipo: (tipo: 'delivery' | 'local' | 'para_llevar') => void
@@ -62,13 +76,13 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   addItem: (producto) => {
     const items = get().items
-    const existingItem = items.find(item => item.producto_id === producto.id)
+    const existingItem = items.find(item => item.producto_id === producto.id && item.tipo === 'producto')
 
     if (existingItem) {
       // Si ya existe, incrementar cantidad
       set({
         items: items.map(item =>
-          item.producto_id === producto.id
+          item.producto_id === producto.id && item.tipo === 'producto'
             ? {
                 ...item,
                 cantidad: item.cantidad + 1,
@@ -78,7 +92,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         )
       })
     } else {
-      // Si no existe, agregar nuevo
+      // Si no existe, agregar nuevo producto individual
       set({
         items: [
           ...items,
@@ -90,11 +104,34 @@ export const useCartStore = create<CartState>((set, get) => ({
             precio: producto.precio,
             cantidad: 1,
             subtotal: producto.precio,
-            extraCostPerUnit: 0
+            extraCostPerUnit: 0,
+            tipo: 'producto' as const
           }
         ]
       })
     }
+  },
+
+  addComboItem: (combo) => {
+    const items = get().items
+    // Los combos siempre se agregan como nuevos items (no se agrupan)
+    set({
+      items: [
+        ...items,
+        {
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `temp-${Date.now()}-${Math.random()}`,
+          producto_id: combo.id,
+          nombre: combo.nombre,
+          descripcion: combo.descripcion,
+          precio: combo.precio,
+          cantidad: 1,
+          subtotal: combo.precio,
+          extraCostPerUnit: 0,
+          tipo: 'combo' as const,
+          comboItems: combo.comboItems
+        }
+      ]
+    })
   },
 
   removeItem: (itemId) => {
@@ -134,6 +171,44 @@ export const useCartStore = create<CartState>((set, get) => ({
             }
           : item
       )
+    })
+  },
+
+  updateComboProductCustomization: (cartItemId, productoId, customization) => {
+    set({
+      items: get().items.map(item => {
+        if (item.id === cartItemId && item.tipo === 'combo' && item.comboItems) {
+          // Actualizar customización del producto específico dentro del combo
+          const updatedComboItems = item.comboItems.map(comboProduct =>
+            comboProduct.producto_id === productoId
+              ? {
+                  ...comboProduct,
+                  customization: customization ?? undefined
+                }
+              : comboProduct
+          )
+          
+          // Calcular costo extra total del combo sumando todos los productos
+          const totalExtraCost = updatedComboItems.reduce((sum, comboProduct) => {
+            if (comboProduct.customization?.extras) {
+              const productExtraCost = comboProduct.customization.extras.reduce(
+                (extraSum, extra) => extraSum + (extra.unitPrice * extra.quantityPerItem),
+                0
+              )
+              return sum + (productExtraCost * comboProduct.cantidad)
+            }
+            return sum
+          }, 0)
+          
+          return {
+            ...item,
+            comboItems: updatedComboItems,
+            extraCostPerUnit: totalExtraCost,
+            subtotal: calculateSubtotal(item.precio, totalExtraCost, item.cantidad)
+          }
+        }
+        return item
+      })
     })
   },
 

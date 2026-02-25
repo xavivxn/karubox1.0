@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { X, Loader2, Minus, Plus, Search, Check, Undo2 } from 'lucide-react'
+import { useEffect, useState, useMemo } from 'react'
+import { X, Loader2, Minus, Plus, Check } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { fetchProductRecipe, fetchTenantIngredients } from '@/lib/api/ingredients'
 import type { IngredientDefinition, IngredientRequirement } from '@/types/ingredients'
@@ -15,34 +15,25 @@ interface ItemCustomizationDrawerProps {
   darkMode?: boolean
 }
 
-type ExtraDraft = {
-  slug: string
-  label: string
-  unit: IngredientRequirement['unit']
-  quantity: number
-  unitPrice: number
-}
+const MAX_QUANTITY = 9
 
 export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: ItemCustomizationDrawerProps) {
   const { tenant } = useTenant()
   const item = useCartStore((state) => state.items.find((it) => it.id === itemId))
   const updateCustomization = useCartStore((state) => state.updateItemCustomization)
 
-  const [catalog, setCatalog] = useState<IngredientDefinition[]>([])
-  const [catalogLoading, setCatalogLoading] = useState(false)
   const [baseRecipe, setBaseRecipe] = useState<IngredientRequirement[]>([])
+  const [catalog, setCatalog] = useState<IngredientDefinition[]>([])
   const [recipeLoading, setRecipeLoading] = useState(false)
-  const [removed, setRemoved] = useState<Set<string>>(new Set())
-  const [extras, setExtras] = useState<Record<string, ExtraDraft>>({})
+  const [catalogLoading, setCatalogLoading] = useState(false)
+  /** Por cada slug de la receta: 0 = quitado, 1 = base, 2+ = base + extras (se cobra precio unitario por cada extra) */
+  const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [notes, setNotes] = useState('')
-  const [search, setSearch] = useState('')
 
   useEffect(() => {
     if (!open) {
-      setRemoved(new Set())
-      setExtras({})
+      setQuantities({})
       setNotes('')
-      setSearch('')
     }
   }, [open])
 
@@ -54,18 +45,14 @@ export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: Ite
       try {
         const data = await fetchTenantIngredients(tenant.id)
         if (active) setCatalog(data)
-      } catch (error) {
-        console.error('Error cargando ingredientes', error)
+      } catch (e) {
         if (active) setCatalog([])
       } finally {
         if (active) setCatalogLoading(false)
       }
     }
     load()
-    return () => {
-      active = false
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { active = false }
   }, [open, tenant?.id])
 
   useEffect(() => {
@@ -79,109 +66,93 @@ export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: Ite
       try {
         const recipe = await fetchProductRecipe(tenant.id, item.producto_id)
         if (active) setBaseRecipe(recipe)
-      } catch (error) {
-        console.error('Error cargando receta', error)
+      } catch (e) {
         if (active) setBaseRecipe([])
       } finally {
         if (active) setRecipeLoading(false)
       }
     }
     loadRecipe()
-    return () => {
-      active = false
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { active = false }
   }, [open, tenant?.id, item?.producto_id])
 
   useEffect(() => {
-    if (!open || !item) return
-    const removedSet = new Set(item.customization?.removedIngredients.map((ing) => ing.slug) ?? [])
-    setRemoved(removedSet)
+    if (!open || !item || baseRecipe.length === 0) return
+    const cust = item.customization
+    const next: Record<string, number> = {}
+    baseRecipe.forEach((ing) => {
+      const removed = cust?.removedIngredients.some((r) => r.slug === ing.slug)
+      if (removed) {
+        next[ing.slug] = 0
+        return
+      }
+      const extra = cust?.extras.find((e) => e.slug === ing.slug)
+      const extraUnits = extra ? extra.quantityPerItem : 0
+      next[ing.slug] = Math.min(MAX_QUANTITY, 1 + extraUnits)
+    })
+    setQuantities(next)
+    setNotes(cust?.notes ?? '')
+  }, [open, item, baseRecipe])
 
-    const extrasDraft: Record<string, ExtraDraft> = {}
-    item.customization?.extras.forEach((extra) => {
-      extrasDraft[extra.slug] = {
-        slug: extra.slug,
-        label: extra.label,
-        unit: extra.unit,
-        quantity: extra.quantityPerItem,
-        unitPrice: extra.unitPrice
+  const priceBySlug = useMemo(() => {
+    const map: Record<string, number> = {}
+    catalog.forEach((ing) => { map[ing.slug] = ing.precio_publico ?? 0 })
+    return map
+  }, [catalog])
+
+  const extraCostPerUnit = useMemo(() => {
+    let sum = 0
+    baseRecipe.forEach((ing) => {
+      const qty = quantities[ing.slug] ?? 1
+      if (qty > 1) {
+        const unitPrice = priceBySlug[ing.slug] ?? 0
+        sum += (qty - 1) * unitPrice
       }
     })
-    setExtras(extrasDraft)
-    setNotes(item.customization?.notes ?? '')
-    setSearch('')
-  }, [open, item])
+    return sum
+  }, [baseRecipe, quantities, priceBySlug])
 
-  const filteredCatalog = useMemo(() => {
-    if (!search.trim()) return catalog
-    const q = search.toLowerCase()
-    return catalog.filter(
-      (ingredient) => ingredient.nombre.toLowerCase().includes(q) || ingredient.slug.toLowerCase().includes(q)
-    )
-  }, [catalog, search])
+  const changeQuantity = (slug: string, delta: number) => {
+    setQuantities((prev) => {
+      const current = prev[slug] ?? 1
+      const next = Math.max(0, Math.min(MAX_QUANTITY, current + delta))
+      return { ...prev, [slug]: next }
+    })
+  }
 
   if (!open || !item) return null
 
-  const toggleBaseIngredient = (slug: string) => {
-    const next = new Set(removed)
-    next.has(slug) ? next.delete(slug) : next.add(slug)
-    setRemoved(next)
-  }
-
-  const changeExtraQuantity = (slug: string, delta: number) => {
-    const ingredient = catalog.find((ing) => ing.slug === slug)
-    if (!ingredient) return
-    const current = extras[slug]?.quantity ?? 0
-    const nextQuantity = Math.max(0, current + delta)
-
-    if (nextQuantity === 0) {
-      if (extras[slug]) {
-        const { [slug]: _, ...rest } = extras
-        setExtras(rest)
-      }
-      return
-    }
-
-    setExtras({
-      ...extras,
-      [slug]: {
-        slug,
-        label: ingredient.nombre,
-        unit: ingredient.unidad,
-        quantity: nextQuantity,
-        unitPrice: ingredient.precio_publico ?? 0
-      }
-    })
-  }
-
   const handleSave = () => {
-    const removedIngredients = Array.from(removed).map((slug) => {
-      const base = baseRecipe.find((ing) => ing.slug === slug)
-      const fallback = catalog.find((ing) => ing.slug === slug)
-      return {
-        slug,
-        label: base?.label ?? fallback?.nombre ?? slug
-      }
-    })
+    const removedIngredients = baseRecipe
+      .filter((ing) => (quantities[ing.slug] ?? 1) === 0)
+      .map((ing) => ({ slug: ing.slug, label: ing.label }))
 
-    const extrasList = Object.values(extras).filter((extra) => extra.quantity > 0)
-    const extraCostPerUnit = extrasList.reduce((sum, extra) => sum + extra.quantity * extra.unitPrice, 0)
+    const extras = baseRecipe
+      .filter((ing) => (quantities[ing.slug] ?? 1) > 1)
+      .map((ing) => {
+        const qty = quantities[ing.slug] ?? 1
+        const unitPrice = priceBySlug[ing.slug] ?? 0
+        return {
+          slug: ing.slug,
+          label: ing.label,
+          unit: ing.unit,
+          quantityPerItem: qty - 1,
+          unitPrice
+        }
+      })
 
-    const resolvedRecipe: IngredientRequirement[] = [
-      ...baseRecipe
-        .filter((ingredient) => !removed.has(ingredient.slug))
-        .map((ingredient) => ({ ...ingredient })),
-      ...extrasList.map((extra) => ({
-        slug: extra.slug,
-        label: extra.label,
-        unit: extra.unit,
-        quantityPerItem: extra.quantity
-      }))
-    ]
+    const resolvedRecipe: IngredientRequirement[] = baseRecipe
+      .filter((ing) => (quantities[ing.slug] ?? 1) > 0)
+      .map((ing) => {
+        const qty = quantities[ing.slug] ?? 1
+        return {
+          ...ing,
+          quantityPerItem: ing.quantityPerItem * qty
+        }
+      })
 
     const hasCustomizations =
-      removedIngredients.length > 0 || extrasList.length > 0 || notes.trim().length > 0
+      removedIngredients.length > 0 || extras.length > 0 || notes.trim().length > 0
 
     if (!hasCustomizations) {
       updateCustomization(item.id, null, 0)
@@ -193,13 +164,7 @@ export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: Ite
       item.id,
       {
         removedIngredients,
-        extras: extrasList.map((extra) => ({
-          slug: extra.slug,
-          label: extra.label,
-          unit: extra.unit,
-          quantityPerItem: extra.quantity,
-          unitPrice: extra.unitPrice
-        })),
+        extras,
         resolvedRecipe,
         notes: notes.trim() || undefined
       },
@@ -208,179 +173,102 @@ export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: Ite
     onClose()
   }
 
-  const extraCostPerUnit = Object.values(extras).reduce((sum, extra) => sum + extra.quantity * extra.unitPrice, 0)
-  const updatedLineTotal = (item.precio + extraCostPerUnit) * item.cantidad
-  const noIngredients = !catalogLoading && catalog.length === 0
+  const lineTotal = (item.precio + extraCostPerUnit) * item.cantidad
+  const isReady = !recipeLoading && !catalogLoading
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div
-        className={`relative ml-auto h-full w-full max-w-xl flex flex-col ${
+        className={`relative ml-auto h-full w-full max-w-md flex flex-col shadow-2xl ${
           darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
         }`}
       >
         <div
-          className={`flex items-center justify-between px-5 py-4 border-b ${
+          className={`flex items-center justify-between px-4 py-3 border-b ${
             darkMode ? 'border-gray-800' : 'border-gray-200'
           }`}
         >
-          <div>
-            <p className="text-xs uppercase tracking-widest text-orange-500">Editor de pedido</p>
-            <h2 className="text-2xl font-bold">{item.nombre}</h2>
-            <p className="text-sm text-gray-500">
-              Cantidad actual: {item.cantidad} • Precio base: {formatGuaranies(item.precio)}
-            </p>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-bold truncate">{item.nombre}</h2>
+            <p className="text-xs text-gray-500">Base {formatGuaranies(item.precio)}</p>
           </div>
           <button
             onClick={onClose}
-            className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+            className="p-2 rounded-full shrink-0 hover:bg-black/10"
+            aria-label="Cerrar"
           >
-            <X size={20} />
+            <X size={22} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-6 space-y-8 scrollbar-thin scrollbar-thumb-orange-500 scrollbar-track-transparent hover:scrollbar-thumb-orange-600">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           <section>
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-xs uppercase tracking-widest text-orange-500">Receta base</p>
-                <h3 className="text-lg font-semibold">Ingredientes originales</h3>
-              </div>
-              {baseRecipe.length > 0 && (
-                <button
-                  onClick={() => {
-                    setRemoved(new Set())
-                    setExtras({})
-                    setNotes('')
-                  }}
-                  className={`flex items-center gap-1 text-xs font-semibold ${
-                    darkMode ? 'text-orange-300' : 'text-orange-600'
-                  }`}
-                >
-                  <Undo2 size={12} /> Restablecer
-                </button>
-              )}
-            </div>
-
+            <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-2">
+              Ingredientes — sumar o quitar (+ suma al total)
+            </p>
             {recipeLoading ? (
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <Loader2 className="w-4 h-4 animate-spin" /> Cargando receta...
+              <div className="flex items-center gap-2 py-4 text-gray-500">
+                <Loader2 className="w-5 h-5 animate-spin" /> Cargando...
               </div>
             ) : baseRecipe.length === 0 ? (
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Este producto no tiene una receta configurada aún. Podés agregar extras manualmente.
-              </p>
+              <p className="text-sm text-gray-500 py-2">Este producto no tiene receta.</p>
             ) : (
-              <div className="space-y-3">
-                {baseRecipe.map((ingredient) => {
-                  const isRemoved = removed.has(ingredient.slug)
-                  return (
-                    <label
-                      key={ingredient.slug}
-                      className={`flex items-center justify-between rounded-2xl border px-4 py-3 cursor-pointer transition ${
-                        isRemoved
-                          ? darkMode
-                            ? 'border-red-500/40 bg-red-900/20'
-                            : 'border-red-200 bg-red-50'
-                          : darkMode
-                            ? 'border-gray-800 bg-gray-800/60'
-                            : 'border-gray-200 bg-gray-50'
-                      }`}
-                    >
-                      <div>
-                        <p className="font-semibold">{ingredient.label}</p>
-                        <p className="text-xs text-gray-500">
-                          {ingredient.quantityPerItem}
-                          {ingredient.unit}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleBaseIngredient(ingredient.slug)}
-                        className={`w-6 h-6 rounded-full border flex items-center justify-center ${
-                          isRemoved
-                            ? 'border-red-500 text-red-500'
-                            : 'border-green-500 text-green-500'
-                        }`}
-                      >
-                        {isRemoved ? <X size={12} /> : <Check size={14} />}
-                      </button>
-                    </label>
-                  )
-                })}
-              </div>
-            )}
-          </section>
-
-          <section>
-            <p className="text-xs uppercase tracking-widest text-orange-500 mb-3">Agregar extras</p>
-            <div
-              className={`flex items-center gap-2 rounded-2xl px-3 py-2 border ${
-                darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'
-              }`}
-            >
-              <Search size={16} className="text-gray-400" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar bacon, queso, salsas..."
-                className="flex-1 bg-transparent text-sm focus:outline-none"
-              />
-            </div>
-
-            {catalogLoading ? (
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-4">
-                <Loader2 className="w-4 h-4 animate-spin" /> Cargando ingredientes...
-              </div>
-            ) : noIngredients ? (
-              <p className={`mt-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Todavía no tenés ingredientes configurados.
-              </p>
-            ) : (
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-orange-500 scrollbar-track-transparent hover:scrollbar-thumb-orange-600">
-                {filteredCatalog.map((ingredient) => {
-                  const draft = extras[ingredient.slug]
-                  const quantity = draft?.quantity ?? 0
-                  const price = ingredient.precio_publico ?? 0
+              <div className="space-y-2">
+                {baseRecipe.map((ing) => {
+                  const qty = quantities[ing.slug] ?? 1
+                  const unitPrice = priceBySlug[ing.slug] ?? 0
+                  const extraCost = qty > 1 ? (qty - 1) * unitPrice : 0
                   return (
                     <div
-                      key={ingredient.slug}
-                      className={`rounded-2xl border px-4 py-3 flex flex-col gap-2 ${
-                        darkMode ? 'border-gray-800 bg-gray-800/60' : 'border-gray-200 bg-white'
+                      key={ing.slug}
+                      className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 border ${
+                        qty > 0
+                          ? darkMode
+                            ? 'border-green-500/40 bg-green-500/10'
+                            : 'border-green-200 bg-green-50'
+                          : darkMode
+                            ? 'border-gray-700 bg-gray-800/50 opacity-80'
+                            : 'border-gray-200 bg-gray-100'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold">{ingredient.nombre}</p>
-                          <p className="text-xs text-gray-500">
-                            {ingredient.unidad.toUpperCase()} • {formatGuaranies(price)}
-                          </p>
-                        </div>
-                        <span className="text-xl">{ingredient.icono ?? '🧂'}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{ing.label}</p>
+                        <p className="text-xs text-gray-500">
+                          {ing.quantityPerItem}{ing.unit}
+                          {unitPrice > 0 && (
+                            <span className="ml-1">· +{formatGuaranies(unitPrice)} c/u</span>
+                          )}
+                        </p>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => changeExtraQuantity(ingredient.slug, -1)}
-                            className={`p-1 rounded-lg ${darkMode ? 'bg-gray-900' : 'bg-gray-100'}`}
-                          >
-                            <Minus size={14} />
-                          </button>
-                          <span className="w-8 text-center font-semibold">{quantity}</span>
-                          <button
-                            onClick={() => changeExtraQuantity(ingredient.slug, 1)}
-                            className="p-1 rounded-lg bg-orange-500 text-white"
-                          >
-                            <Plus size={14} />
-                          </button>
-                        </div>
-                        {quantity > 0 && (
-                          <p className="text-sm font-semibold text-orange-500">
-                            +{formatGuaranies(quantity * price)}
-                          </p>
-                        )}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => changeQuantity(ing.slug, -1)}
+                          disabled={qty <= 0}
+                          className="p-2.5 rounded-xl border-2 border-gray-300 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-200 dark:hover:bg-gray-700"
+                          aria-label="Quitar una"
+                        >
+                          <Minus size={18} />
+                        </button>
+                        <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 font-bold tabular-nums">
+                          {qty}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => changeQuantity(ing.slug, 1)}
+                          disabled={qty >= MAX_QUANTITY}
+                          className="p-2.5 rounded-xl border-2 border-orange-500 bg-orange-500 text-white disabled:opacity-40 disabled:bg-gray-400 disabled:border-gray-400"
+                          aria-label="Sumar una"
+                        >
+                          <Plus size={18} />
+                        </button>
                       </div>
+                      {extraCost > 0 && (
+                        <p className="text-xs font-semibold text-orange-500 shrink-0">
+                          +{formatGuaranies(extraCost)}
+                        </p>
+                      )}
                     </div>
                   )
                 })}
@@ -388,50 +276,49 @@ export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: Ite
             )}
           </section>
 
-          <section>
-            <p className="text-xs uppercase tracking-widest text-orange-500 mb-2">Notas</p>
-            <textarea
+          <div>
+            <input
+              type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ej: entregar sin cortar, salsa aparte..."
-              className={`w-full rounded-2xl border px-4 py-3 text-sm ${
+              placeholder="Notas (ej: sin cortar)"
+              className={`w-full rounded-xl px-3 py-2.5 text-sm border ${
                 darkMode
-                  ? 'bg-gray-900 border-gray-800 focus:border-orange-500'
-                  : 'bg-white border-gray-200 focus:border-orange-500'
-              } focus:outline-none`}
-              rows={3}
+                  ? 'bg-gray-800 border-gray-700'
+                  : 'bg-gray-50 border-gray-200'
+              } focus:outline-none focus:ring-2 focus:ring-orange-500`}
             />
-          </section>
+          </div>
         </div>
 
         <div
-          className={`px-5 py-4 border-t ${
-            darkMode ? 'border-gray-800 bg-gray-900/80' : 'border-gray-200 bg-white'
+          className={`px-4 py-4 border-t ${
+            darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'
           }`}
         >
-          <div className="flex flex-col gap-2 mb-4 text-sm">
-            <div className="flex justify-between">
-              <span>Precio base:</span>
-              <span>{formatGuaranies(item.precio)}</span>
+          {extraCostPerUnit > 0 && (
+            <div className="flex justify-between text-sm text-gray-500 mb-1">
+              <span>Extras ingredientes</span>
+              <span>+{formatGuaranies(extraCostPerUnit)}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Extras por unidad:</span>
-              <span className="text-orange-500 font-semibold">
-                +{formatGuaranies(extraCostPerUnit)}
-              </span>
-            </div>
-            <div className="flex justify-between text-base font-bold">
-              <span>Total nuevo:</span>
-              <span>{formatGuaranies(updatedLineTotal)}</span>
-            </div>
+          )}
+          <div className="flex justify-between items-baseline mb-3 text-sm">
+            <span className="text-gray-500">Total</span>
+            <span className="text-xl font-bold text-orange-500">
+              {formatGuaranies(lineTotal)}
+            </span>
           </div>
           <button
             onClick={handleSave}
-            disabled={recipeLoading || catalogLoading}
-            className="w-full py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold hover:from-orange-600 hover:to-orange-700 transition flex items-center justify-center gap-2 disabled:opacity-60"
+            disabled={!isReady}
+            className="w-full py-3.5 rounded-xl bg-orange-500 text-white font-semibold hover:bg-orange-600 active:scale-[0.98] transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {recipeLoading || catalogLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check size={18} />}
-            Guardar cambios
+            {!isReady ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Check size={20} />
+            )}
+            Guardar
           </button>
         </div>
       </div>

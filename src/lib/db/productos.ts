@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { Producto } from '@/types/database'
 
 // Tipos auxiliares para el archivo
@@ -9,6 +9,7 @@ type NuevoProducto = Omit<Producto, 'id'>
  * Obtener todos los productos disponibles
  */
 export async function getProductos() {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('productos')
     .select('*')
@@ -24,6 +25,7 @@ export async function getProductos() {
  * Obtener productos con información de categoría
  */
 export async function getProductosCompletos() {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('vista_productos_completos')
     .select('*')
@@ -36,6 +38,7 @@ export async function getProductosCompletos() {
  * Obtener productos por categoría
  */
 export async function getProductosPorCategoria(categoriaId: string) {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('productos')
     .select('*')
@@ -52,6 +55,7 @@ export async function getProductosPorCategoria(categoriaId: string) {
  * Obtener un producto por ID
  */
 export async function getProductoPorId(id: string) {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('productos')
     .select('*')
@@ -67,6 +71,7 @@ export async function getProductoPorId(id: string) {
  * Buscar productos por nombre
  */
 export async function buscarProductos(termino: string) {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('productos')
     .select('*')
@@ -83,6 +88,7 @@ export async function buscarProductos(termino: string) {
  * Crear un nuevo producto
  */
 export async function crearProducto(producto: NuevoProducto) {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('productos')
     .insert(producto)
@@ -100,6 +106,7 @@ export async function actualizarProducto(
   id: string,
   cambios: Partial<Producto>
 ) {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('productos')
     .update(cambios)

@@ -13,6 +13,7 @@ import Cart from '../components/Cart'
 import ClientModal from '../components/ClientModal'
 import CategoryList from '../components/CategoryList'
 import ProductGrid from '../components/ProductGrid'
+import { ScrollToCartFAB, CART_SECTION_ID } from '../components/ScrollToCartFAB'
 
 export default function POSView() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -64,7 +65,7 @@ export default function POSView() {
             />
           </div>
 
-          <div className="lg:col-span-1">
+          <div id={CART_SECTION_ID} className="lg:col-span-1 scroll-mt-4">
             <div className="sticky top-6">
               <div style={{ maxHeight: 'calc(100vh - 200px)' }}>
                 <Cart
@@ -91,6 +92,7 @@ export default function POSView() {
         onClose={() => setEditingItemId(null)}
         darkMode={darkMode}
       />
+      <ScrollToCartFAB darkMode={darkMode} />
       {currentFeedback && (
         <FeedbackModal
           open

@@ -141,7 +141,6 @@ export async function applyInventoryConsumption({
   const inventoryMap = new Map<string, InventoryRow>()
 
   inventoryRows.forEach(row => {
-    // Supabase devuelve un objeto anidado para la relación productos
     const productosData = row.productos as unknown as { nombre: string | null } | null
     const displayName = productosData?.nombre
     
@@ -230,4 +229,317 @@ export function getIngredientEstimationFromItems(
   })
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Tipos internos para el sistema optimizado
+// ─────────────────────────────────────────────────────────────────────────────
+type RecetaIngrediente = {
+  id: string
+  slug: string
+  nombre: string
+  unidad: string
+  tipo_inventario: string
+  stock_actual: number
+  controlar_stock: boolean
+  tenant_id: string
+}
 
+type RecetaRow = {
+  id: string
+  producto_id: string
+  ingrediente_id: string
+  cantidad: number
+  unidad: string
+  obligatorio: boolean
+  ingredientes: RecetaIngrediente | null
+}
+
+/**
+ * Descuenta ingredientes o inventario según tipo de producto.
+ *
+ * OPTIMIZADO — antes: N×3 queries por pedido (GET+PATCH+INSERT por ingrediente).
+ * Ahora:
+ *   1 SELECT productos
+ *   1 SELECT recetas_producto (todos los productos, con JOIN a ingredientes)
+ *   N PATCH ingredientes   (uno por ingrediente único; no hay batch UPDATE en Supabase sin RPC)
+ *   1 INSERT movimientos_ingredientes  (batch)
+ *   1 INSERT items_pedido_customizacion (batch)
+ *   1 SELECT inventario    (solo productos sin receta)
+ *   N PATCH inventario     (uno por producto sin receta)
+ *   1 INSERT movimientos_inventario (batch)
+ */
+export async function descontarIngredientesPorPedido({
+  tenantId,
+  items,
+  pedidoId,
+  pedidoNumero,
+  usuarioId
+}: ApplyInventoryArgs): Promise<{ success: boolean; errores: string[] }> {
+  if (!tenantId || !items.length) return { success: true, errores: [] }
+
+  const supabase = createClient()
+  const errores: string[] = []
+
+  try {
+    // ── QUERY 1: todos los productos del pedido ───────────────────────────
+    const productoIds = [
+      ...new Set(items.map(i => i.producto_id).filter((id): id is string => Boolean(id)))
+    ]
+
+    const { data: productos, error: productosError } = await supabase
+      .from('productos')
+      .select('id, nombre, tiene_receta')
+      .in('id', productoIds)
+
+    if (productosError) {
+      console.error('Error al obtener productos:', productosError)
+      errores.push('Error al obtener información de productos')
+      return { success: false, errores }
+    }
+
+    const productosMap = new Map((productos ?? []).map(p => [p.id, p]))
+    const itemsConReceta = items.filter(
+      i => i.producto_id && productosMap.get(i.producto_id)?.tiene_receta
+    )
+    const itemsSinReceta = items.filter(
+      i =>
+        i.producto_id &&
+        productosMap.get(i.producto_id) &&
+        !productosMap.get(i.producto_id)!.tiene_receta
+    )
+
+    // ── QUERY 2: TODAS las recetas en un solo fetch con JOIN a ingredientes ─
+    // Obtenemos stock_actual embebido → eliminamos el GET por ingrediente
+    const productIdsConReceta = [...new Set(itemsConReceta.map(i => i.producto_id as string))]
+    const recetaMap = new Map<string, RecetaRow[]>()
+
+    if (productIdsConReceta.length > 0) {
+      const { data: recetas, error: recetasError } = await supabase
+        .from('recetas_producto')
+        .select(`
+          id, ingrediente_id, cantidad, unidad, obligatorio, producto_id,
+          ingredientes:ingrediente_id (
+            id, slug, nombre, unidad, tipo_inventario,
+            stock_actual, controlar_stock, tenant_id
+          )
+        `)
+        .eq('tenant_id', tenantId)
+        .in('producto_id', productIdsConReceta)
+
+      if (recetasError) {
+        console.error('Error al obtener recetas:', recetasError)
+        errores.push('Error al obtener recetas de productos')
+      } else {
+        for (const r of (recetas ?? []) as RecetaRow[]) {
+          if (!recetaMap.has(r.producto_id)) recetaMap.set(r.producto_id, [])
+          recetaMap.get(r.producto_id)!.push(r)
+        }
+      }
+    }
+
+    // ── Acumular consumos por ingrediente único ────────────────────────────
+    // Si varios ítems comparten un ingrediente, se suman en memoria antes
+    // de hacer cualquier UPDATE a la DB.
+    type IngConsumo = {
+      ing: RecetaIngrediente
+      cantidadTotal: number
+      stockAnterior: number
+    }
+    const ingredienteTotals = new Map<string, IngConsumo>()
+
+    const customizacionesBatch: Array<{
+      item_pedido_id: string
+      ingrediente_id: string
+      tipo: 'extra' | 'removido' | 'modificado'
+      cantidad_original: number
+      cantidad_ajustada: number
+    }> = []
+
+    for (const item of itemsConReceta) {
+      if (!item.producto_id) continue
+      const receta = recetaMap.get(item.producto_id) ?? []
+
+      const removidos = new Set(
+        (item.customization?.removedIngredients ?? []).map((x: { slug: string }) => x.slug)
+      )
+      const extrasMap = new Map(
+        (item.customization?.extras ?? []).map(
+          (x: { slug: string; quantityPerItem: number }) => [x.slug, x.quantityPerItem]
+        )
+      )
+
+      for (const r of receta) {
+        const ing = r.ingredientes
+        if (!ing || !ing.controlar_stock) continue
+
+        if (removidos.has(ing.slug)) {
+          customizacionesBatch.push({
+            item_pedido_id: item.id,
+            ingrediente_id: ing.id,
+            tipo: 'removido',
+            cantidad_original: r.cantidad,
+            cantidad_ajustada: 0
+          })
+          continue
+        }
+
+        let cantidadItem = r.cantidad * item.cantidad
+
+        if (extrasMap.has(ing.slug)) {
+          const extraPorItem = extrasMap.get(ing.slug)!
+          cantidadItem += extraPorItem * item.cantidad
+          customizacionesBatch.push({
+            item_pedido_id: item.id,
+            ingrediente_id: ing.id,
+            tipo: 'extra',
+            cantidad_original: r.cantidad,
+            cantidad_ajustada: r.cantidad + extraPorItem
+          })
+        }
+
+        if (ingredienteTotals.has(ing.id)) {
+          ingredienteTotals.get(ing.id)!.cantidadTotal += cantidadItem
+        } else {
+          ingredienteTotals.set(ing.id, {
+            ing,
+            cantidadTotal: cantidadItem,
+            stockAnterior: Number(ing.stock_actual ?? 0)
+          })
+        }
+      }
+    }
+
+    // ── QUERIES 3..N: 1 PATCH por ingrediente único ───────────────────────
+    // Stock ya viene del JOIN → no se necesita GET previo por ingrediente
+    const movimientosBatch: Array<{
+      tenant_id: string
+      ingrediente_id: string
+      tipo: string
+      cantidad: number
+      stock_anterior: number
+      stock_nuevo: number
+      motivo: string
+      pedido_id: string
+      usuario_id?: string
+    }> = []
+
+    for (const [ingId, { ing, cantidadTotal, stockAnterior }] of ingredienteTotals) {
+      const nuevoStock = Math.max(stockAnterior - cantidadTotal, 0)
+
+      const { error: updateError } = await supabase
+        .from('ingredientes')
+        .update({ stock_actual: nuevoStock, updated_at: new Date().toISOString() })
+        .eq('id', ingId)
+
+      if (updateError) {
+        console.error(`Error al descontar ${ing.nombre}:`, updateError)
+        errores.push(`Error al descontar ${ing.nombre}`)
+        continue
+      }
+
+      movimientosBatch.push({
+        tenant_id: ing.tenant_id,
+        ingrediente_id: ingId,
+        tipo: 'salida',
+        cantidad: cantidadTotal,
+        stock_anterior: stockAnterior,
+        stock_nuevo: nuevoStock,
+        motivo: `Venta pedido #${pedidoNumero}`,
+        pedido_id: pedidoId,
+        ...(usuarioId ? { usuario_id: usuarioId } : {})
+      })
+    }
+
+    // ── 1 INSERT batch para todos los movimientos de ingredientes ─────────
+    if (movimientosBatch.length > 0) {
+      const { error } = await supabase.from('movimientos_ingredientes').insert(movimientosBatch)
+      if (error) console.error('Error al insertar movimientos de ingredientes:', error)
+    }
+
+    // ── 1 INSERT batch para todas las customizaciones ─────────────────────
+    if (customizacionesBatch.length > 0) {
+      const { error } = await supabase.from('items_pedido_customizacion').insert(customizacionesBatch)
+      if (error) console.error('Error al insertar customizaciones:', error)
+    }
+
+    // ── Productos sin receta (inventario de productos terminados) ─────────
+    if (itemsSinReceta.length > 0) {
+      // QUERY: 1 solo SELECT para todos los productos sin receta
+      const prodIdsSinReceta = itemsSinReceta.map(i => i.producto_id as string)
+
+      const { data: inventarios, error: invError } = await supabase
+        .from('inventario')
+        .select('id, producto_id, stock_actual, controlar_stock, unidad, tenant_id')
+        .eq('tenant_id', tenantId)
+        .in('producto_id', prodIdsSinReceta)
+
+      if (!invError && inventarios) {
+        const invMap = new Map(
+          (inventarios as Array<{ producto_id: string } & Record<string, unknown>>).map(inv => [
+            inv.producto_id,
+            inv
+          ])
+        )
+        const movimientosInv: Array<{
+          tenant_id: string
+          inventario_id: string
+          pedido_id: string
+          tipo: string
+          cantidad: number
+          stock_anterior: number
+          stock_nuevo: number
+          motivo: string
+          usuario_id?: string
+        }> = []
+
+        for (const item of itemsSinReceta) {
+          if (!item.producto_id) continue
+          const inv = invMap.get(item.producto_id) as any
+          if (!inv || !inv.controlar_stock) continue
+
+          const stockAnterior = Number(inv.stock_actual ?? 0)
+          if (stockAnterior < item.cantidad) {
+            errores.push(
+              `Stock insuficiente de ${item.nombre}. Disponible: ${stockAnterior}, solicitado: ${item.cantidad}`
+            )
+            continue
+          }
+
+          const stockNuevo = stockAnterior - item.cantidad
+          const { error: updateErr } = await supabase
+            .from('inventario')
+            .update({ stock_actual: stockNuevo, updated_at: new Date().toISOString() })
+            .eq('id', inv.id)
+
+          if (updateErr) {
+            console.error(`Error al actualizar inventario de ${item.nombre}:`, updateErr)
+            errores.push(`Error al descontar ${item.nombre}`)
+            continue
+          }
+
+          movimientosInv.push({
+            tenant_id: tenantId,
+            inventario_id: inv.id,
+            pedido_id: pedidoId,
+            tipo: 'salida',
+            cantidad: -item.cantidad,
+            stock_anterior: stockAnterior,
+            stock_nuevo: stockNuevo,
+            motivo: `Venta pedido #${pedidoNumero}`,
+            ...(usuarioId ? { usuario_id: usuarioId } : {})
+          })
+        }
+
+        // 1 INSERT batch para todos los movimientos de inventario
+        if (movimientosInv.length > 0) {
+          await supabase.from('movimientos_inventario').insert(movimientosInv)
+        }
+      }
+    }
+
+    return { success: errores.length === 0, errores }
+  } catch (error) {
+    console.error('Error en descontarIngredientesPorPedido:', error)
+    errores.push('Error general al procesar descuento de inventario')
+    return { success: false, errores }
+  }
+}

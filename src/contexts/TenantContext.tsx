@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { signOut as signOutAction } from '@/app/actions/auth'
 import { User } from '@supabase/supabase-js'
+import { prefetchPOSCatalog } from '@/features/pos/lib/catalogCache'
 
 interface Tenant {
   id: string
@@ -153,6 +154,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
       setTenant(userData.tenants as Tenant)
       console.log('✅ Tenant cargado:', userData.tenants)
+      prefetchPOSCatalog((userData.tenants as Tenant).id)
     } catch (error) {
       console.error('❌ Error cargando datos del usuario:', error)
     } finally {

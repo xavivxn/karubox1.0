@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/client'
-import { applyInventoryConsumption } from '@/lib/inventory/consumption'
+import { descontarIngredientesPorPedido } from '@/lib/inventory/consumption'
 import type { CartItem } from '@/store/cartStore'
 import type { Cliente } from '@/types/supabase'
 import type { TipoPedido, FeedbackDetail } from '../types/pos.types'
-import { calcularPuntos, formatTipoPedido } from '../utils/pos.utils'
+import { calcularPuntos, formatTipoPedido, formatItemModificacionesForTicket } from '../utils/pos.utils'
 import { formatGuaranies } from '@/lib/utils/format'
 import { printService } from './printService'
 
@@ -50,21 +50,29 @@ export const orderService = {
 
     if (errorPedido) throw errorPedido
 
-    // Insertar items del pedido
+    // Insertar items del pedido (notas = texto de modificaciones para el ticket de cocina)
     const itemsToInsert = items.map((item) => ({
       pedido_id: pedido.id,
       producto_id: item.producto_id,
       producto_nombre: item.nombre,
       cantidad: item.cantidad,
       precio_unitario: item.precio,
-      subtotal: item.subtotal
+      subtotal: item.subtotal,
+      notas: formatItemModificacionesForTicket(item) ?? null
     }))
 
-    const { error: errorItems } = await supabase
+    const { data: itemsInsertados, error: errorItems } = await supabase
       .from('items_pedido')
       .insert(itemsToInsert)
+      .select()
 
     if (errorItems) throw errorItems
+
+    // Mapear los CartItems con sus IDs reales de items_pedido para la customización
+    const cartItemsConId = items.map((item, index) => ({
+      ...item,
+      id: itemsInsertados?.[index]?.id || item.id
+    }))
 
     // Actualizar puntos del cliente
     if (cliente && puntosGenerados > 0) {
@@ -89,16 +97,23 @@ export const orderService = {
       })
     }
 
-    // Aplicar consumo de inventario
-    applyInventoryConsumption({
+    // Descontar ingredientes o inventario según tipo de producto
+    const resultadoInventario = await descontarIngredientesPorPedido({
       tenantId,
-      items,
+      items: cartItemsConId,
       pedidoId: pedido.id,
       pedidoNumero: pedido.numero_pedido,
       usuarioId
     }).catch((consumptionError) => {
-      console.warn('No se pudo descontar inventario automáticamente', consumptionError)
+      console.warn('Error al descontar inventario:', consumptionError)
+      return { success: false, errores: ['Error al procesar inventario'] }
     })
+
+    // Si hubo errores de stock, registrar advertencia
+    if (!resultadoInventario.success && resultadoInventario.errores.length > 0) {
+      console.warn('Advertencias de inventario:', resultadoInventario.errores)
+      // El pedido ya fue creado, solo notificamos los errores
+    }
 
     // Imprimir ticket de cocina (no crítico - si falla, el pedido se guarda igual)
     printService

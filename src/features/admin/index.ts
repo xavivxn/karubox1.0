@@ -17,6 +17,7 @@ export { TopClients } from './components/TopClients'
 export { TopProducts } from './components/TopProducts'
 export { IngredientConsumption } from './components/IngredientConsumption'
 export { InventoryGrid } from './components/InventoryGrid'
+export { ProductModal } from './components/ProductModal'
 
 // Hooks
 export { useAdminDashboard } from './hooks/useAdminDashboard'
