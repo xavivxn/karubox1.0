@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTenant } from '@/contexts/TenantContext'
 import { posService } from '../services/posService'
-import type { FeedbackState } from '../types/pos.types'
+import type { Categoria, Producto, FeedbackState } from '../types/pos.types'
 import { buildUnexpectedErrorState } from '../utils/error.utils'
 import {
   getCachedCatalog,
@@ -20,7 +20,8 @@ export function usePOSData() {
   useEffect(() => {
     if (tenantLoading || !tenant) return
 
-    const cached = getCachedCatalog(tenant.id)
+    const tenantId = tenant.id
+    const cached = getCachedCatalog(tenantId)
     const useCache = cached && Date.now() - cached.at < CACHE_TTL_MS
 
     if (useCache) {
@@ -29,11 +30,11 @@ export function usePOSData() {
       setLoading(false)
       // Revalidar en segundo plano
       Promise.all([
-        posService.loadCategorias(tenant.id),
-        posService.loadProductos(tenant.id)
+        posService.loadCategorias(tenantId),
+        posService.loadProductos(tenantId)
       ])
         .then(([cats, prods]) => {
-          setCachedCatalog(tenant.id, cats, prods)
+          setCachedCatalog(tenantId, cats, prods)
           setCategorias(cats)
           setProductos(prods)
         })
@@ -47,11 +48,11 @@ export function usePOSData() {
     async function loadData() {
       try {
         const [cats, prods] = await Promise.all([
-          posService.loadCategorias(tenant.id),
-          posService.loadProductos(tenant.id)
+          posService.loadCategorias(tenantId),
+          posService.loadProductos(tenantId)
         ])
         if (cancelled) return
-        setCachedCatalog(tenant.id, cats, prods)
+        setCachedCatalog(tenantId, cats, prods)
         setCategorias(cats)
         setProductos(prods)
       } catch (error) {

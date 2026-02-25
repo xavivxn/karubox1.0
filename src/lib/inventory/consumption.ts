@@ -329,7 +329,7 @@ export async function descontarIngredientesPorPedido({
         console.error('Error al obtener recetas:', recetasError)
         errores.push('Error al obtener recetas de productos')
       } else {
-        for (const r of (recetas ?? []) as RecetaRow[]) {
+        for (const r of (recetas ?? []) as unknown as RecetaRow[]) {
           if (!recetaMap.has(r.producto_id)) recetaMap.set(r.producto_id, [])
           recetaMap.get(r.producto_id)!.push(r)
         }
