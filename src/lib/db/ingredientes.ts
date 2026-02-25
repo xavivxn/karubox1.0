@@ -197,7 +197,7 @@ export async function registrarMovimientoIngrediente(params: {
 }): Promise<MovimientoIngrediente> {
   const supabase = createClient()
   
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('movimientos_ingredientes')
     .insert({
       tenant_id: params.tenantId,
@@ -210,15 +210,14 @@ export async function registrarMovimientoIngrediente(params: {
       pedido_id: params.pedidoId,
       usuario_id: params.usuarioId
     })
-    .select()
-    .single()
   
   if (error) {
     console.error('Error al registrar movimiento de ingrediente:', error)
     throw new Error(`Error al registrar movimiento: ${error.message}`)
   }
   
-  return data as MovimientoIngrediente
+  // Retornamos un objeto parcial para mantener compatibilidad con la firma
+  return { id: '', ...params, created_at: new Date().toISOString() } as unknown as MovimientoIngrediente
 }
 
 /**

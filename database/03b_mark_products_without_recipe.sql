@@ -102,7 +102,17 @@ BEGIN
   SET stock_minimo = COALESCE(stock_minimo_sugerido, 0)
   WHERE stock_minimo = 0 OR stock_minimo IS NULL;
   
-  -- Inicializar stock_actual en 0 (el admin deberá cargarlo manualmente)
+  -- Stock inicial para que los pedidos no fallen por "stock insuficiente"
+  -- Discretos (unidad): 200 | Fraccionables (g/ml): 50000 (el admin puede ajustar después)
+  UPDATE ingredientes
+  SET stock_actual = 200
+  WHERE (stock_actual IS NULL OR stock_actual = 0)
+    AND tipo_inventario = 'discreto';
+  UPDATE ingredientes
+  SET stock_actual = 50000
+  WHERE (stock_actual IS NULL OR stock_actual = 0)
+    AND tipo_inventario = 'fraccionable';
+  -- Si aún no tienen tipo_inventario (schema viejo), dejar en 0
   UPDATE ingredientes
   SET stock_actual = 0
   WHERE stock_actual IS NULL;
@@ -115,7 +125,7 @@ BEGIN
   GET DIAGNOSTICS v_ingredientes_inicializados = ROW_COUNT;
   
   RAISE NOTICE '✅ % ingredientes inicializados con valores por defecto', v_ingredientes_inicializados;
-  RAISE NOTICE '⚠️  IMPORTANTE: Los ingredientes tienen stock_actual = 0. Debes cargar el stock manualmente.';
+  RAISE NOTICE '✅ Stock inicial aplicado (discreto: 200, fraccionable: 50000). Ajustá desde admin si hace falta.';
 END $$;
 
 -- ============================================
@@ -269,12 +279,12 @@ BEGIN
   RAISE NOTICE '';
   RAISE NOTICE '📝 Próximos pasos:';
   RAISE NOTICE '  1. Revisar productos marcados sin receta';
-  RAISE NOTICE '  2. Cargar stock inicial de ingredientes manualmente';
+  RAISE NOTICE '  2. (Opcional) Ajustar stock de ingredientes desde admin';
   RAISE NOTICE '  3. Cargar stock de productos sin receta (bebidas) en tabla inventario';
   RAISE NOTICE '  4. Actualizar seeds/atlas-burger.sql con nuevos campos';
   RAISE NOTICE '  5. Probar descuento automático desde POS';
   RAISE NOTICE '';
-  RAISE NOTICE '💡 Tip: Puedes descomentar la sección 4 para cargar stock de ejemplo';
+  RAISE NOTICE '💡 Stock inicial ya aplicado en sección 3 (discreto: 200, fraccionable: 50000).';
 END $$;
 
 -- ============================================

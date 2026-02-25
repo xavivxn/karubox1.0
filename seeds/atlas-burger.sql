@@ -203,33 +203,34 @@ BEGIN
   DELETE FROM ingredientes WHERE tenant_id = v_tenant_id;
 
   -- NOTA: tipo_inventario = 'discreto' (unidades enteras) o 'fraccionable' (peso/volumen)
-  -- stock_actual y stock_minimo en 0 por defecto (el admin los cargará manualmente)
+  -- stock_actual con valor inicial alto para que los pedidos no fallen por "stock insuficiente"
+  -- (en producción el admin puede ajustar desde el panel de inventario)
   INSERT INTO ingredientes (tenant_id, slug, nombre, tipo_inventario, unidad, stock_actual, stock_minimo, icono, precio_publico, controlar_stock, descripcion, activo)
   VALUES
-    -- INGREDIENTES DISCRETOS (unidades enteras)
-    (v_tenant_id, 'pan-brioche', 'Pan Brioche Atlas', 'discreto', 'unidad', 0, 40, '🥖', 4000, true, 'Panes para burgers premium', true),
-    (v_tenant_id, 'pan-smash', 'Pan Smash', 'discreto', 'unidad', 0, 60, '🍞', 3000, true, 'Panes chicos para smash burgers', true),
-    (v_tenant_id, 'huevo', 'Huevos', 'discreto', 'unidad', 0, 60, '🥚', 2500, true, 'Huevos frescos para toppings', true),
-    (v_tenant_id, 'nugget', 'Nugget Congelado', 'discreto', 'unidad', 0, 100, '🍗', 2500, true, 'Nuggets de pollo congelados', true),
-    (v_tenant_id, 'pan-arabe', 'Pan Arabe', 'discreto', 'unidad', 0, 40, '🥙', 4500, true, 'Pan arabe artesanal', true),
-    (v_tenant_id, 'coca-15', 'Coca Cola 1.5L', 'discreto', 'unidad', 0, 12, '🥤', 15000, true, 'Gaseosa Coca Cola 1.5 litros', true),
+    -- INGREDIENTES DISCRETOS (unidades enteras) - stock inicial 200
+    (v_tenant_id, 'pan-brioche', 'Pan Brioche Atlas', 'discreto', 'unidad', 200, 40, '🥖', 4000, true, 'Panes para burgers premium', true),
+    (v_tenant_id, 'pan-smash', 'Pan Smash', 'discreto', 'unidad', 200, 60, '🍞', 3000, true, 'Panes chicos para smash burgers', true),
+    (v_tenant_id, 'huevo', 'Huevos', 'discreto', 'unidad', 200, 60, '🥚', 2500, true, 'Huevos frescos para toppings', true),
+    (v_tenant_id, 'nugget', 'Nugget Congelado', 'discreto', 'unidad', 200, 100, '🍗', 2500, true, 'Nuggets de pollo congelados', true),
+    (v_tenant_id, 'pan-arabe', 'Pan Arabe', 'discreto', 'unidad', 200, 40, '🥙', 4500, true, 'Pan arabe artesanal', true),
+    (v_tenant_id, 'coca-15', 'Coca Cola 1.5L', 'discreto', 'unidad', 200, 12, '🥤', 15000, true, 'Gaseosa Coca Cola 1.5 litros', true),
     
-    -- INGREDIENTES FRACCIONABLES (peso/volumen)
-    (v_tenant_id, 'carne-120', 'Blend 120g', 'fraccionable', 'g', 0, 6000, '🥩', 9000, true, 'Carne preparada para burgers clasicas', true),
-    (v_tenant_id, 'carne-160', 'Blend 160g', 'fraccionable', 'g', 0, 8000, '🍔', 11000, true, 'Carne premium para burgers especiales', true),
-    (v_tenant_id, 'carne-90', 'Blend Smash 90g', 'fraccionable', 'g', 0, 5000, '🍖', 7500, true, 'Carne para smash burgers', true),
-    (v_tenant_id, 'cheddar', 'Queso Cheddar Bloque', 'fraccionable', 'g', 0, 3000, '🧀', 3500, true, 'Bloques de cheddar para rallar', true),
-    (v_tenant_id, 'bacon', 'Bacon Premium', 'fraccionable', 'g', 0, 2000, '🥓', 4000, true, 'Bacon ahumado premium', true),
-    (v_tenant_id, 'mix-verde', 'Mix Verde', 'fraccionable', 'g', 0, 1500, '🥬', 1500, true, 'Lechuga, rucula y espinaca frescas', true),
-    (v_tenant_id, 'tomate', 'Tomate Laminado', 'fraccionable', 'g', 0, 1200, '🍅', 1800, true, 'Tomates frescos laminados', true),
-    (v_tenant_id, 'cebolla', 'Cebolla Picada', 'fraccionable', 'g', 0, 1000, '🧅', 1200, true, 'Cebolla fresca picada', true),
-    (v_tenant_id, 'salsa-house', 'Salsa House', 'fraccionable', 'ml', 0, 1500, '🥣', 1200, true, 'Salsa especial de la casa', true),
-    (v_tenant_id, 'salsa-smash', 'Salsa Smash', 'fraccionable', 'ml', 0, 1200, '🔥', 1200, true, 'Salsa para smash burgers', true),
-    (v_tenant_id, 'salsa-garlic', 'Salsa de Ajo', 'fraccionable', 'ml', 0, 1000, '🧄', 1500, true, 'Salsa de ajo casera', true),
-    (v_tenant_id, 'papa-frita', 'Papa Pre-frita', 'fraccionable', 'g', 0, 8000, '🍟', 3000, true, 'Papas congeladas listas para freir', true),
-    (v_tenant_id, 'aceite', 'Aceite de Fritura', 'fraccionable', 'ml', 0, 5000, '🛢️', 1000, true, 'Aceite alto rendimiento para freidoras', true),
-    (v_tenant_id, 'sal', 'Sal Especial', 'fraccionable', 'g', 0, 500, '🧂', 800, true, 'Sal con mezcla de especias', true),
-    (v_tenant_id, 'pollo-mechado', 'Pollo Mechado', 'fraccionable', 'g', 0, 3000, '🍗', 6500, true, 'Pollo desmenuzado para rellenos', true);
+    -- INGREDIENTES FRACCIONABLES (peso/volumen) - stock inicial 50000 g/ml
+    (v_tenant_id, 'carne-120', 'Blend 120g', 'fraccionable', 'g', 50000, 6000, '🥩', 9000, true, 'Carne preparada para burgers clasicas', true),
+    (v_tenant_id, 'carne-160', 'Blend 160g', 'fraccionable', 'g', 50000, 8000, '🍔', 11000, true, 'Carne premium para burgers especiales', true),
+    (v_tenant_id, 'carne-90', 'Blend Smash 90g', 'fraccionable', 'g', 50000, 5000, '🍖', 7500, true, 'Carne para smash burgers', true),
+    (v_tenant_id, 'cheddar', 'Queso Cheddar Bloque', 'fraccionable', 'g', 50000, 3000, '🧀', 3500, true, 'Bloques de cheddar para rallar', true),
+    (v_tenant_id, 'bacon', 'Bacon Premium', 'fraccionable', 'g', 50000, 2000, '🥓', 4000, true, 'Bacon ahumado premium', true),
+    (v_tenant_id, 'mix-verde', 'Mix Verde', 'fraccionable', 'g', 50000, 1500, '🥬', 1500, true, 'Lechuga, rucula y espinaca frescas', true),
+    (v_tenant_id, 'tomate', 'Tomate Laminado', 'fraccionable', 'g', 50000, 1200, '🍅', 1800, true, 'Tomates frescos laminados', true),
+    (v_tenant_id, 'cebolla', 'Cebolla Picada', 'fraccionable', 'g', 50000, 1000, '🧅', 1200, true, 'Cebolla fresca picada', true),
+    (v_tenant_id, 'salsa-house', 'Salsa House', 'fraccionable', 'ml', 50000, 1500, '🥣', 1200, true, 'Salsa especial de la casa', true),
+    (v_tenant_id, 'salsa-smash', 'Salsa Smash', 'fraccionable', 'ml', 50000, 1200, '🔥', 1200, true, 'Salsa para smash burgers', true),
+    (v_tenant_id, 'salsa-garlic', 'Salsa de Ajo', 'fraccionable', 'ml', 50000, 1000, '🧄', 1500, true, 'Salsa de ajo casera', true),
+    (v_tenant_id, 'papa-frita', 'Papa Pre-frita', 'fraccionable', 'g', 50000, 8000, '🍟', 3000, true, 'Papas congeladas listas para freir', true),
+    (v_tenant_id, 'aceite', 'Aceite de Fritura', 'fraccionable', 'ml', 50000, 5000, '🛢️', 1000, true, 'Aceite alto rendimiento para freidoras', true),
+    (v_tenant_id, 'sal', 'Sal Especial', 'fraccionable', 'g', 50000, 500, '🧂', 800, true, 'Sal con mezcla de especias', true),
+    (v_tenant_id, 'pollo-mechado', 'Pollo Mechado', 'fraccionable', 'g', 50000, 3000, '🍗', 6500, true, 'Pollo desmenuzado para rellenos', true);
 
   -- Recetas Clasica
   INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
@@ -356,6 +357,109 @@ BEGIN
   FROM ingredientes ing
   WHERE ing.tenant_id = v_tenant_id
     AND ing.slug = 'coca-15';
+
+  -- Recetas Big Atlas Doble Libra (sin sal/aceite)
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Big Atlas Doble Libra'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('pan-brioche', 1, 'unidad'), ('carne-160', 320, 'g'), ('cheddar', 60, 'g'), ('cebolla', 20, 'g'), ('salsa-house', 20, 'ml')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Burcheddar
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Burcheddar'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('pan-brioche', 1, 'unidad'), ('carne-160', 160, 'g'), ('cheddar', 55, 'g'), ('bacon', 40, 'g'), ('mix-verde', 15, 'g'), ('cebolla', 15, 'g'), ('salsa-house', 20, 'ml')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Mega BBQ
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Mega BBQ'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('pan-brioche', 1, 'unidad'), ('carne-160', 160, 'g'), ('cheddar', 40, 'g'), ('bacon', 35, 'g'), ('mix-verde', 15, 'g'), ('cebolla', 15, 'g'), ('salsa-house', 25, 'ml')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Mega de Luxe
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Mega de Luxe'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('pan-brioche', 1, 'unidad'), ('carne-160', 160, 'g'), ('cheddar', 40, 'g'), ('mix-verde', 15, 'g'), ('cebolla', 15, 'g'), ('salsa-house', 20, 'ml')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Mega Onion
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Mega Onion'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('pan-brioche', 1, 'unidad'), ('carne-160', 160, 'g'), ('cebolla', 30, 'g'), ('cheddar', 40, 'g'), ('bacon', 30, 'g'), ('mix-verde', 15, 'g'), ('salsa-house', 20, 'ml')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Resacona
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Resacona'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('pan-brioche', 1, 'unidad'), ('carne-160', 160, 'g'), ('cheddar', 40, 'g'), ('bacon', 35, 'g'), ('mix-verde', 20, 'g'), ('cebolla', 20, 'g'), ('salsa-house', 25, 'ml')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Yaguamboom
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Yaguamboom'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('pan-brioche', 1, 'unidad'), ('carne-160', 160, 'g'), ('huevo', 1, 'unidad'), ('cheddar', 40, 'g'), ('bacon', 35, 'g'), ('tomate', 25, 'g'), ('mix-verde', 15, 'g'), ('salsa-house', 20, 'ml')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Smash American Cuadruple
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Smash American Cuadruple'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('pan-smash', 1, 'unidad'), ('carne-90', 360, 'g'), ('cheddar', 50, 'g'), ('mix-verde', 20, 'g'), ('salsa-smash', 20, 'ml')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Smash Bacon
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Smash Bacon'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('pan-smash', 1, 'unidad'), ('carne-90', 180, 'g'), ('cheddar', 35, 'g'), ('bacon', 35, 'g'), ('cebolla', 15, 'g'), ('salsa-smash', 15, 'ml')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Agregado de Cheddar y Bacon
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Agregado de Cheddar y Bacon'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('cheddar', 35, 'g'), ('bacon', 30, 'g')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Papas Chicas (solo papa, sin aceite/sal)
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Papas Chicas'), ing.id, 180, 'g'
+  FROM ingredientes ing WHERE ing.tenant_id = v_tenant_id AND ing.slug = 'papa-frita';
+
+  -- Recetas Papas Medianas (solo papa, sin aceite/sal)
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Papas Medianas'), ing.id, 240, 'g'
+  FROM ingredientes ing WHERE ing.tenant_id = v_tenant_id AND ing.slug = 'papa-frita';
+
+  -- Recetas Arabe de Carne
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Arabe de Carne'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('pan-arabe', 1, 'unidad'), ('carne-160', 120, 'g'), ('huevo', 1, 'unidad'), ('mix-verde', 25, 'g'), ('cebolla', 15, 'g'), ('salsa-garlic', 20, 'ml')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Arabe Mixto
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Arabe Mixto'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('pan-arabe', 1, 'unidad'), ('pollo-mechado', 70, 'g'), ('carne-120', 70, 'g'), ('mix-verde', 25, 'g'), ('salsa-garlic', 20, 'ml')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Arabe XXL
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Arabe XXL'), ing.id, data.cantidad, data.unidad
+  FROM (VALUES ('pan-arabe', 1, 'unidad'), ('carne-160', 80, 'g'), ('pollo-mechado', 80, 'g'), ('cheddar', 35, 'g'), ('bacon', 30, 'g'), ('mix-verde', 30, 'g'), ('salsa-garlic', 25, 'ml')) AS data(slug, cantidad, unidad)
+  JOIN ingredientes ing ON ing.tenant_id = v_tenant_id AND ing.slug = data.slug;
+
+  -- Recetas Salsa de Ajo (agregado)
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Salsa de Ajo'), ing.id, 25, 'ml'
+  FROM ingredientes ing WHERE ing.tenant_id = v_tenant_id AND ing.slug = 'salsa-garlic';
+
+  -- Recetas Cheddar Derretido (agregado)
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Cheddar Derretido'), ing.id, 35, 'g'
+  FROM ingredientes ing WHERE ing.tenant_id = v_tenant_id AND ing.slug = 'cheddar';
+
+  -- Recetas Barbacoa (agregado, salsa house como barbacoa)
+  INSERT INTO recetas_producto (tenant_id, producto_id, ingrediente_id, cantidad, unidad)
+  SELECT v_tenant_id, (SELECT id FROM productos WHERE tenant_id = v_tenant_id AND nombre = 'Barbacoa'), ing.id, 30, 'ml'
+  FROM ingredientes ing WHERE ing.tenant_id = v_tenant_id AND ing.slug = 'salsa-house';
 
   -- Paso 7: Insertar empleados de ejemplo (cajeros para app movil)
   -- NOTA: Estos son empleados de ejemplo. Ajustar con datos reales.
