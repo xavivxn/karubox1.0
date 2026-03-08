@@ -87,7 +87,7 @@ export const fetchInventory = async (tenantId: string): Promise<InventoryRecord[
   const { data, error } = await supabase
     .from('inventario')
     .select(
-      'id,stock_actual,stock_minimo,unidad,controlar_stock,productos:producto_id(nombre,categoria:categorias(nombre))'
+      'id,stock_actual,stock_minimo,unidad,controlar_stock,nombre,productos:producto_id(nombre,categoria:categorias(nombre))'
     )
     .eq('tenant_id', tenantId)
 
@@ -105,7 +105,7 @@ export const fetchInventory = async (tenantId: string): Promise<InventoryRecord[
       stock_minimo: normalizeNumber(item.stock_minimo),
       unidad: String(item.unidad),
       controlar_stock: Boolean(item.controlar_stock),
-      productos: productosNombre ? { nombre: productosNombre } : null
+      productos: productosNombre ? { nombre: productosNombre } : (item as any).nombre ? { nombre: (item as any).nombre } : null
     }
   })
 

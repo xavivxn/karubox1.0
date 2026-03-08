@@ -1,0 +1,465 @@
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// ─── Tipos ──────────────────────────────────────────────────────────────────
+
+export interface CreateTenantData {
+  nombreNegocio: string
+  ruc?: string
+}
+
+export interface CreateTenantUserData {
+  tenantId: string
+  nombreAdmin: string
+  emailAdmin: string
+  passwordAdmin: string
+}
+
+// ─── Helpers internos ───────────────────────────────────────────────────────
+
+function generarSlug(nombre: string): string {
+  return nombre
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+}
+
+async function resolverSlugUnico(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  slugBase: string
+): Promise<string> {
+  const { data: existente } = await supabase
+    .from('tenants')
+    .select('slug')
+    .eq('slug', slugBase)
+    .maybeSingle()
+
+  if (!existente) return slugBase
+
+  const { data: similares } = await supabase
+    .from('tenants')
+    .select('slug')
+    .like('slug', `${slugBase}%`)
+
+  const numeros = (similares ?? [])
+    .map((r) => {
+      const match = r.slug.match(new RegExp(`^${slugBase}-(\\d+)$`))
+      return match ? parseInt(match[1], 10) : 0
+    })
+    .filter((n) => n > 0)
+
+  const siguiente = numeros.length > 0 ? Math.max(...numeros) + 1 : 2
+  return `${slugBase}-${siguiente}`
+}
+
+/**
+ * Verifica que el usuario que llama la acción sea un owner.
+ */
+async function assertOwner() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' as const, supabase: null }
+
+  const { data: usuario } = await supabase
+    .from('usuarios')
+    .select('rol')
+    .eq('auth_user_id', user.id)
+    .eq('is_deleted', false)
+    .single()
+
+  if (usuario?.rol !== 'owner') return { error: 'Sin permisos' as const, supabase: null }
+  return { error: null, supabase }
+}
+
+// ─── Actions ────────────────────────────────────────────────────────────────
+
+/**
+ * Lista todos los tenants activos con el conteo de sus usuarios.
+ */
+export async function listTenants() {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError, tenants: [] }
+
+  const { data: tenants, error } = await supabase
+    .from('tenants')
+    .select(`
+      id, nombre, slug, ruc, activo, created_at,
+      usuarios(count)
+    `)
+    .eq('is_deleted', false)
+    .neq('slug', 'sistema')
+    .order('created_at', { ascending: false })
+
+  if (error) return { error: 'Error al cargar lomiterías', tenants: [] }
+  return { error: null, tenants: tenants ?? [] }
+}
+
+/**
+ * Crea un nuevo tenant (lomitería) con su contador de pedidos.
+ */
+export async function createTenant(data: CreateTenantData) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError }
+
+  if (!data.nombreNegocio.trim()) return { error: 'El nombre del negocio es requerido' }
+
+  const slugBase = generarSlug(data.nombreNegocio)
+  if (!slugBase) return { error: 'El nombre del negocio no generó un slug válido' }
+
+  const slug = await resolverSlugUnico(supabase, slugBase)
+
+  const { data: tenant, error: tenantError } = await supabase
+    .from('tenants')
+    .insert({
+      nombre: data.nombreNegocio.trim(),
+      slug,
+      ruc: data.ruc?.trim() || null,
+      activo: true,
+      is_deleted: false,
+    })
+    .select('id, nombre, slug')
+    .single()
+
+  if (tenantError || !tenant) {
+    return { error: 'Error al crear la lomitería. Intentalo nuevamente.' }
+  }
+
+  // Inicializar contador de pedidos
+  await supabase
+    .from('tenant_pedido_counters')
+    .insert({ tenant_id: tenant.id, ultimo_numero: 0 })
+
+  return { error: null, tenant }
+}
+
+/**
+ * Crea el usuario administrador de un tenant.
+ * Usa la Admin API (service role) para crear el auth user sin requerir signup.
+ */
+export async function createTenantUser(data: CreateTenantUserData) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError }
+
+  if (!data.nombreAdmin.trim()) return { error: 'El nombre del administrador es requerido' }
+  if (!data.emailAdmin.trim()) return { error: 'El email es requerido' }
+  if (!data.passwordAdmin || data.passwordAdmin.length < 6) {
+    return { error: 'La contraseña debe tener al menos 6 caracteres' }
+  }
+
+  // Verificar que el tenant existe
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id')
+    .eq('id', data.tenantId)
+    .eq('is_deleted', false)
+    .single()
+
+  if (!tenant) return { error: 'La lomitería indicada no existe' }
+
+  // Crear auth user con Admin API (no requiere que el usuario haga signup)
+  const adminClient = createAdminClient()
+  const { data: authUser, error: authUserError } = await adminClient.auth.admin.createUser({
+    email: data.emailAdmin.trim(),
+    password: data.passwordAdmin,
+    email_confirm: true, // confirmar email automáticamente para que pueda loguear ya
+    user_metadata: { full_name: data.nombreAdmin.trim() },
+  })
+
+  if (authUserError || !authUser.user) {
+    if (authUserError?.message.includes('already registered')) {
+      return { error: 'Ya existe un usuario con ese correo electrónico.' }
+    }
+    return { error: authUserError?.message ?? 'Error al crear el usuario.' }
+  }
+
+  // Crear registro en tabla usuarios
+  const { error: usuarioError } = await supabase.from('usuarios').insert({
+    auth_user_id: authUser.user.id,
+    tenant_id: data.tenantId,
+    email: data.emailAdmin.trim(),
+    nombre: data.nombreAdmin.trim(),
+    rol: 'admin',
+    activo: true,
+    is_deleted: false,
+  })
+
+  if (usuarioError) {
+    // Rollback: eliminar el auth user creado
+    await adminClient.auth.admin.deleteUser(authUser.user.id)
+    return { error: 'Error al guardar el perfil del usuario. Intentalo nuevamente.' }
+  }
+
+  return { error: null, email: data.emailAdmin.trim() }
+}
+
+/**
+ * Activa o desactiva una lomitería (soft toggle).
+ */
+export async function toggleTenantStatus(tenantId: string, activo: boolean) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError }
+
+  const { error } = await supabase
+    .from('tenants')
+    .update({ activo })
+    .eq('id', tenantId)
+    .neq('slug', 'sistema')
+
+  if (error) return { error: 'Error al actualizar el estado.' }
+  return { error: null }
+}
+
+// ─── Gestión de productos (owner cross-tenant) ───────────────────────────────
+
+export interface CreateProductoOwnerData {
+  nombre: string
+  descripcion?: string
+  precio: number
+  categoria_id?: string
+  disponible: boolean
+  imagen_url?: string
+  tipo: 'con_receta' | 'combo' | 'sin_receta'
+  receta?: Array<{
+    ingrediente_id: string
+    cantidad: number
+    unidad: string
+    obligatorio: boolean
+  }>
+  combo_items?: Array<{
+    producto_id: string
+    cantidad: number
+  }>
+  inventario_id?: string
+}
+
+/**
+ * Obtiene los datos básicos de un tenant (para mostrar en el header de la página de productos).
+ */
+export async function getTenantForOwner(tenantId: string) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError, tenant: null }
+
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('id, nombre, slug')
+    .eq('id', tenantId)
+    .eq('is_deleted', false)
+    .single()
+
+  if (error || !data) return { error: 'Lomitería no encontrada', tenant: null }
+  return { error: null, tenant: data }
+}
+
+/**
+ * Lista los productos de un tenant específico (sin filtrar por disponible para la vista owner).
+ */
+export async function listProductosOwner(tenantId: string) {
+  const { error: authError } = await assertOwner()
+  if (authError) return { error: authError, productos: [] }
+
+  const adminClient = createAdminClient()
+  const { data, error } = await adminClient
+    .from('productos')
+    .select('id, nombre, precio, disponible, tiene_receta, imagen_url, categoria_id')
+    .eq('tenant_id', tenantId)
+    .neq('is_deleted', true)       // cubre is_deleted = false Y is_deleted = null
+    .order('nombre', { ascending: true })
+
+  if (error) {
+    console.error('[listProductosOwner] Error al consultar productos:', error)
+    return { error: `Error al cargar productos: ${error.message}`, productos: [] }
+  }
+
+  console.log(`[listProductosOwner] tenant=${tenantId} → ${data?.length ?? 0} productos`)
+  return { error: null, productos: data ?? [] }
+}
+
+/**
+ * Lista las categorías activas de un tenant específico.
+ */
+export async function listCategoriasOwner(tenantId: string) {
+  const { error: authError } = await assertOwner()
+  if (authError) return { error: authError, categorias: [] }
+
+  const adminClient = createAdminClient()
+  const { data, error } = await adminClient
+    .from('categorias')
+    .select('id, nombre')
+    .eq('tenant_id', tenantId)
+    .eq('activa', true)
+    .order('orden', { ascending: true })
+
+  if (error) return { error: 'Error al cargar categorías', categorias: [] }
+  return { error: null, categorias: data ?? [] }
+}
+
+/**
+ * Lista los ingredientes activos de un tenant específico.
+ */
+export async function listIngredientesOwner(tenantId: string) {
+  const { error: authError } = await assertOwner()
+  if (authError) return { error: authError, ingredientes: [] }
+
+  const adminClient = createAdminClient()
+  const { data, error } = await adminClient
+    .from('ingredientes')
+    .select('id, nombre, unidad')
+    .eq('tenant_id', tenantId)
+    .eq('activo', true)
+    .order('nombre', { ascending: true })
+
+  if (error) return { error: 'Error al cargar ingredientes', ingredientes: [] }
+  return { error: null, ingredientes: data ?? [] }
+}
+
+/**
+ * Lista items de inventario sin producto vinculado (disponibles para crear producto sin receta).
+ */
+export async function listInventarioSinProducto(tenantId: string) {
+  const { error: authError } = await assertOwner()
+  if (authError) return { error: authError, items: [] }
+
+  const adminClient = createAdminClient()
+  const { data, error } = await adminClient
+    .from('inventario')
+    .select('id, nombre, stock_actual, stock_minimo, unidad, tipo_inventario')
+    .eq('tenant_id', tenantId)
+    .is('producto_id', null)
+    .order('nombre', { ascending: true })
+
+  if (error) return { error: 'Error al cargar items de inventario', items: [] }
+  return { error: null, items: data ?? [] }
+}
+
+/**
+ * Crea un producto (con receta o combo) para un tenant, ejecutado desde el rol owner.
+ * Usa el admin client para bypass de RLS cross-tenant.
+ */
+export async function createProductoOwner(tenantId: string, data: CreateProductoOwnerData) {
+  const { error: authError } = await assertOwner()
+  if (authError) return { error: authError, producto: null }
+
+  if (!data.nombre.trim()) return { error: 'El nombre del producto es requerido', producto: null }
+  if (!data.precio || data.precio <= 0) return { error: 'El precio debe ser mayor a cero', producto: null }
+  if (!data.categoria_id) return { error: 'Debes seleccionar una categoría', producto: null }
+  if (data.tipo === 'con_receta' && (!data.receta || data.receta.length === 0)) {
+    return { error: 'Debes agregar al menos un ingrediente a la receta', producto: null }
+  }
+  if (data.tipo === 'combo' && (!data.combo_items || data.combo_items.length === 0)) {
+    return { error: 'Debes agregar al menos un producto al combo', producto: null }
+  }
+  if (data.tipo === 'sin_receta' && !data.inventario_id) {
+    return { error: 'Debes seleccionar un item de inventario', producto: null }
+  }
+
+  const adminClient = createAdminClient()
+
+  // 1. Crear el producto
+  const { data: producto, error: productoError } = await adminClient
+    .from('productos')
+    .insert({
+      tenant_id: tenantId,
+      nombre: data.nombre.trim(),
+      descripcion: data.descripcion?.trim() || null,
+      precio: data.precio,
+      categoria_id: data.categoria_id || null,
+      disponible: data.disponible,
+      imagen_url: data.imagen_url?.trim() || null,
+      tiene_receta: data.tipo === 'con_receta',
+      is_deleted: false,
+    })
+    .select('id, nombre')
+    .single()
+
+  if (productoError || !producto) {
+    return { error: 'Error al crear el producto. Inténtalo de nuevo.', producto: null }
+  }
+
+  // 2. Insertar ítems de receta
+  if (data.tipo === 'con_receta' && data.receta && data.receta.length > 0) {
+    const recetaItems = data.receta.map((item) => ({
+      tenant_id: tenantId,
+      producto_id: producto.id,
+      ingrediente_id: item.ingrediente_id,
+      cantidad: item.cantidad,
+      unidad: item.unidad,
+      obligatorio: item.obligatorio,
+    }))
+
+    const { error: recetaError } = await adminClient
+      .from('recetas_producto')
+      .insert(recetaItems)
+
+    if (recetaError) {
+      await adminClient.from('productos').delete().eq('id', producto.id)
+      return { error: 'Error al guardar la receta del producto', producto: null }
+    }
+  }
+
+  // 3. Insertar ítems de combo
+  if (data.tipo === 'combo' && data.combo_items && data.combo_items.length > 0) {
+    const comboInserts = data.combo_items.map((item) => ({
+      tenant_id: tenantId,
+      combo_id: producto.id,
+      producto_id: item.producto_id,
+      cantidad: item.cantidad,
+    }))
+
+    const { error: comboError } = await adminClient
+      .from('combo_items')
+      .insert(comboInserts)
+
+    if (comboError) {
+      await adminClient.from('productos').delete().eq('id', producto.id)
+      return { error: 'Error al guardar los ítems del combo', producto: null }
+    }
+  }
+
+  // 4. Vincular item de inventario para productos sin receta
+  if (data.tipo === 'sin_receta' && data.inventario_id) {
+    const { error: linkError } = await adminClient
+      .from('inventario')
+      .update({ producto_id: producto.id })
+      .eq('id', data.inventario_id)
+      .is('producto_id', null)
+
+    if (linkError) {
+      await adminClient.from('productos').delete().eq('id', producto.id)
+      return { error: 'Error al vincular el item de inventario al producto', producto: null }
+    }
+  }
+
+  return { error: null, producto }
+}
+
+/**
+ * Elimina (soft delete) un producto de un tenant, ejecutado desde el rol owner.
+ */
+export async function deleteProductoOwner(productoId: string, tenantId: string) {
+  const { error: authError } = await assertOwner()
+  if (authError) return { error: authError }
+
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
+    .from('productos')
+    .update({ is_deleted: true })
+    .eq('id', productoId)
+    .eq('tenant_id', tenantId)
+
+  if (error) return { error: 'Error al eliminar el producto. Inténtalo de nuevo.' }
+
+  // Desvincular inventario si el producto tenía un item de inventario asociado
+  await adminClient
+    .from('inventario')
+    .update({ producto_id: null })
+    .eq('producto_id', productoId)
+    .eq('tenant_id', tenantId)
+
+  return { error: null }
+}

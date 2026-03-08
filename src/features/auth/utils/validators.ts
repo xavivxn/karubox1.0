@@ -12,18 +12,18 @@ export const validateLoginForm = (email: string, password: string): string | nul
   if (!email.trim()) {
     return 'El correo electrónico es requerido'
   }
-  
+
   if (!validateEmail(email)) {
     return 'Formato de correo electrónico inválido'
   }
-  
+
   if (!password) {
     return 'La contraseña es requerida'
   }
-  
+
   if (!validatePassword(password)) {
     return `La contraseña debe tener al menos ${VALIDATION_RULES.MIN_PASSWORD_LENGTH} caracteres`
   }
-  
+
   return null
 }

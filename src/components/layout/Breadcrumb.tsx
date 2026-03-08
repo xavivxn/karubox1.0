@@ -1,7 +1,7 @@
 'use client'
 
-import { usePathname, useRouter } from 'next/navigation'
-import { ChevronRight, Home, Users, ShoppingCart, LayoutDashboard, ChefHat } from 'lucide-react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { ChevronRight, Home, Users, ShoppingCart, LayoutDashboard, ChefHat, Store, PlusCircle, Package } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { ROUTES } from '@/config/routes'
 
@@ -14,49 +14,70 @@ interface BreadcrumbItem {
 export function Breadcrumb() {
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { darkMode, isAdmin } = useTenant()
 
-  // Construir items del breadcrumb basado en la ruta
   const items: BreadcrumbItem[] = []
-  
-  // Solo agregar "Inicio" si el usuario es admin
-  if (isAdmin) {
+
+  if (pathname.startsWith('/owner')) {
+    // Home siempre es el primer item para el rol owner
     items.push({
-      label: 'Inicio',
-      path: ROUTES.PROTECTED.HOME,
+      label: 'Home',
+      path: ROUTES.PROTECTED.OWNER,
       icon: <Home className="w-4 h-4" />,
     })
-  }
 
-  // Construir breadcrumb dinámicamente según la ruta
-  if (pathname.startsWith('/home/admin')) {
-    // Agregar Administración
-    items.push({
-      label: 'Administración',
-      path: '/home/admin',
-      icon: <LayoutDashboard className="w-4 h-4" />,
-    })
-    
-    // Si hay subrutas, agregarlas
-    if (pathname === '/home/admin/clientes') {
+    if (pathname === '/owner/tenants/new') {
       items.push({
-        label: 'Clientes',
-        path: '/home/admin/clientes',
-        icon: <Users className="w-4 h-4" />,
+        label: 'Crear lomitería',
+        path: '/owner/tenants/new',
+        icon: <PlusCircle className="w-4 h-4" />,
+      })
+    } else if (pathname.includes('/owner/tenants/') && pathname.endsWith('/productos')) {
+      const tenantName = searchParams.get('name')
+      items.push({
+        label: tenantName ?? 'Gestionar productos',
+        path: pathname,
+        icon: tenantName ? <Store className="w-4 h-4" /> : <Package className="w-4 h-4" />,
       })
     }
-  } else if (pathname.startsWith('/home/pos')) {
-    items.push({
-      label: 'Punto de Venta',
-      path: '/home/pos',
-      icon: <ShoppingCart className="w-4 h-4" />,
-    })
-  } else if (pathname.startsWith('/home/kds')) {
-    items.push({
-      label: 'Cocina',
-      path: '/home/kds',
-      icon: <ChefHat className="w-4 h-4" />,
-    })
+  } else {
+    // Rutas /home: "Inicio" solo si es admin
+    if (isAdmin) {
+      items.push({
+        label: 'Inicio',
+        path: ROUTES.PROTECTED.HOME,
+        icon: <Home className="w-4 h-4" />,
+      })
+    }
+
+    if (pathname.startsWith('/home/admin')) {
+      items.push({
+        label: 'Administración',
+        path: '/home/admin',
+        icon: <LayoutDashboard className="w-4 h-4" />,
+      })
+
+      if (pathname === '/home/admin/clientes') {
+        items.push({
+          label: 'Clientes',
+          path: '/home/admin/clientes',
+          icon: <Users className="w-4 h-4" />,
+        })
+      }
+    } else if (pathname.startsWith('/home/pos')) {
+      items.push({
+        label: 'Punto de Venta',
+        path: '/home/pos',
+        icon: <ShoppingCart className="w-4 h-4" />,
+      })
+    } else if (pathname.startsWith('/home/kds')) {
+      items.push({
+        label: 'Cocina',
+        path: '/home/kds',
+        icon: <ChefHat className="w-4 h-4" />,
+      })
+    }
   }
 
   const handleClick = (path: string, isLast: boolean) => {
@@ -74,7 +95,7 @@ export function Breadcrumb() {
     >
       {items.map((item, index) => {
         const isLast = index === items.length - 1
-        
+
         return (
           <div key={item.path} className="flex items-center gap-1.5">
             {index > 0 && (

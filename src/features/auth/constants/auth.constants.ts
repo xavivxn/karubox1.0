@@ -21,3 +21,4 @@ export const REDIRECT_URLS = {
   DEFAULT: '/home',
   LOGIN: '/'
 }
+
