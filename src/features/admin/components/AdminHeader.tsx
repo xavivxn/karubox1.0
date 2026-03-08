@@ -4,7 +4,7 @@
  */
 
 import Link from 'next/link'
-import { BarChart3, PlusCircle, Tag } from 'lucide-react'
+import { BarChart3, PlusCircle } from 'lucide-react'
 import { formatGuaranies } from '@/lib/utils/format'
 import { ROUTES } from '@/config/routes'
 import { getTodayLabel } from '../utils/admin.utils'
@@ -14,14 +14,12 @@ interface AdminHeaderProps {
   tenantName: string
   stats: DashboardStats
   onOpenInventoryDrawer: () => void
-  onOpenCategoriaModal: () => void
 }
 
 export const AdminHeader = ({
   tenantName,
   stats,
-  onOpenInventoryDrawer,
-  onOpenCategoriaModal
+  onOpenInventoryDrawer
 }: AdminHeaderProps) => {
   const todayLabel = getTodayLabel()
 
@@ -67,13 +65,6 @@ export const AdminHeader = ({
             <BarChart3 className="w-5 h-5" />
             Ir al POS
           </Link>
-          <button
-            onClick={onOpenCategoriaModal}
-            className="inline-flex items-center gap-2 rounded-2xl border border-orange-300 bg-white px-5 py-3 font-semibold text-orange-600 hover:bg-orange-50 transition"
-          >
-            <Tag className="w-5 h-5" />
-            Nueva categoría
-          </button>
           <button
             onClick={onOpenInventoryDrawer}
             className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-5 py-3 font-semibold text-white shadow-xl shadow-orange-500/40 hover:bg-orange-600 transition"

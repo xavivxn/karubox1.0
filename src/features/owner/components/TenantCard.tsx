@@ -96,7 +96,7 @@ export function TenantCard({ tenant, onStatusChange }: TenantCardProps) {
           className="w-full py-2 px-4 rounded-lg text-sm font-medium text-center transition bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-900/50 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-700 inline-flex items-center justify-center gap-2"
         >
           <Package className="w-4 h-4" />
-          Gestionar productos
+          Gestionar
         </Link>
         <button
           onClick={handleToggle}

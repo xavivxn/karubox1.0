@@ -29,9 +29,10 @@ interface ProductManagementViewProps {
   tenant: Tenant
   initialProductos: Producto[]
   productosError: string | null
+  userRole: string
 }
 
-export function ProductManagementView({ tenant, initialProductos, productosError }: ProductManagementViewProps) {
+export function ProductManagementView({ tenant, initialProductos, productosError, userRole }: ProductManagementViewProps) {
   const router = useRouter()
   const [productos, setProductos] = useState<Producto[]>(initialProductos)
   const [showModal, setShowModal] = useState(false)
@@ -96,13 +97,15 @@ export function ProductManagementView({ tenant, initialProductos, productosError
               <ClipboardList className="w-5 h-5" />
               Registrar inventario
             </button>
-            <button
-              onClick={() => setShowCategoriaModal(true)}
-              className="inline-flex items-center gap-2 rounded-2xl border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 px-5 py-3 font-semibold text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition"
-            >
-              <Tag className="w-5 h-5" />
-              Nueva categoría
-            </button>
+            {userRole === 'owner' && (
+              <button
+                onClick={() => setShowCategoriaModal(true)}
+                className="inline-flex items-center gap-2 rounded-2xl border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 px-5 py-3 font-semibold text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition"
+              >
+                <Tag className="w-5 h-5" />
+                Nueva categoría
+              </button>
+            )}
             <button
               onClick={() => setShowModal(true)}
               className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-5 py-3 font-semibold text-white shadow-xl shadow-orange-500/30 hover:bg-orange-600 transition"

@@ -7,7 +7,7 @@ interface Props {
 }
 
 export default async function OwnerProductosPage({ params }: Props) {
-  await requireOwner()
+  const { usuario } = await requireOwner()
 
   const { tenantId } = await params
 
@@ -39,6 +39,7 @@ export default async function OwnerProductosPage({ params }: Props) {
       tenant={tenantResult.tenant}
       initialProductos={productosResult.productos}
       productosError={productosResult.error ?? null}
+      userRole={usuario.rol}
     />
   )
 }

@@ -9,7 +9,6 @@ import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { IngredienteModal } from './IngredienteModal'
-import { CategoriaModal } from './CategoriaModal'
 import { useAdminDashboard } from '../hooks/useAdminDashboard'
 import { AdminHeader } from './AdminHeader'
 import { AdminLoading } from './AdminLoading'
@@ -27,7 +26,6 @@ import { InventoryGrid } from './InventoryGrid'
 export const AdminView = () => {
   const { tenant, usuario, darkMode } = useTenant()
   const [showIngredienteModal, setShowIngredienteModal] = useState(false)
-  const [showCategoriaModal, setShowCategoriaModal] = useState(false)
   
   const {
     loading,
@@ -67,7 +65,6 @@ export const AdminView = () => {
         tenantName={tenant.nombre}
         stats={stats}
         onOpenInventoryDrawer={() => setShowIngredienteModal(true)}
-        onOpenCategoriaModal={() => setShowCategoriaModal(true)}
       />
 
       {/* KPI Cards principales */}
@@ -114,14 +111,6 @@ export const AdminView = () => {
         onClose={() => setShowIngredienteModal(false)}
         tenantId={tenant.id}
         onSaved={handleIngredienteSaved}
-      />
-
-      {/* Modal para crear categorías */}
-      <CategoriaModal
-        open={showCategoriaModal}
-        onClose={() => setShowCategoriaModal(false)}
-        tenantId={tenant.id}
-        onSaved={() => setShowCategoriaModal(false)}
       />
     </>
   )
