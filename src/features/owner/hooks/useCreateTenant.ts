@@ -6,6 +6,10 @@ import { createTenant, createTenantUser } from '@/app/actions/owner'
 export interface CreateTenantForm {
   nombreNegocio: string
   ruc: string
+  email: string
+  telefono: string
+  direccion: string
+  logo_url: string
   nombreAdmin: string
   emailAdmin: string
   passwordAdmin: string
@@ -17,6 +21,10 @@ export function useCreateTenant() {
   const [form, setForm] = useState<CreateTenantForm>({
     nombreNegocio: '',
     ruc: '',
+    email: '',
+    telefono: '',
+    direccion: '',
+    logo_url: '',
     nombreAdmin: '',
     emailAdmin: '',
     passwordAdmin: '',
@@ -74,6 +82,10 @@ export function useCreateTenant() {
     const tenantResult = await createTenant({
       nombreNegocio: form.nombreNegocio,
       ruc: form.ruc,
+      email: form.email,
+      telefono: form.telefono,
+      direccion: form.direccion,
+      logo_url: form.logo_url,
     })
 
     if (tenantResult.error) {
@@ -103,7 +115,7 @@ export function useCreateTenant() {
   }
 
   const reset = useCallback(() => {
-    setForm({ nombreNegocio: '', ruc: '', nombreAdmin: '', emailAdmin: '', passwordAdmin: '' })
+    setForm({ nombreNegocio: '', ruc: '', email: '', telefono: '', direccion: '', logo_url: '', nombreAdmin: '', emailAdmin: '', passwordAdmin: '' })
     setStep('tenant')
     setCreatedTenantNombre('')
     setAdminEmail('')

@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ChevronRight, Home, Users, ShoppingCart, LayoutDashboard, ChefHat, Store, PlusCircle, Package } from 'lucide-react'
+import { ChevronRight, Home, Users, ShoppingCart, LayoutDashboard, ChefHat, Store, PlusCircle, Package, UserCog, Building2 } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { ROUTES } from '@/config/routes'
 
@@ -33,12 +33,36 @@ export function Breadcrumb() {
         path: '/owner/tenants/new',
         icon: <PlusCircle className="w-4 h-4" />,
       })
+    } else if (pathname.match(/^\/owner\/tenants\/[^/]+$/) && !pathname.endsWith('/new')) {
+      const tenantName = searchParams.get('name')
+      items.push({
+        label: tenantName ?? 'Detalle del negocio',
+        path: pathname,
+        icon: <Building2 className="w-4 h-4" />,
+      })
     } else if (pathname.includes('/owner/tenants/') && pathname.endsWith('/productos')) {
       const tenantName = searchParams.get('name')
       items.push({
         label: tenantName ?? 'Gestionar productos',
         path: pathname,
         icon: tenantName ? <Store className="w-4 h-4" /> : <Package className="w-4 h-4" />,
+      })
+    } else if (pathname.includes('/owner/tenants/') && pathname.endsWith('/cajeros')) {
+      // Extraer tenantId para construir la ruta hacia productos
+      const match = pathname.match(/\/owner\/tenants\/([^/]+)\/cajeros/)
+      const tenantId = match?.[1]
+      const tenantName = searchParams.get('name')
+      if (tenantId) {
+        items.push({
+          label: tenantName ?? 'Gestionar productos',
+          path: `/owner/tenants/${tenantId}/productos${tenantName ? `?name=${encodeURIComponent(tenantName)}` : ''}`,
+          icon: <Store className="w-4 h-4" />,
+        })
+      }
+      items.push({
+        label: 'Usuarios',
+        path: pathname,
+        icon: <UserCog className="w-4 h-4" />,
       })
     }
   } else {

@@ -15,6 +15,7 @@ interface Tenant {
   telefono?: string
   email?: string
   config_impresion?: any
+  activo: boolean
 }
 
 interface Usuario {
@@ -38,6 +39,7 @@ interface TenantContextType {
   isCajero: boolean
   isCocinero: boolean
   isRepartidor: boolean
+  isTenantActive: boolean
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined)
@@ -180,6 +182,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     isCajero: usuario?.rol === 'cajero',
     isCocinero: usuario?.rol === 'cocinero',
     isRepartidor: usuario?.rol === 'repartidor',
+    isTenantActive: tenant?.activo ?? true,
   }
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>

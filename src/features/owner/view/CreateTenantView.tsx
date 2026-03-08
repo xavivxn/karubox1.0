@@ -77,7 +77,7 @@ export function CreateTenantView() {
               Datos de la lomitería
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              Ingresá el nombre y RUC del nuevo negocio.
+              Ingresá los datos del nuevo negocio y su información de contacto.
             </p>
             <TenantForm
               form={form}

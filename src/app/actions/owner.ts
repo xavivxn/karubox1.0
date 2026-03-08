@@ -8,6 +8,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export interface CreateTenantData {
   nombreNegocio: string
   ruc?: string
+  email?: string
+  telefono?: string
+  direccion?: string
+  logo_url?: string
+}
+
+export interface UpdateTenantData {
+  nombre?: string
+  ruc?: string
+  email?: string
+  telefono?: string
+  direccion?: string
+  logo_url?: string
 }
 
 export interface CreateTenantUserData {
@@ -16,6 +29,14 @@ export interface CreateTenantUserData {
   emailAdmin: string
   passwordAdmin: string
 }
+
+export interface CreateCajeroData {
+  nombre: string
+  email: string
+  password: string
+}
+
+export type TenantUserRole = 'admin' | 'cajero'
 
 // ─── Helpers internos ───────────────────────────────────────────────────────
 
@@ -89,7 +110,7 @@ export async function listTenants() {
   const { data: tenants, error } = await supabase
     .from('tenants')
     .select(`
-      id, nombre, slug, ruc, activo, created_at,
+      id, nombre, slug, ruc, email, telefono, direccion, logo_url, activo, created_at,
       usuarios(count)
     `)
     .eq('is_deleted', false)
@@ -120,6 +141,10 @@ export async function createTenant(data: CreateTenantData) {
       nombre: data.nombreNegocio.trim(),
       slug,
       ruc: data.ruc?.trim() || null,
+      email: data.email?.trim() || null,
+      telefono: data.telefono?.trim() || null,
+      direccion: data.direccion?.trim() || null,
+      logo_url: data.logo_url?.trim() || null,
       activo: true,
       is_deleted: false,
     })
@@ -212,6 +237,54 @@ export async function toggleTenantStatus(tenantId: string, activo: boolean) {
     .neq('slug', 'sistema')
 
   if (error) return { error: 'Error al actualizar el estado.' }
+  return { error: null }
+}
+
+/**
+ * Obtiene los datos completos de un tenant para visualización/edición.
+ */
+export async function getTenantDetail(tenantId: string) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError, tenant: null }
+
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('id, nombre, slug, ruc, email, telefono, direccion, logo_url, activo, created_at')
+    .eq('id', tenantId)
+    .eq('is_deleted', false)
+    .single()
+
+  if (error || !data) return { error: 'Lomitería no encontrada', tenant: null }
+  return { error: null, tenant: data }
+}
+
+/**
+ * Actualiza los datos de un tenant (nombre, contacto, logo).
+ */
+export async function updateTenant(tenantId: string, data: UpdateTenantData) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError }
+
+  const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() }
+
+  if (data.nombre !== undefined) {
+    if (!data.nombre.trim()) return { error: 'El nombre del negocio es requerido' }
+    updatePayload.nombre = data.nombre.trim()
+  }
+  if (data.ruc !== undefined) updatePayload.ruc = data.ruc.trim() || null
+  if (data.email !== undefined) updatePayload.email = data.email.trim() || null
+  if (data.telefono !== undefined) updatePayload.telefono = data.telefono.trim() || null
+  if (data.direccion !== undefined) updatePayload.direccion = data.direccion.trim() || null
+  if (data.logo_url !== undefined) updatePayload.logo_url = data.logo_url.trim() || null
+
+  const { error } = await supabase
+    .from('tenants')
+    .update(updatePayload)
+    .eq('id', tenantId)
+    .eq('is_deleted', false)
+    .neq('slug', 'sistema')
+
+  if (error) return { error: 'Error al actualizar la lomitería. Intentalo nuevamente.' }
   return { error: null }
 }
 
@@ -483,6 +556,134 @@ export async function deleteProductoOwner(productoId: string, tenantId: string) 
     .update({ producto_id: null })
     .eq('producto_id', productoId)
     .eq('tenant_id', tenantId)
+
+  return { error: null }
+}
+
+// ─── Gestión de usuarios por tenant (owner cross-tenant) ─────────────────────
+
+const VALID_TENANT_ROLES: TenantUserRole[] = ['admin', 'cajero']
+const ROLE_LABELS: Record<TenantUserRole, string> = { admin: 'administrador', cajero: 'cajero' }
+
+/**
+ * Lista los usuarios de un tenant filtrados por rol.
+ */
+export async function listUsuariosTenantOwner(tenantId: string, rol: TenantUserRole) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError, usuarios: [] }
+  if (!VALID_TENANT_ROLES.includes(rol)) return { error: 'Rol inválido', usuarios: [] }
+
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('id, auth_user_id, nombre, email, activo, created_at')
+    .eq('tenant_id', tenantId)
+    .eq('rol', rol)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[listUsuariosTenantOwner] Error:', error)
+    return { error: `Error al cargar ${ROLE_LABELS[rol]}s`, usuarios: [] }
+  }
+
+  return { error: null, usuarios: data ?? [] }
+}
+
+/**
+ * Crea un usuario (admin o cajero) para un tenant.
+ * Usa la Admin API (service role) para crear el auth user + registro en usuarios.
+ */
+export async function createUsuarioTenantOwner(tenantId: string, rol: TenantUserRole, data: CreateCajeroData) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError }
+  if (!VALID_TENANT_ROLES.includes(rol)) return { error: 'Rol inválido' }
+
+  const label = ROLE_LABELS[rol]
+
+  if (!data.nombre.trim()) return { error: `El nombre del ${label} es requerido` }
+  if (!data.email.trim()) return { error: 'El email es requerido' }
+  if (!data.password || data.password.length < 6) {
+    return { error: 'La contraseña debe tener al menos 6 caracteres' }
+  }
+
+  // Verificar que el tenant existe
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id')
+    .eq('id', tenantId)
+    .eq('is_deleted', false)
+    .single()
+
+  if (!tenant) return { error: 'La lomitería indicada no existe' }
+
+  // Crear auth user con Admin API
+  const adminClient = createAdminClient()
+  const { data: authUser, error: authUserError } = await adminClient.auth.admin.createUser({
+    email: data.email.trim(),
+    password: data.password,
+    email_confirm: true,
+    user_metadata: { full_name: data.nombre.trim() },
+  })
+
+  if (authUserError || !authUser.user) {
+    if (authUserError?.message.includes('already registered')) {
+      return { error: 'Ya existe un usuario con ese correo electrónico.' }
+    }
+    return { error: authUserError?.message ?? 'Error al crear el usuario.' }
+  }
+
+  // Crear registro en tabla usuarios
+  const { error: usuarioError } = await supabase.from('usuarios').insert({
+    auth_user_id: authUser.user.id,
+    tenant_id: tenantId,
+    email: data.email.trim(),
+    nombre: data.nombre.trim(),
+    rol,
+    activo: true,
+    is_deleted: false,
+  })
+
+  if (usuarioError) {
+    // Rollback: eliminar el auth user creado
+    await adminClient.auth.admin.deleteUser(authUser.user.id)
+    return { error: `Error al guardar el perfil del ${label}. Intentalo nuevamente.` }
+  }
+
+  return { error: null, email: data.email.trim() }
+}
+
+/**
+ * Elimina un usuario de un tenant (soft delete en usuarios + elimina auth user).
+ */
+export async function deleteUsuarioTenantOwner(usuarioId: string, tenantId: string) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError }
+
+  // Obtener el auth_user_id antes de marcar como eliminado
+  const { data: usuario, error: fetchError } = await supabase
+    .from('usuarios')
+    .select('auth_user_id, rol')
+    .eq('id', usuarioId)
+    .eq('tenant_id', tenantId)
+    .eq('is_deleted', false)
+    .single()
+
+  if (fetchError || !usuario) return { error: 'Usuario no encontrado' }
+
+  // Soft delete en tabla usuarios
+  const { error: updateError } = await supabase
+    .from('usuarios')
+    .update({ is_deleted: true, activo: false, deleted_at: new Date().toISOString() })
+    .eq('id', usuarioId)
+    .eq('tenant_id', tenantId)
+
+  if (updateError) return { error: 'Error al eliminar el usuario. Intentalo nuevamente.' }
+
+  // Eliminar el auth user para que no pueda loguear más
+  const adminClient = createAdminClient()
+  if (usuario.auth_user_id) {
+    await adminClient.auth.admin.deleteUser(usuario.auth_user_id)
+  }
 
   return { error: null }
 }

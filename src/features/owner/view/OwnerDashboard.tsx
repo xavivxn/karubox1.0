@@ -10,6 +10,10 @@ interface Tenant {
   nombre: string
   slug: string
   ruc: string | null
+  email: string | null
+  telefono: string | null
+  direccion: string | null
+  logo_url: string | null
   activo: boolean
   created_at: string
   usuarios: { count: number }[]

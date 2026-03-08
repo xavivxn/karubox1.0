@@ -4,6 +4,7 @@ import { ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { AppNavbar } from './AppNavbar'
 import { AppFooter } from './AppFooter'
+import { InactiveTenantOverlay } from '@/components/ui/InactiveTenantOverlay'
 import { useTenant } from '@/contexts/TenantContext'
 import { THEME_CONFIG } from '@/utils/constants'
 
@@ -82,6 +83,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       {!hideNavbar && (
         <AppNavbar pageTitle={pageInfo.title} pageSubtitle={pageInfo.subtitle} />
       )}
+      <InactiveTenantOverlay />
       <main className={`flex-1 ${pageInfo.fullWidth ? "py-4" : "px-4 py-6"}`}>
         {pageInfo.fullWidth ? (
           children

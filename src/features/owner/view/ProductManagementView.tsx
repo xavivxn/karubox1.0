@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Package, Plus, CheckCircle, XCircle, ChefHat, ClipboardList, Tag, Trash2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Package, Plus, CheckCircle, XCircle, ChefHat, ClipboardList, Tag, Trash2, AlertTriangle, Users } from 'lucide-react'
+import Link from 'next/link'
 import { OwnerProductModal } from '../components/OwnerProductModal'
 import { IngredienteModal } from '@/features/admin/components/IngredienteModal'
 import { CategoriaModal } from '@/features/admin/components/CategoriaModal'
@@ -72,7 +73,7 @@ export function ProductManagementView({ tenant, initialProductos, productosError
     <>
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push(ROUTES.PROTECTED.OWNER)}
@@ -89,29 +90,38 @@ export function ProductManagementView({ tenant, initialProductos, productosError
               <p className="text-sm text-gray-400 dark:text-gray-500 font-mono">/{tenant.slug}</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex gap-2">
             <button
               onClick={() => setShowIngredienteModal(true)}
-              className="inline-flex items-center gap-2 rounded-2xl border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 px-5 py-3 font-semibold text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 px-2 py-2.5 text-xs sm:text-sm font-semibold text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition whitespace-nowrap"
             >
-              <ClipboardList className="w-5 h-5" />
-              Registrar inventario
+              <ClipboardList className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Registrar</span> inventario
             </button>
             {userRole === 'owner' && (
               <button
                 onClick={() => setShowCategoriaModal(true)}
-                className="inline-flex items-center gap-2 rounded-2xl border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 px-5 py-3 font-semibold text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 px-2 py-2.5 text-xs sm:text-sm font-semibold text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition whitespace-nowrap"
               >
-                <Tag className="w-5 h-5" />
-                Nueva categoría
+                <Tag className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">Nueva</span> categoría
               </button>
+            )}
+            {userRole === 'owner' && (
+              <Link
+                href={`/owner/tenants/${tenant.id}/cajeros`}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 px-2 py-2.5 text-xs sm:text-sm font-semibold text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition whitespace-nowrap"
+              >
+                <Users className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">Administrar</span> usuarios
+              </Link>
             )}
             <button
               onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-5 py-3 font-semibold text-white shadow-xl shadow-orange-500/30 hover:bg-orange-600 transition"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-2 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xl shadow-orange-500/30 hover:bg-orange-600 transition whitespace-nowrap"
             >
-              <Plus className="w-5 h-5" />
-              Nuevo producto
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Nuevo</span> producto
             </button>
           </div>
         </div>
