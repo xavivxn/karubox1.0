@@ -20,7 +20,6 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
   const [mounted, setMounted] = useState(false)
 
   // Form fields
-  const [tipoItem, setTipoItem] = useState<'materia_prima' | 'item_comprado'>('materia_prima')
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [tipoInventario, setTipoInventario] = useState<'discreto' | 'fraccionable'>('fraccionable')
@@ -39,7 +38,6 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
   useEffect(() => {
     if (!open) {
       // Reset form
-      setTipoItem('materia_prima')
       setNombre('')
       setDescripcion('')
       setTipoInventario('fraccionable')
@@ -96,93 +94,53 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
           .substring(0, 50) // Limitar longitud
       }
 
-      if (tipoItem === 'materia_prima') {
-        // Crear ingrediente (materia prima)
-        const slug = generateSlug(nombre)
-        
-        const ingredienteData: Partial<Ingrediente> = {
-          tenant_id: tenantId,
-          slug,
-          nombre: nombre.trim(),
-          descripcion: descripcion.trim() || undefined,
-          tipo_inventario: tipoInventario,
-          unidad,
-          stock_actual: parseFloat(stockActual) || 0,
-          stock_minimo: parseFloat(stockMinimo) || 0,
-          precio_publico: parseFloat(precioPublico) || 0,
-          controlar_stock: controlarStock,
-          icono: icono.trim() || undefined,
-          activo: true
-        }
+      // Crear ingrediente (materia prima)
+      const slug = generateSlug(nombre)
 
-        const { data: ingrediente, error } = await supabase
-          .from('ingredientes')
-          .insert(ingredienteData)
-          .select()
-          .single()
-
-        if (error) throw error
-
-        // Si hay stock inicial, registrar movimiento
-        if (parseFloat(stockActual) > 0) {
-          const { error: movimientoError } = await supabase
-            .from('movimientos_ingredientes')
-            .insert({
-              ingrediente_id: ingrediente.id,
-              tenant_id: tenantId,
-              tipo: 'inicial',
-              cantidad: parseFloat(stockActual),
-              stock_anterior: 0,
-              stock_nuevo: parseFloat(stockActual),
-              motivo: 'Stock inicial al crear ingrediente'
-            })
-
-          if (movimientoError) {
-            console.error('Error registrando movimiento inicial:', movimientoError)
-          }
-        }
-
-        setSuccessMessage(`Materia prima "${nombre}" registrada exitosamente`)
-      } else {
-        // Crear item comprado (solo inventario, sin crear producto)
-        const { data: inventarioRow, error: inventarioError } = await supabase
-          .from('inventario')
-          .insert({
-            tenant_id: tenantId,
-            producto_id: null,
-            nombre: nombre.trim(),
-            tipo_inventario: tipoInventario,
-            stock_actual: parseFloat(stockActual) || 0,
-            stock_minimo: parseFloat(stockMinimo) || 0,
-            unidad: unidad,
-            controlar_stock: controlarStock
-          })
-          .select()
-          .single()
-
-        if (inventarioError) throw inventarioError
-
-        // Si hay stock inicial, registrar movimiento
-        if (parseFloat(stockActual) > 0) {
-          const { error: movimientoError } = await supabase
-            .from('movimientos_inventario')
-            .insert({
-              inventario_id: inventarioRow.id,
-              tenant_id: tenantId,
-              tipo: 'inicial',
-              cantidad: parseFloat(stockActual),
-              stock_anterior: 0,
-              stock_nuevo: parseFloat(stockActual),
-              motivo: 'Stock inicial al registrar item comprado'
-            })
-
-          if (movimientoError) {
-            console.error('Error registrando movimiento inicial:', movimientoError)
-          }
-        }
-
-        setSuccessMessage(`Item "${nombre}" registrado en inventario`)
+      const ingredienteData: Partial<Ingrediente> = {
+        tenant_id: tenantId,
+        slug,
+        nombre: nombre.trim(),
+        descripcion: descripcion.trim() || undefined,
+        tipo_inventario: tipoInventario,
+        unidad,
+        stock_actual: parseFloat(stockActual) || 0,
+        stock_minimo: parseFloat(stockMinimo) || 0,
+        precio_publico: parseFloat(precioPublico) || 0,
+        controlar_stock: controlarStock,
+        icono: icono.trim() || undefined,
+        activo: true
       }
+
+      const { data: ingrediente, error } = await supabase
+        .from('ingredientes')
+        .insert(ingredienteData)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Si hay stock inicial, registrar movimiento
+      if (parseFloat(stockActual) > 0) {
+        const { error: movimientoError } = await supabase
+          .from('movimientos_ingredientes')
+          .insert({
+            ingrediente_id: ingrediente.id,
+            tenant_id: tenantId,
+            tipo: 'inicial',
+            cantidad: parseFloat(stockActual),
+            stock_anterior: 0,
+            stock_nuevo: parseFloat(stockActual),
+            motivo: 'Stock inicial al crear ingrediente'
+          })
+
+        if (movimientoError) {
+          console.error('Error registrando movimiento inicial:', movimientoError)
+        }
+      }
+
+      setSuccessMessage(`Materia prima "${nombre}" registrada exitosamente`)
+
       setTimeout(() => {
         onSaved?.()
         onClose()
@@ -212,7 +170,7 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
                 Registrar Inventario
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                Materias primas e items comprados
+                Materias primas para la elaboraci&oacute;n de productos
               </p>
             </div>
           </div>
@@ -245,69 +203,22 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
               </div>
             )}
 
-            {/* Tipo de item */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
-                ¿Qué vas a registrar?
-              </h3>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:border-orange-500 dark:hover:border-orange-500 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:bg-orange-900/20">
-                  <input
-                    type="radio"
-                    value="materia_prima"
-                    checked={tipoItem === 'materia_prima'}
-                    onChange={(e) => setTipoItem(e.target.value as 'materia_prima')}
-                    disabled={isSaving}
-                    className="peer sr-only"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                      🥩 Materia Prima
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Ingredientes para fabricar productos
-                    </p>
-                  </div>
-                </label>
-
-                <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:border-orange-500 dark:hover:border-orange-500 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:bg-orange-900/20">
-                  <input
-                    type="radio"
-                    value="item_comprado"
-                    checked={tipoItem === 'item_comprado'}
-                    onChange={(e) => setTipoItem(e.target.value as 'item_comprado')}
-                    disabled={isSaving}
-                    className="peer sr-only"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                      🥤 Item comprado
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Bebidas, extras (se compran listos para vender)
-                    </p>
-                  </div>
-                </label>
-              </div>
-            </div>
-
             {/* Información básica */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
-                Información básica
+                Informaci&oacute;n b&aacute;sica
               </h3>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {tipoItem === 'materia_prima' ? 'Nombre del ingrediente' : 'Nombre del item'} *
+                    Nombre del ingrediente *
                   </label>
                   <input
                     type="text"
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
-                    placeholder={tipoItem === 'materia_prima' ? 'Ej: Carne Vacuna 120g' : 'Ej: Coca Cola 1.5L'}
+                    placeholder="Ej: Carne Vacuna 120g"
                     required
                     disabled={isSaving}
                     className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -316,12 +227,12 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
 
                 <div className="sm:col-span-2">
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Descripción (opcional)
+                    Descripci&oacute;n (opcional)
                   </label>
                   <textarea
                     value={descripcion}
                     onChange={(e) => setDescripcion(e.target.value)}
-                    placeholder="Descripción adicional del ingrediente"
+                    placeholder="Descripci&oacute;n adicional del ingrediente"
                     rows={2}
                     disabled={isSaving}
                     className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
@@ -343,10 +254,9 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
                   />
                 </div>
 
-                {tipoItem === 'materia_prima' && (
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Precio público
+                    Precio p&uacute;blico
                   </label>
                   <input
                     type="number"
@@ -359,7 +269,6 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
                     className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
-                )}
               </div>
             </div>
 
@@ -464,7 +373,7 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
 
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Stock mínimo (alerta)
+                    Stock m&iacute;nimo (alerta)
                   </label>
                   <input
                     type="number"
@@ -489,7 +398,7 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
                 />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    Controlar stock automáticamente
+                    Controlar stock autom&aacute;ticamente
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     Descuenta stock cuando se confirman pedidos
@@ -523,7 +432,7 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
                   Guardando...
                 </>
               ) : (
-                tipoItem === 'materia_prima' ? 'Registrar materia prima' : 'Registrar item'
+                'Registrar materia prima'
               )}
             </button>
           </div>

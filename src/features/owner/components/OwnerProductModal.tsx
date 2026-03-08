@@ -7,7 +7,6 @@ import {
   listCategoriasOwner,
   listIngredientesOwner,
   listProductosOwner,
-  listInventarioSinProducto,
   createProductoOwner,
 } from '@/app/actions/owner'
 
@@ -29,7 +28,6 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
   const [categorias, setCategorias] = useState<{ id: string; nombre: string }[]>([])
   const [ingredientes, setIngredientes] = useState<{ id: string; nombre: string; unidad: string }[]>([])
   const [productos, setProductos] = useState<{ id: string; nombre: string }[]>([])
-  const [inventarioItems, setInventarioItems] = useState<{ id: string; nombre: string; stock_actual: number; unidad: string }[]>([])
   const [loadingData, setLoadingData] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -58,7 +56,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
   const [cantidadProducto, setCantidadProducto] = useState('')
 
   // Sin receta fields
-  const [selectedInventarioId, setSelectedInventarioId] = useState('')
+  const [selectedIngredienteSinRecetaId, setSelectedIngredienteSinRecetaId] = useState('')
 
   useEffect(() => {
     setMounted(true)
@@ -70,17 +68,15 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
     const loadData = async () => {
       setLoadingData(true)
       try {
-        const [catResult, ingResult, prodResult, invResult] = await Promise.all([
+        const [catResult, ingResult, prodResult] = await Promise.all([
           listCategoriasOwner(tenantId),
           listIngredientesOwner(tenantId),
           listProductosOwner(tenantId),
-          listInventarioSinProducto(tenantId),
         ])
 
         setCategorias(catResult.categorias)
         setIngredientes(ingResult.ingredientes)
         setProductos(prodResult.productos)
-        setInventarioItems(invResult.items)
 
         if (catResult.categorias.length > 0) {
           setCategoriaId(catResult.categorias[0].id)
@@ -106,7 +102,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
       setImagenUrl('')
       setReceta([])
       setComboItems([])
-      setSelectedInventarioId('')
+      setSelectedIngredienteSinRecetaId('')
       setActiveTab('general')
       setSuccessMessage(null)
       setErrorMessage(null)
@@ -180,7 +176,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
       tipo: tipoProducto,
       receta: tipoProducto === 'con_receta' ? receta : undefined,
       combo_items: tipoProducto === 'combo' ? comboItems : undefined,
-      inventario_id: tipoProducto === 'sin_receta' ? selectedInventarioId : undefined,
+      inventario_id: tipoProducto === 'sin_receta' ? selectedIngredienteSinRecetaId : undefined,
     })
 
     setIsSaving(false)
@@ -240,7 +236,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                 }`}
               >
                 {tab === 'receta' && <ChefHat className="w-4 h-4" />}
-                {tab === 'general' ? 'Información General' : tipoProducto === 'combo' ? 'Items del Combo' : tipoProducto === 'sin_receta' ? 'Item de Inventario' : 'Receta'}
+                {tab === 'general' ? 'Información General' : tipoProducto === 'combo' ? 'Items del Combo' : tipoProducto === 'sin_receta' ? 'Materia Prima' : 'Receta'}
                 {activeTab === tab && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
                 )}
@@ -671,50 +667,49 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                   <>
                     <div className="p-4 rounded-xl bg-purple-50 border border-purple-100">
                       <p className="text-sm text-purple-600">
-                        Selecciona el item de inventario que corresponde a este producto
+                        Selecciona la materia prima que corresponde a este producto
                       </p>
                     </div>
 
                     <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200">
-                      <h3 className="font-semibold text-sm text-gray-700">Item de inventario</h3>
+                      <h3 className="font-semibold text-sm text-gray-700">Materia prima</h3>
                       {loadingData ? (
                         <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50">
                           <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
                         </div>
-                      ) : inventarioItems.length === 0 ? (
+                      ) : ingredientes.length === 0 ? (
                         <div className="text-center py-8 text-gray-400">
                           <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                          <p className="text-sm">No hay items disponibles en inventario</p>
-                          <p className="text-xs mt-1">Registra items primero usando &quot;Registrar inventario&quot;</p>
+                          <p className="text-sm">No hay materias primas registradas</p>
+                          <p className="text-xs mt-1">Registra materias primas primero usando &quot;Registrar inventario&quot;</p>
                         </div>
                       ) : (
                         <select
-                          value={selectedInventarioId}
-                          onChange={(e) => setSelectedInventarioId(e.target.value)}
+                          value={selectedIngredienteSinRecetaId}
+                          onChange={(e) => setSelectedIngredienteSinRecetaId(e.target.value)}
                           disabled={isSaving}
                           className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
                         >
-                          <option value="">Seleccionar item de inventario</option>
-                          {inventarioItems.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.nombre} ({item.stock_actual} {item.unidad})
+                          <option value="">Seleccionar materia prima</option>
+                          {ingredientes.map((ing) => (
+                            <option key={ing.id} value={ing.id}>
+                              {ing.nombre} ({ing.unidad})
                             </option>
                           ))}
                         </select>
                       )}
                     </div>
 
-                    {selectedInventarioId && (
+                    {selectedIngredienteSinRecetaId && (
                       <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
                         <div className="flex items-center gap-3">
                           <Package className="w-5 h-5 text-orange-500" />
                           <div>
                             <p className="font-semibold text-sm">
-                              {inventarioItems.find((i) => i.id === selectedInventarioId)?.nombre}
+                              {ingredientes.find((i) => i.id === selectedIngredienteSinRecetaId)?.nombre}
                             </p>
                             <p className="text-xs text-gray-500">
-                              Stock: {inventarioItems.find((i) => i.id === selectedInventarioId)?.stock_actual}{' '}
-                              {inventarioItems.find((i) => i.id === selectedInventarioId)?.unidad}
+                              Unidad: {ingredientes.find((i) => i.id === selectedIngredienteSinRecetaId)?.unidad}
                             </p>
                           </div>
                         </div>

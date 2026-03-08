@@ -20,3 +20,7 @@ WHERE i.producto_id = p.id
 CREATE INDEX IF NOT EXISTS idx_inventario_sin_producto
   ON inventario(tenant_id)
   WHERE producto_id IS NULL;
+
+-- Permisos para que service_role pueda operar sobre inventario
+GRANT ALL ON TABLE inventario TO service_role;
+GRANT ALL ON TABLE movimientos_inventario TO service_role;

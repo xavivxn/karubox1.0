@@ -235,7 +235,7 @@ export interface CreateProductoOwnerData {
     producto_id: string
     cantidad: number
   }>
-  inventario_id?: string
+  inventario_id?: string  // ingrediente_id para sin_receta
 }
 
 /**
@@ -355,7 +355,7 @@ export async function createProductoOwner(tenantId: string, data: CreateProducto
     return { error: 'Debes agregar al menos un producto al combo', producto: null }
   }
   if (data.tipo === 'sin_receta' && !data.inventario_id) {
-    return { error: 'Debes seleccionar un item de inventario', producto: null }
+    return { error: 'Debes seleccionar una materia prima', producto: null }
   }
 
   const adminClient = createAdminClient()
@@ -421,17 +421,40 @@ export async function createProductoOwner(tenantId: string, data: CreateProducto
     }
   }
 
-  // 4. Vincular item de inventario para productos sin receta
+  // 4. Crear inventario para productos sin receta (vinculado a un ingrediente)
   if (data.tipo === 'sin_receta' && data.inventario_id) {
-    const { error: linkError } = await adminClient
-      .from('inventario')
-      .update({ producto_id: producto.id })
-      .eq('id', data.inventario_id)
-      .is('producto_id', null)
+    // data.inventario_id contiene el ingrediente_id seleccionado
+    const ingredienteId = data.inventario_id
 
-    if (linkError) {
+    // Obtener datos del ingrediente para copiar stock info
+    const { data: ingrediente, error: ingError } = await adminClient
+      .from('ingredientes')
+      .select('stock_actual, stock_minimo, unidad, controlar_stock, nombre')
+      .eq('id', ingredienteId)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (ingError || !ingrediente) {
       await adminClient.from('productos').delete().eq('id', producto.id)
-      return { error: 'Error al vincular el item de inventario al producto', producto: null }
+      return { error: 'Error al obtener datos de la materia prima', producto: null }
+    }
+
+    // Crear fila de inventario vinculada al producto
+    const { error: invError } = await adminClient
+      .from('inventario')
+      .insert({
+        tenant_id: tenantId,
+        producto_id: producto.id,
+        stock_actual: ingrediente.stock_actual ?? 0,
+        stock_minimo: ingrediente.stock_minimo ?? 0,
+        unidad: ingrediente.unidad ?? 'unidad',
+        controlar_stock: ingrediente.controlar_stock ?? true,
+      })
+
+    if (invError) {
+      console.error('Error al insertar inventario:', invError)
+      await adminClient.from('productos').delete().eq('id', producto.id)
+      return { error: `Error al crear el inventario: ${invError.message}`, producto: null }
     }
   }
 
