@@ -1,7 +1,6 @@
-import { requireRole } from '@/lib/auth/guard'
 import POSPageClient from './POSPageClient'
 
-export default async function POSPage() {
-  await requireRole(['admin', 'cajero'], '/home/pos')
+// Página síncrona para evitar round-trip RSC (pos?_rsc=...); la verificación de rol se hace en el cliente.
+export default function POSPage() {
   return <POSPageClient />
 }

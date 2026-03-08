@@ -3,16 +3,16 @@
  * Grid completo de inventario detallado
  */
 
-import Link from 'next/link'
 import { calculateStockProgress } from '../utils/admin.utils'
 import type { InventoryRecord } from '../types/admin.types'
 
 interface InventoryGridProps {
   inventory: InventoryRecord[]
   onOpenInventoryDrawer: () => void
+  onOpenProductModal?: () => void
 }
 
-export const InventoryGrid = ({ inventory, onOpenInventoryDrawer }: InventoryGridProps) => {
+export const InventoryGrid = ({ inventory, onOpenInventoryDrawer, onOpenProductModal }: InventoryGridProps) => {
   return (
     <section className="rounded-3xl border border-white/60 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
@@ -23,12 +23,15 @@ export const InventoryGrid = ({ inventory, onOpenInventoryDrawer }: InventoryGri
           <h3 className="text-2xl font-bold">Insumos controlados</h3>
         </div>
         <div className="flex gap-3">
-          <Link
-            href="/admin/productos"
-            className="rounded-2xl border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-semibold hover:border-orange-400 transition"
-          >
-            Gestionar productos
-          </Link>
+          {onOpenProductModal && (
+            <button
+              type="button"
+              onClick={onOpenProductModal}
+              className="rounded-2xl border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-semibold hover:border-orange-400 transition"
+            >
+              Gestionar productos
+            </button>
+          )}
           <button
             onClick={onOpenInventoryDrawer}
             className="rounded-2xl bg-gray-900 text-white px-4 py-2 text-sm font-semibold hover:bg-gray-800 transition"

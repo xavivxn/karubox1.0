@@ -1,7 +1,8 @@
 'use client'
 
-import { ReactNode } from 'react'
-import { usePathname } from 'next/navigation'
+import { ReactNode, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { ROUTES } from '@/config/routes'
 import { AppNavbar } from './AppNavbar'
 import { AppFooter } from './AppFooter'
 import { useTenant } from '@/contexts/TenantContext'
@@ -61,7 +62,13 @@ const DEFAULT_INFO: PageInfo = {
 
 export function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname()
-  const { darkMode } = useTenant()
+  const router = useRouter()
+  const { darkMode, tenant } = useTenant()
+
+  // Prefetch POS para que el primer clic no dispare un RSC lento
+  useEffect(() => {
+    if (tenant) router.prefetch(ROUTES.PROTECTED.POS)
+  }, [tenant, router])
 
   // Solo ocultar navbar en la ruta raíz (login)
   const hideNavbar = pathname === '/'

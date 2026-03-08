@@ -92,26 +92,27 @@ export const AdminView = () => {
       {/* <AdditionalKpis stats={stats} /> */}
 
       {/* Tendencia semanal y alertas de inventario */}
-      {/* <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
+      <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
         <WeeklyTrend stats={stats} />
         <InventoryAlerts
           lowStockItems={lowStockItems}
-          onOpenInventoryDrawer={() => setShowInventoryDrawer(true)}
+          onOpenInventoryDrawer={() => setShowIngredienteModal(true)}
         />
-      </section> */}
+      </section>
 
       {/* Top clientes, productos y consumo de ingredientes */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <TopClients topClients={topClients} />
         <TopProducts topProducts={topProducts} />
-        {/* <IngredientConsumption ingredientsUsage={ingredientsUsage} /> */}
+        <IngredientConsumption ingredientsUsage={ingredientsUsage} />
       </section>
 
       {/* Grid completo de inventario */}
-      {/* <InventoryGrid
+      <InventoryGrid
         inventory={inventory}
-        onOpenInventoryDrawer={() => setShowInventoryDrawer(true)}
-      /> */}
+        onOpenInventoryDrawer={() => setShowIngredienteModal(true)}
+        onOpenProductModal={() => setShowProductModal(true)}
+      />
 
       {/* Modal para registrar nuevos ingredientes */}
       <IngredienteModal

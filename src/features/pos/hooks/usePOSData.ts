@@ -3,11 +3,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import { posService } from '../services/posService'
 import type { Categoria, Producto, FeedbackState } from '../types/pos.types'
 import { buildUnexpectedErrorState } from '../utils/error.utils'
-import {
-  getCachedCatalog,
-  setCachedCatalog,
-  CACHE_TTL_MS
-} from '../lib/catalogCache'
+import { getCachedCatalog, setCachedCatalog } from '../lib/catalogCache'
 
 export function usePOSData() {
   const [categorias, setCategorias] = useState<Categoria[]>([])
@@ -17,28 +13,18 @@ export function usePOSData() {
 
   const { tenant, loading: tenantLoading } = useTenant()
 
+  // Catálogo se carga solo al iniciar sesión (prefetch en TenantContext).
+  // Aquí solo leemos de cache; si no hay cache (ej. prefetch aún no terminó), hacemos un único fetch de fallback.
   useEffect(() => {
     if (tenantLoading || !tenant) return
 
     const tenantId = tenant.id
     const cached = getCachedCatalog(tenantId)
-    const useCache = cached && Date.now() - cached.at < CACHE_TTL_MS
 
-    if (useCache) {
+    if (cached) {
       setCategorias(cached.categorias)
       setProductos(cached.productos)
       setLoading(false)
-      // Revalidar en segundo plano
-      Promise.all([
-        posService.loadCategorias(tenantId),
-        posService.loadProductos(tenantId)
-      ])
-        .then(([cats, prods]) => {
-          setCachedCatalog(tenantId, cats, prods)
-          setCategorias(cats)
-          setProductos(prods)
-        })
-        .catch(() => {})
       return
     }
 

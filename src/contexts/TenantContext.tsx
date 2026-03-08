@@ -154,6 +154,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
       setTenant(userData.tenants as Tenant)
       console.log('✅ Tenant cargado:', userData.tenants)
+      // Única carga del catálogo POS (categorías + productos) por sesión; el POS solo lee de cache
       prefetchPOSCatalog((userData.tenants as Tenant).id)
     } catch (error) {
       console.error('❌ Error cargando datos del usuario:', error)
