@@ -35,8 +35,8 @@ export function OwnerDashboard({ initialTenants }: OwnerDashboardProps) {
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Lomiterías registradas</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Lomiterías registradas</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             {tenants.length === 0
               ? 'Sin lomiterías aún.'
               : `${tenants.length} lomitería${tenants.length !== 1 ? 's' : ''} en la plataforma.`}
@@ -52,10 +52,10 @@ export function OwnerDashboard({ initialTenants }: OwnerDashboardProps) {
 
       {/* Estado vacío */}
       {tenants.length === 0 && (
-        <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+        <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
           <p className="text-4xl mb-3">🍔</p>
-          <p className="text-gray-500 font-medium">No hay lomiterías registradas todavía.</p>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-gray-500 dark:text-gray-300 font-medium">No hay lomiterías registradas todavía.</p>
+          <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
             Hacé clic en &ldquo;Nueva lomitería&rdquo; para empezar.
           </p>
         </div>

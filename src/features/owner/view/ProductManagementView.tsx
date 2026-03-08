@@ -75,30 +75,30 @@ export function ProductManagementView({ tenant, initialProductos, productosError
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push(ROUTES.PROTECTED.OWNER)}
-              className="p-2 rounded-xl hover:bg-gray-200 transition"
+              className="p-2 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition"
               aria-label="Volver al dashboard"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>
             <div>
-              <p className="text-xs uppercase tracking-widest text-orange-500 font-medium">
+              <p className="text-xs uppercase tracking-widest text-orange-500 dark:text-orange-400 font-medium">
                 Gestión de productos
               </p>
-              <h1 className="text-2xl font-black text-gray-900">{tenant.nombre}</h1>
-              <p className="text-sm text-gray-400 font-mono">/{tenant.slug}</p>
+              <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100">{tenant.nombre}</h1>
+              <p className="text-sm text-gray-400 dark:text-gray-500 font-mono">/{tenant.slug}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setShowIngredienteModal(true)}
-              className="inline-flex items-center gap-2 rounded-2xl border border-orange-300 bg-white px-5 py-3 font-semibold text-orange-600 hover:bg-orange-50 transition"
+              className="inline-flex items-center gap-2 rounded-2xl border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 px-5 py-3 font-semibold text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition"
             >
               <ClipboardList className="w-5 h-5" />
               Registrar inventario
             </button>
             <button
               onClick={() => setShowCategoriaModal(true)}
-              className="inline-flex items-center gap-2 rounded-2xl border border-orange-300 bg-white px-5 py-3 font-semibold text-orange-600 hover:bg-orange-50 transition"
+              className="inline-flex items-center gap-2 rounded-2xl border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 px-5 py-3 font-semibold text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition"
             >
               <Tag className="w-5 h-5" />
               Nueva categoría
@@ -115,20 +115,20 @@ export function ProductManagementView({ tenant, initialProductos, productosError
 
         {/* Banner de error al cargar productos */}
         {productosError && (
-          <div className="p-4 rounded-2xl bg-red-50 border border-red-200">
-            <p className="text-sm font-semibold text-red-700">Error al cargar productos</p>
-            <p className="text-xs text-red-500 font-mono mt-1">{productosError}</p>
+          <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700">
+            <p className="text-sm font-semibold text-red-700 dark:text-red-400">Error al cargar productos</p>
+            <p className="text-xs text-red-500 dark:text-red-400 font-mono mt-1">{productosError}</p>
           </div>
         )}
 
         {/* Contenido */}
         {productos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-orange-100 flex items-center justify-center mb-4">
-              <Package className="w-8 h-8 text-orange-400" />
+            <div className="w-16 h-16 rounded-2xl bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center mb-4">
+              <Package className="w-8 h-8 text-orange-400 dark:text-orange-300" />
             </div>
-            <h2 className="text-lg font-bold text-gray-800 mb-1">Sin productos cargados</h2>
-            <p className="text-sm text-gray-500 max-w-xs">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">Sin productos cargados</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
               Esta lomitería aún no tiene productos. Presiona "Nuevo producto" para comenzar a cargar el menú.
             </p>
           </div>
@@ -137,7 +137,7 @@ export function ProductManagementView({ tenant, initialProductos, productosError
             {productos.map((producto) => (
               <div
                 key={producto.id}
-                className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3"
+                className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex flex-col gap-3"
               >
                 {/* Imagen solo si existe */}
                 {producto.imagen_url && (
@@ -150,12 +150,12 @@ export function ProductManagementView({ tenant, initialProductos, productosError
 
                 <div className="flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-gray-900 text-sm leading-snug">{producto.nombre}</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-snug">{producto.nombre}</h3>
                     <span
                       className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                         producto.disponible
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-500'
+                          ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                       }`}
                     >
                       {producto.disponible ? (
@@ -167,13 +167,13 @@ export function ProductManagementView({ tenant, initialProductos, productosError
                     </span>
                   </div>
 
-                  <p className="text-base font-bold text-orange-600 mt-1">
+                  <p className="text-base font-bold text-orange-600 dark:text-orange-400 mt-1">
                     Gs. {producto.precio.toLocaleString('es-PY')}
                   </p>
 
                   <div className="flex items-center gap-1 mt-2">
-                    <ChefHat className="w-3.5 h-3.5 text-gray-400" />
-                    <span className="text-xs text-gray-400">
+                    <ChefHat className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
                       {producto.tiene_receta ? 'Con receta' : 'Sin receta / Combo'}
                     </span>
                   </div>
@@ -185,7 +185,7 @@ export function ProductManagementView({ tenant, initialProductos, productosError
                     setDeleteError(null)
                     setProductoToDelete(producto)
                   }}
-                  className="mt-auto w-full inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100 transition"
+                  className="mt-auto w-full inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition"
                 >
                   <Trash2 className="w-4 h-4" />
                   Eliminar
@@ -197,7 +197,7 @@ export function ProductManagementView({ tenant, initialProductos, productosError
 
         {/* Total */}
         {productos.length > 0 && (
-          <p className="text-sm text-gray-400 text-center">
+          <p className="text-sm text-gray-400 dark:text-gray-500 text-center">
             {productos.length} producto{productos.length !== 1 ? 's' : ''} cargado{productos.length !== 1 ? 's' : ''}
           </p>
         )}
@@ -210,24 +210,24 @@ export function ProductManagementView({ tenant, initialProductos, productosError
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => !deleting && setProductoToDelete(null)}
           />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
+              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 text-base">Eliminar producto</h3>
-                <p className="text-sm text-gray-500 mt-0.5">Esta acción no se puede deshacer.</p>
+                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">Eliminar producto</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Esta acción no se puede deshacer.</p>
               </div>
             </div>
 
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               ¿Estás seguro que querés eliminar{' '}
-              <span className="font-semibold text-gray-900">"{productoToDelete.nombre}"</span>?
+              <span className="font-semibold text-gray-900 dark:text-gray-100">"{productoToDelete.nombre}"</span>?
             </p>
 
             {deleteError && (
-              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg px-3 py-2">
                 {deleteError}
               </p>
             )}
@@ -236,7 +236,7 @@ export function ProductManagementView({ tenant, initialProductos, productosError
               <button
                 onClick={() => setProductoToDelete(null)}
                 disabled={deleting}
-                className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition disabled:opacity-50"
+                className="flex-1 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition disabled:opacity-50"
               >
                 Cancelar
               </button>

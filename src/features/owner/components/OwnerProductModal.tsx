@@ -197,24 +197,27 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
 
   if (!open || !mounted) return null
 
+  const inputClass =
+    'w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 focus:border-transparent outline-none transition disabled:opacity-50'
+
   const modalContent = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-3xl shadow-2xl bg-white text-gray-900 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="w-full max-w-3xl rounded-3xl shadow-2xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center">
-              <Package className="w-6 h-6 text-orange-600" />
+            <div className="w-12 h-12 rounded-2xl bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
+              <Package className="w-6 h-6 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
               <h2 className="text-2xl font-bold">Cargar Producto POS</h2>
-              <p className="text-sm text-gray-500">Productos con receta, combos o sin receta para el menú</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Productos con receta, combos o sin receta para el menú</p>
             </div>
           </div>
           <button
             onClick={onClose}
             disabled={isSaving}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50"
+            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             aria-label="Cerrar"
           >
             <X className="w-5 h-5" />
@@ -222,7 +225,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-100 px-6">
+        <div className="border-b border-gray-100 dark:border-gray-700 px-6">
           <div className="flex gap-1">
             {(['general', 'receta'] as const).map((tab) => (
               <button
@@ -231,14 +234,14 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-3 font-semibold text-sm transition-colors relative flex items-center gap-2 ${
                   activeTab === tab
-                    ? 'text-orange-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'text-orange-600 dark:text-orange-400'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
                 {tab === 'receta' && <ChefHat className="w-4 h-4" />}
                 {tab === 'general' ? 'Información General' : tipoProducto === 'combo' ? 'Items del Combo' : tipoProducto === 'sin_receta' ? 'Materia Prima' : 'Receta'}
                 {activeTab === tab && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 dark:bg-orange-400" />
                 )}
               </button>
             ))}
@@ -248,13 +251,13 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
           {errorMessage && (
-            <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100">
-              <p className="text-sm text-red-600">{errorMessage}</p>
+            <div className="mb-6 p-4 rounded-2xl bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-700">
+              <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
             </div>
           )}
           {successMessage && (
-            <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
-              <p className="text-sm text-emerald-600">{successMessage}</p>
+            <div className="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-700">
+              <p className="text-sm text-emerald-600 dark:text-emerald-400">{successMessage}</p>
             </div>
           )}
 
@@ -262,12 +265,12 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
             {activeTab === 'general' && (
               <>
                 {/* Tipo de producto */}
-                <div className="space-y-4 pb-6 border-b border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                <div className="space-y-4 pb-6 border-b border-gray-100 dark:border-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
                     ¿Qué vas a crear?
                   </h3>
                   <div className="grid gap-4 sm:grid-cols-3">
-                    <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 bg-white p-4 hover:border-orange-500 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
+                    <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/50 p-4 hover:border-orange-500 dark:hover:border-orange-400 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:border-orange-400 dark:has-[:checked]:bg-orange-900/30">
                       <input
                         type="radio"
                         value="con_receta"
@@ -277,11 +280,11 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                         className="peer sr-only"
                       />
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900">Producto con Receta</p>
-                        <p className="text-xs text-gray-500 mt-1">Fabricado a partir de materias primas</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Producto con Receta</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Fabricado a partir de materias primas</p>
                       </div>
                     </label>
-                    <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 bg-white p-4 hover:border-orange-500 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
+                    <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/50 p-4 hover:border-orange-500 dark:hover:border-orange-400 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:border-orange-400 dark:has-[:checked]:bg-orange-900/30">
                       <input
                         type="radio"
                         value="combo"
@@ -291,11 +294,11 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                         className="peer sr-only"
                       />
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900">Combo</p>
-                        <p className="text-xs text-gray-500 mt-1">Agrupaci&oacute;n de productos existentes</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Combo</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Agrupaci&oacute;n de productos existentes</p>
                       </div>
                     </label>
-                    <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 bg-white p-4 hover:border-orange-500 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
+                    <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/50 p-4 hover:border-orange-500 dark:hover:border-orange-400 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:border-orange-400 dark:has-[:checked]:bg-orange-900/30">
                       <input
                         type="radio"
                         value="sin_receta"
@@ -305,8 +308,8 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                         className="peer sr-only"
                       />
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900">Producto sin receta</p>
-                        <p className="text-xs text-gray-500 mt-1">Vinculado a un item del inventario</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Producto sin receta</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Vinculado a un item del inventario</p>
                       </div>
                     </label>
                   </div>
@@ -324,7 +327,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                     onChange={(e) => setNombre(e.target.value)}
                     placeholder="Ej: Hamburguesa clásica"
                     disabled={isSaving}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                    className={inputClass}
                   />
                 </div>
 
@@ -340,7 +343,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                     placeholder="Descripción del producto (opcional)"
                     rows={3}
                     disabled={isSaving}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition resize-none disabled:opacity-50"
+                    className={`${inputClass} resize-none`}
                   />
                 </div>
 
@@ -359,7 +362,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                       onChange={(e) => setPrecio(e.target.value)}
                       placeholder="0"
                       disabled={isSaving}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                      className={inputClass}
                     />
                   </div>
 
@@ -369,7 +372,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                       Categoría <span className="text-red-500">*</span>
                     </label>
                     {loadingData ? (
-                      <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50">
+                      <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50 dark:bg-gray-900/50">
                         <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
                       </div>
                     ) : (
@@ -378,7 +381,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                         value={categoriaId}
                         onChange={(e) => setCategoriaId(e.target.value)}
                         disabled={isSaving}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                        className={inputClass}
                       >
                         <option value="">Seleccionar categoría</option>
                         {categorias.map((cat) => (
@@ -397,7 +400,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                     URL de imagen
                   </label>
                   <div className="relative">
-                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
                     <input
                       id="imagen"
                       type="url"
@@ -405,20 +408,20 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                       onChange={(e) => setImagenUrl(e.target.value)}
                       placeholder="https://ejemplo.com/imagen.jpg"
                       disabled={isSaving}
-                      className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                      className={`${inputClass} pl-11`}
                     />
                   </div>
                 </div>
 
                 {/* Disponibilidad */}
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700">
                   <input
                     id="disponible"
                     type="checkbox"
                     checked={disponible}
                     onChange={(e) => setDisponible(e.target.checked)}
                     disabled={isSaving}
-                    className="w-5 h-5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 focus:ring-offset-0 disabled:opacity-50"
+                    className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500 focus:ring-offset-0 disabled:opacity-50"
                   />
                   <label htmlFor="disponible" className="text-sm font-semibold cursor-pointer select-none">
                     Producto disponible para la venta
@@ -431,22 +434,22 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
               <div className="space-y-6">
                 {tipoProducto === 'con_receta' ? (
                   <>
-                    <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-                      <p className="text-sm text-blue-600">
+                    <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-700">
+                      <p className="text-sm text-blue-600 dark:text-blue-400">
                         Define qué ingredientes lleva este producto y en qué cantidad
                       </p>
                     </div>
 
                     {/* Agregar ingrediente */}
-                    <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200">
-                      <h3 className="font-semibold text-sm text-gray-700">Agregar ingrediente</h3>
+                    <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600">
+                      <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Agregar ingrediente</h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="md:col-span-2">
                           <label htmlFor="ingrediente" className="block text-sm font-medium mb-2">
                             Ingrediente
                           </label>
                           {loadingData ? (
-                            <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50">
+                            <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50 dark:bg-gray-900/50">
                               <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
                             </div>
                           ) : (
@@ -455,7 +458,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                               value={selectedIngredienteId}
                               onChange={(e) => setSelectedIngredienteId(e.target.value)}
                               disabled={isSaving}
-                              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                              className={inputClass}
                             >
                               <option value="">Seleccionar ingrediente</option>
                               {ingredientes
@@ -481,7 +484,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                             onChange={(e) => setCantidad(e.target.value)}
                             placeholder="0"
                             disabled={isSaving}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                            className={inputClass}
                           />
                         </div>
                       </div>
@@ -492,7 +495,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                           checked={obligatorio}
                           onChange={(e) => setObligatorio(e.target.checked)}
                           disabled={isSaving}
-                          className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500 focus:ring-offset-0 disabled:opacity-50"
+                          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500 focus:ring-offset-0 disabled:opacity-50"
                         />
                         <label htmlFor="obligatorio" className="text-sm cursor-pointer select-none">
                           Ingrediente obligatorio (no se puede remover)
@@ -502,7 +505,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                         type="button"
                         onClick={handleAddIngrediente}
                         disabled={isSaving || !selectedIngredienteId || !cantidad}
-                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-orange-100 text-orange-600 hover:bg-orange-200 transition disabled:opacity-50"
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition disabled:opacity-50"
                       >
                         <Plus className="w-5 h-5" />
                         Agregar a la receta
@@ -512,7 +515,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                     {/* Lista de ingredientes */}
                     {receta.length > 0 ? (
                       <div className="space-y-2">
-                        <h3 className="font-semibold text-sm text-gray-700">
+                        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
                           Ingredientes de la receta ({receta.length})
                         </h3>
                         <div className="space-y-2">
@@ -521,13 +524,13 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                             return (
                               <div
                                 key={item.ingrediente_id}
-                                className="flex items-center justify-between p-4 rounded-xl bg-gray-50 border border-gray-100"
+                                className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700"
                               >
                                 <div className="flex items-center gap-3">
-                                  <ChefHat className="w-5 h-5 text-gray-400" />
+                                  <ChefHat className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                                   <div>
                                     <p className="font-semibold text-sm">{ingrediente?.nombre}</p>
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
                                       {item.cantidad} {item.unidad}{' '}
                                       {item.obligatorio ? '• Obligatorio' : '• Opcional'}
                                     </p>
@@ -537,7 +540,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                                   type="button"
                                   onClick={() => handleRemoveIngrediente(item.ingrediente_id)}
                                   disabled={isSaving}
-                                  className="p-2 rounded-lg hover:bg-red-100 text-red-500 transition disabled:opacity-50"
+                                  className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 transition disabled:opacity-50"
                                   aria-label="Eliminar ingrediente"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -548,7 +551,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-400">
+                      <div className="text-center py-8 text-gray-400 dark:text-gray-500">
                         <ChefHat className="w-12 h-12 mx-auto mb-3 opacity-50" />
                         <p className="text-sm">No hay ingredientes en la receta</p>
                       </div>
@@ -556,22 +559,22 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                   </>
                 ) : tipoProducto === 'combo' ? (
                   <>
-                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
-                      <p className="text-sm text-emerald-600">
+                    <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-700">
+                      <p className="text-sm text-emerald-600 dark:text-emerald-400">
                         Selecciona los productos que incluye este combo
                       </p>
                     </div>
 
                     {/* Agregar producto al combo */}
-                    <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200">
-                      <h3 className="font-semibold text-sm text-gray-700">Agregar producto</h3>
+                    <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600">
+                      <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Agregar producto</h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="md:col-span-2">
                           <label htmlFor="producto" className="block text-sm font-medium mb-2">
                             Producto
                           </label>
                           {loadingData ? (
-                            <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50">
+                            <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50 dark:bg-gray-900/50">
                               <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
                             </div>
                           ) : (
@@ -580,7 +583,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                               value={selectedProductoId}
                               onChange={(e) => setSelectedProductoId(e.target.value)}
                               disabled={isSaving}
-                              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                              className={inputClass}
                             >
                               <option value="">Seleccionar producto</option>
                               {productos
@@ -606,7 +609,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                             onChange={(e) => setCantidadProducto(e.target.value)}
                             placeholder="1"
                             disabled={isSaving}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                            className={inputClass}
                           />
                         </div>
                       </div>
@@ -614,7 +617,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                         type="button"
                         onClick={handleAddProducto}
                         disabled={isSaving || !selectedProductoId || !cantidadProducto}
-                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-orange-100 text-orange-600 hover:bg-orange-200 transition disabled:opacity-50"
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition disabled:opacity-50"
                       >
                         <Plus className="w-5 h-5" />
                         Agregar al combo
@@ -624,7 +627,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                     {/* Lista de productos del combo */}
                     {comboItems.length > 0 ? (
                       <div className="space-y-2">
-                        <h3 className="font-semibold text-sm text-gray-700">
+                        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
                           Productos del combo ({comboItems.length})
                         </h3>
                         <div className="space-y-2">
@@ -633,20 +636,20 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                             return (
                               <div
                                 key={item.producto_id}
-                                className="flex items-center justify-between p-4 rounded-xl bg-gray-50 border border-gray-100"
+                                className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700"
                               >
                                 <div className="flex items-center gap-3">
-                                  <Package className="w-5 h-5 text-gray-400" />
+                                  <Package className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                                   <div>
                                     <p className="font-semibold text-sm">{producto?.nombre}</p>
-                                    <p className="text-xs text-gray-500">Cantidad: {item.cantidad}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Cantidad: {item.cantidad}</p>
                                   </div>
                                 </div>
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveProducto(item.producto_id)}
                                   disabled={isSaving}
-                                  className="p-2 rounded-lg hover:bg-red-100 text-red-500 transition disabled:opacity-50"
+                                  className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 transition disabled:opacity-50"
                                   aria-label="Eliminar producto"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -657,7 +660,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-400">
+                      <div className="text-center py-8 text-gray-400 dark:text-gray-500">
                         <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
                         <p className="text-sm">No hay productos en el combo</p>
                       </div>
@@ -665,20 +668,20 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                   </>
                 ) : (
                   <>
-                    <div className="p-4 rounded-xl bg-purple-50 border border-purple-100">
-                      <p className="text-sm text-purple-600">
+                    <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/30 border border-purple-100 dark:border-purple-700">
+                      <p className="text-sm text-purple-600 dark:text-purple-400">
                         Selecciona la materia prima que corresponde a este producto
                       </p>
                     </div>
 
-                    <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200">
-                      <h3 className="font-semibold text-sm text-gray-700">Materia prima</h3>
+                    <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600">
+                      <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Materia prima</h3>
                       {loadingData ? (
-                        <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50">
+                        <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50 dark:bg-gray-900/50">
                           <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
                         </div>
                       ) : ingredientes.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400">
+                        <div className="text-center py-8 text-gray-400 dark:text-gray-500">
                           <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
                           <p className="text-sm">No hay materias primas registradas</p>
                           <p className="text-xs mt-1">Registra materias primas primero usando &quot;Registrar inventario&quot;</p>
@@ -688,7 +691,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                           value={selectedIngredienteSinRecetaId}
                           onChange={(e) => setSelectedIngredienteSinRecetaId(e.target.value)}
                           disabled={isSaving}
-                          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                          className={inputClass}
                         >
                           <option value="">Seleccionar materia prima</option>
                           {ingredientes.map((ing) => (
@@ -701,14 +704,14 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                     </div>
 
                     {selectedIngredienteSinRecetaId && (
-                      <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                      <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700">
                         <div className="flex items-center gap-3">
-                          <Package className="w-5 h-5 text-orange-500" />
+                          <Package className="w-5 h-5 text-orange-500 dark:text-orange-400" />
                           <div>
                             <p className="font-semibold text-sm">
                               {ingredientes.find((i) => i.id === selectedIngredienteSinRecetaId)?.nombre}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               Unidad: {ingredientes.find((i) => i.id === selectedIngredienteSinRecetaId)?.unidad}
                             </p>
                           </div>
@@ -723,12 +726,12 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
+        <div className="flex justify-end gap-3 p-6 border-t border-gray-100 dark:border-gray-700">
           <button
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="px-5 py-3 rounded-xl font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition disabled:opacity-50"
+            className="px-5 py-3 rounded-xl font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition disabled:opacity-50"
           >
             Cancelar
           </button>
