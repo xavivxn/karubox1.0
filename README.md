@@ -2,6 +2,8 @@
 
 Sistema completo de Punto de Venta (POS) diseñado específicamente para lomiterías, con arquitectura multi-tenant que permite gestionar múltiples locales desde una sola plataforma.
 
+<!-- deploy trigger -->
+
 ## ✨ Características Principales
 
 ### 🎯 **Multi-Tenant**
