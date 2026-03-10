@@ -2,12 +2,12 @@
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Package, Plus, CheckCircle, XCircle, ChefHat, ClipboardList, Tag, Trash2, AlertTriangle, Users } from 'lucide-react'
+import { ArrowLeft, Package, Plus, CheckCircle, XCircle, ChefHat, ClipboardList, Tag, Trash2, AlertTriangle, Users, Printer } from 'lucide-react'
 import Link from 'next/link'
 import { OwnerProductModal } from '../components/OwnerProductModal'
 import { IngredienteModal } from '@/features/admin/components/IngredienteModal'
 import { CategoriaModal } from '@/features/admin/components/CategoriaModal'
-import { listProductosOwner, deleteProductoOwner } from '@/app/actions/owner'
+import { listProductosOwner, deleteProductoOwner, deleteTenantOwner } from '@/app/actions/owner'
 import { ROUTES } from '@/config/routes'
 
 interface Producto {
@@ -42,6 +42,11 @@ export function ProductManagementView({ tenant, initialProductos, productosError
   const [productoToDelete, setProductoToDelete] = useState<Producto | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [showDeleteTenantModal, setShowDeleteTenantModal] = useState(false)
+  const [deletingTenant, setDeletingTenant] = useState(false)
+  const [deleteTenantError, setDeleteTenantError] = useState<string | null>(null)
+  const [tenantNameConfirmation, setTenantNameConfirmation] = useState('')
+
 
   const refreshProductos = useCallback(async () => {
     const result = await listProductosOwner(tenant.id)
@@ -68,6 +73,23 @@ export function ProductManagementView({ tenant, initialProductos, productosError
     setProductoToDelete(null)
     refreshProductos()
   }
+
+  const handleDeleteTenant = async () => {
+    if (!tenant) return
+
+    setDeletingTenant(true)
+    setDeleteTenantError(null)
+
+    const result = await deleteTenantOwner(tenant.id)
+
+    if (result.error) {
+      setDeleteTenantError(result.error)
+      setDeletingTenant(false)
+    } else {
+      router.push(ROUTES.PROTECTED.OWNER)
+    }
+  }
+
 
   return (
     <>
@@ -115,6 +137,24 @@ export function ProductManagementView({ tenant, initialProductos, productosError
                 <Users className="w-4 h-4 shrink-0" />
                 <span className="hidden sm:inline">Administrar</span> usuarios
               </Link>
+            )}
+            {userRole === 'owner' && (
+              <Link
+                href={`/owner/tenants/${tenant.id}/printer`}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 px-2 py-2.5 text-xs sm:text-sm font-semibold text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition whitespace-nowrap"
+              >
+                <Printer className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">Configurar</span> impresora
+              </Link>
+            )}
+            {userRole === 'owner' && (
+              <button
+                onClick={() => setShowDeleteTenantModal(true)}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-red-300 dark:border-red-700 bg-white dark:bg-gray-800 px-2 py-2.5 text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition whitespace-nowrap"
+              >
+                <Trash2 className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">Eliminar</span> lomitería
+              </button>
             )}
             <button
               onClick={() => setShowModal(true)}
@@ -268,6 +308,96 @@ export function ProductManagementView({ tenant, initialProductos, productosError
                     <Trash2 className="w-4 h-4" />
                     Sí, eliminar
                   </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de eliminación de tenant */}
+      {showDeleteTenantModal && tenant && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => !deletingTenant && setShowDeleteTenantModal(false)}
+          />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4">
+            {/* Header con icono de advertencia */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white">Eliminar lomitería permanentemente</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+
+            {/* Lista de lo que se eliminará */}
+            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold mb-2">
+                Se eliminarán TODOS los datos de "{tenant.nombre}":
+              </p>
+              <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 ml-4 list-disc">
+                <li>Todos los productos y categorías</li>
+                <li>Todo el inventario y materias primas</li>
+                <li>Todos los pedidos y clientes</li>
+                <li>Todos los usuarios (cajeros y administradores)</li>
+                <li>Todas las transacciones y puntos de lealtad</li>
+                <li>Todas las promociones y configuraciones</li>
+                <li>Las cuentas de autenticación de todos los usuarios</li>
+              </ul>
+            </div>
+
+            {/* Campo de confirmación con nombre del tenant */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Para confirmar, escribe: <span className="font-bold text-red-600 dark:text-red-400">{tenant.nombre}</span>
+              </label>
+              <input
+                type="text"
+                value={tenantNameConfirmation}
+                onChange={(e) => setTenantNameConfirmation(e.target.value)}
+                placeholder="Nombre del tenant"
+                className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-transparent"
+                disabled={deletingTenant}
+                autoComplete="off"
+              />
+            </div>
+
+            {/* Mensaje de error */}
+            {deleteTenantError && (
+              <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+                {deleteTenantError}
+              </p>
+            )}
+
+            {/* Botones de acción */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteTenantModal(false)
+                  setTenantNameConfirmation('')
+                  setDeleteTenantError(null)
+                }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-600 transition"
+                disabled={deletingTenant}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteTenant}
+                disabled={deletingTenant || tenantNameConfirmation !== tenant.nombre}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {deletingTenant ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  'Eliminar permanentemente'
                 )}
               </button>
             </div>

@@ -160,6 +160,25 @@ export async function createTenant(data: CreateTenantData) {
     .from('tenant_pedido_counters')
     .insert({ tenant_id: tenant.id, ultimo_numero: 0 })
 
+  // Inicializar configuración de impresora por defecto
+  const printerConfigResult = await supabase
+    .from('printer_config')
+    .insert({
+      lomiteria_id: tenant.id,
+      printer_id: `${slug}-printer-1`,
+      agent_ip: 'localhost',
+      agent_port: 3001,
+      tipo_impresora: 'usb',
+      nombre_impresora: 'Impresora Térmica Cocina',
+      ubicacion: 'Cocina',
+      activo: true,
+    })
+
+  // Log error pero no fallar la creación del tenant
+  if (printerConfigResult.error) {
+    console.error('[createTenant] Error al crear printer_config:', printerConfigResult.error)
+  }
+
   return { error: null, tenant }
 }
 
@@ -683,6 +702,187 @@ export async function deleteUsuarioTenantOwner(usuarioId: string, tenantId: stri
   const adminClient = createAdminClient()
   if (usuario.auth_user_id) {
     await adminClient.auth.admin.deleteUser(usuario.auth_user_id)
+  }
+
+  return { error: null }
+}
+
+export async function deleteTenantOwner(tenantId: string) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError }
+
+  // 1. Proteger tenant sistema
+  const { data: tenant, error: fetchError } = await supabase
+    .from('tenants')
+    .select('id, slug, nombre')
+    .eq('id', tenantId)
+    .single()
+
+  if (fetchError || !tenant) return { error: 'Lomitería no encontrada' }
+  if (tenant.slug === 'sistema') return { error: 'No se puede eliminar el tenant del sistema' }
+
+  // 2. Obtener todos los auth_user_id de usuarios del tenant
+  const { data: usuarios } = await supabase
+    .from('usuarios')
+    .select('auth_user_id')
+    .eq('tenant_id', tenantId)
+    .not('auth_user_id', 'is', null)
+
+  // 3. Eliminar cuentas de autenticación primero
+  const adminClient = createAdminClient()
+  if (usuarios && usuarios.length > 0) {
+    for (const usuario of usuarios) {
+      if (usuario.auth_user_id) {
+        await adminClient.auth.admin.deleteUser(usuario.auth_user_id)
+      }
+    }
+  }
+
+  // 4. Hard delete del tenant (CASCADE eliminará las 18 tablas relacionadas)
+  const { error: deleteError } = await supabase
+    .from('tenants')
+    .delete()
+    .eq('id', tenantId)
+
+  if (deleteError) {
+    return { error: 'Error al eliminar la lomitería. Inténtalo nuevamente.' }
+  }
+
+  return { error: null }
+}
+
+// ─── Gestión de configuración de impresoras ─────────────────────────────────
+
+export interface CreatePrinterConfigData {
+  printer_id: string
+  agent_ip: string
+  agent_port: number
+  tipo_impresora: 'usb' | 'network' | 'bluetooth'
+  nombre_impresora?: string
+  ubicacion?: string
+  activo: boolean
+}
+
+export interface UpdatePrinterConfigData {
+  printer_id?: string
+  agent_ip?: string
+  agent_port?: number
+  tipo_impresora?: 'usb' | 'network' | 'bluetooth'
+  nombre_impresora?: string
+  ubicacion?: string
+  activo?: boolean
+}
+
+/**
+ * Obtiene la configuración de impresora de un tenant.
+ */
+export async function getPrinterConfigOwner(tenantId: string) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError, config: null }
+
+  const { data, error } = await supabase
+    .from('printer_config')
+    .select('*')
+    .eq('lomiteria_id', tenantId)
+    .maybeSingle()
+
+  if (error) {
+    console.error('[getPrinterConfigOwner] Error:', error)
+    return { error: 'Error al cargar configuración de impresora', config: null }
+  }
+
+  return { error: null, config: data }
+}
+
+/**
+ * Crea o actualiza la configuración de impresora de un tenant.
+ * Usa UPSERT para evitar conflictos.
+ */
+export async function upsertPrinterConfig(tenantId: string, data: CreatePrinterConfigData) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError }
+
+  if (!data.printer_id.trim()) return { error: 'El ID de impresora es requerido' }
+  if (!data.agent_ip.trim()) return { error: 'La IP del agente es requerida' }
+  if (!data.agent_port || data.agent_port <= 0) return { error: 'El puerto debe ser mayor a 0' }
+  if (data.agent_port > 65535) return { error: 'El puerto debe ser menor a 65536' }
+
+  const { error } = await supabase
+    .from('printer_config')
+    .upsert({
+      lomiteria_id: tenantId,
+      printer_id: data.printer_id.trim(),
+      agent_ip: data.agent_ip.trim(),
+      agent_port: data.agent_port,
+      tipo_impresora: data.tipo_impresora,
+      nombre_impresora: data.nombre_impresora?.trim() || null,
+      ubicacion: data.ubicacion?.trim() || null,
+      activo: data.activo,
+    }, { onConflict: 'lomiteria_id' })
+
+  if (error) {
+    console.error('[upsertPrinterConfig] Error:', error)
+    return { error: 'Error al guardar configuración de impresora. Intentalo nuevamente.' }
+  }
+
+  return { error: null }
+}
+
+/**
+ * Actualiza campos específicos de la configuración de impresora.
+ */
+export async function updatePrinterConfig(tenantId: string, data: UpdatePrinterConfigData) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError }
+
+  const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() }
+
+  if (data.printer_id !== undefined) {
+    if (!data.printer_id.trim()) return { error: 'El ID de impresora es requerido' }
+    updatePayload.printer_id = data.printer_id.trim()
+  }
+  if (data.agent_ip !== undefined) {
+    if (!data.agent_ip.trim()) return { error: 'La IP del agente es requerida' }
+    updatePayload.agent_ip = data.agent_ip.trim()
+  }
+  if (data.agent_port !== undefined) {
+    if (data.agent_port <= 0) return { error: 'El puerto debe ser mayor a 0' }
+    if (data.agent_port > 65535) return { error: 'El puerto debe ser menor a 65536' }
+    updatePayload.agent_port = data.agent_port
+  }
+  if (data.tipo_impresora !== undefined) updatePayload.tipo_impresora = data.tipo_impresora
+  if (data.nombre_impresora !== undefined) updatePayload.nombre_impresora = data.nombre_impresora?.trim() || null
+  if (data.ubicacion !== undefined) updatePayload.ubicacion = data.ubicacion?.trim() || null
+  if (data.activo !== undefined) updatePayload.activo = data.activo
+
+  const { error } = await supabase
+    .from('printer_config')
+    .update(updatePayload)
+    .eq('lomiteria_id', tenantId)
+
+  if (error) {
+    console.error('[updatePrinterConfig] Error:', error)
+    return { error: 'Error al actualizar configuración de impresora. Intentalo nuevamente.' }
+  }
+
+  return { error: null }
+}
+
+/**
+ * Elimina la configuración de impresora de un tenant.
+ */
+export async function deletePrinterConfig(tenantId: string) {
+  const { error: authError, supabase } = await assertOwner()
+  if (authError || !supabase) return { error: authError }
+
+  const { error } = await supabase
+    .from('printer_config')
+    .delete()
+    .eq('lomiteria_id', tenantId)
+
+  if (error) {
+    console.error('[deletePrinterConfig] Error:', error)
+    return { error: 'Error al eliminar configuración de impresora. Intentalo nuevamente.' }
   }
 
   return { error: null }
