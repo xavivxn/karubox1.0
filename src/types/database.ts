@@ -3,6 +3,7 @@
 
 export interface Categoria {
   id: string
+  tenant_id: string
   nombre: string
   descripcion?: string
   orden: number
@@ -119,4 +120,16 @@ export interface ComboItem {
   cantidad: number
   created_at: string
   updated_at: string
+}
+
+export interface Inventario {
+  id: string
+  tenant_id: string
+  producto_id: string | null
+  nombre: string | null
+  tipo_inventario: 'discreto' | 'fraccionable'
+  stock_actual: number
+  stock_minimo: number
+  unidad: string
+  controlar_stock: boolean
 }

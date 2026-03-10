@@ -4,13 +4,19 @@
 
 import { ROUTES } from './routes'
 
-export type UserRole = 'admin' | 'cajero' 
+export type UserRole = 'owner' | 'admin' | 'cajero'
 // | 'cocinero' | 'repartidor'
 
 /**
  * Configuración de acceso por rol
  */
 export const ROLE_ACCESS = {
+  owner: {
+    defaultRoute: ROUTES.PROTECTED.OWNER,
+    allowedRoutes: [
+      ROUTES.PROTECTED.OWNER,
+    ],
+  },
   admin: {
     defaultRoute: ROUTES.PROTECTED.HOME,
     allowedRoutes: [
@@ -58,8 +64,7 @@ export function hasRoleAccess(role: UserRole, pathname: string): boolean {
   const roleConfig = ROLE_ACCESS[role]
   if (!roleConfig) return false
 
-  // Verificar si la ruta está en las permitidas para este rol
-  return roleConfig.allowedRoutes.some(route => 
+  return roleConfig.allowedRoutes.some(route =>
     pathname === route || pathname.startsWith(route + '/')
   )
 }

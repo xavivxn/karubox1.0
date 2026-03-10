@@ -101,9 +101,9 @@ COMMENT ON VIEW vista_printer_config IS 'Vista para verificar configuración de 
 -- Deshabilitar RLS (siguiendo el patrón del schema base)
 ALTER TABLE printer_config DISABLE ROW LEVEL SECURITY;
 
--- Dar permisos al rol anónimo de Supabase (para que la app web pueda leer)
-GRANT SELECT ON printer_config TO anon;
-GRANT SELECT ON printer_config TO authenticated;
+-- Dar permisos completos a authenticated y anon (para que la app web pueda gestionar printer_config)
+GRANT SELECT, INSERT, UPDATE, DELETE ON printer_config TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON printer_config TO anon;
 
 -- Dar permisos a la vista también
 GRANT SELECT ON vista_printer_config TO anon;

@@ -2,11 +2,12 @@ import { createClient } from '@/lib/supabase/client'
 import type { Categoria, Producto } from '../types/pos.types'
 
 export const posService = {
-  async loadCategorias(_tenantId: string): Promise<Categoria[]> {
+  async loadCategorias(tenantId: string): Promise<Categoria[]> {
     const supabase = createClient()
     const { data, error } = await supabase
       .from('categorias')
       .select('id,nombre,orden')
+      .eq('tenant_id', tenantId)
       .eq('activa', true)
       .order('orden')
 
@@ -14,13 +15,14 @@ export const posService = {
     return (data || []) as Categoria[]
   },
 
-  async loadProductos(_tenantId: string): Promise<Producto[]> {
+  async loadProductos(tenantId: string): Promise<Producto[]> {
     const supabase = createClient()
     const { data, error } = await supabase
       .from('productos')
       .select('id,nombre,descripcion,precio,categoria_id,disponible')
+      .eq('tenant_id', tenantId)
       .eq('disponible', true)
-      .eq('is_deleted', false)
+      .neq('is_deleted', true)
       .order('nombre')
 
     if (error) throw error

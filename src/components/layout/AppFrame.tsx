@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ROUTES } from '@/config/routes'
 import { AppNavbar } from './AppNavbar'
 import { AppFooter } from './AppFooter'
+import { InactiveTenantOverlay } from '@/components/ui/InactiveTenantOverlay'
 import { useTenant } from '@/contexts/TenantContext'
 import { THEME_CONFIG } from '@/utils/constants'
 
@@ -38,21 +39,20 @@ const PAGE_MAP: Array<{ test: (pathname: string) => boolean; info: PageInfo }> =
       fullWidth: true
     }
   },
-  // {
-  //   test: (path) => path.startsWith('/admin/clientes'),
-  //   info: {
-  //     title: 'Clientes & Fidelidad',
-  //     subtitle: 'Segmentá, premiá y entendé el comportamiento de tus fans.'
-  //   }
-  // },
-  // {
-  //   test: (path) => path.startsWith('/kds'),
-  //   info: {
-  //     title: 'Pantalla de cocina',
-  //     subtitle: 'Pedidos en tiempo real para producción.',
-  //     fullWidth: true
-  //   }
-  // },
+  {
+    test: (path) => path === '/owner',
+    info: {
+      title: 'Panel Owner',
+      subtitle: 'Gestioná todas las lomiterías de la plataforma.'
+    }
+  },
+  {
+    test: (path) => path.startsWith('/owner/tenants'),
+    info: {
+      title: 'Lomiterías',
+      subtitle: 'Creá y administrá los negocios registrados.'
+    }
+  },
 ]
 
 const DEFAULT_INFO: PageInfo = {
@@ -70,8 +70,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
     if (tenant) router.prefetch(ROUTES.PROTECTED.POS)
   }, [tenant, router])
 
-  // Solo ocultar navbar en la ruta raíz (login)
-  const hideNavbar = pathname === '/'
+  // Ocultar navbar en rutas de autenticación
+  const hideNavbar = NAV_EXCLUDED_PATHS.includes(pathname)
   
   const pageInfo =
     PAGE_MAP.find((entry) => entry.test(pathname))?.info ??
@@ -90,6 +90,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       {!hideNavbar && (
         <AppNavbar pageTitle={pageInfo.title} pageSubtitle={pageInfo.subtitle} />
       )}
+      <InactiveTenantOverlay />
       <main className={`flex-1 ${pageInfo.fullWidth ? "py-4" : "px-4 py-6"}`}>
         {pageInfo.fullWidth ? (
           children
@@ -97,7 +98,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <div className="max-w-7xl mx-auto space-y-10">{children}</div>
         )}
       </main>
-      {!hideNavbar && <AppFooter />}
+      <AppFooter />
     </div>
   );
 }

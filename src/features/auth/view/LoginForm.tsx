@@ -26,15 +26,15 @@ export default function LoginForm() {
           <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-8 md:p-12 flex items-center justify-center">
             <LoginHeader />
           </div>
-          
+
           {/* Separador sutil - solo visible en desktop */}
           <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-gray-200 -translate-x-1/2"></div>
-          
+
           {/* Sección derecha - Form */}
           <div className="p-8 md:p-12 flex flex-col justify-center">
             <form onSubmit={handleLogin} className="space-y-6">
               <ErrorAlert message={error} />
-              
+
               <LoginFields
                 email={email}
                 password={password}
@@ -42,7 +42,7 @@ export default function LoginForm() {
                 onPasswordChange={setPassword}
                 disabled={loading}
               />
-              
+
               <LoginButton loading={loading} />
             </form>
 
