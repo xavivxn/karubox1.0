@@ -264,7 +264,7 @@ export function CajerosManagementView({ tenant, initialAdmins, initialCajeros }:
 
             <p className="text-sm text-gray-700 dark:text-gray-300">
               ¿Estás seguro que querés eliminar a{' '}
-              <span className="font-semibold text-gray-900 dark:text-gray-100">"{userToDelete.nombre}"</span>?
+              <span className="font-semibold text-gray-900 dark:text-gray-100">&quot;{userToDelete.nombre}&quot;</span>?
               Se eliminarán sus credenciales de acceso.
             </p>
 

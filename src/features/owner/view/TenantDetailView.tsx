@@ -368,7 +368,7 @@ export function TenantDetailView({ tenant }: TenantDetailViewProps) {
                 </div>
               ) : (
                 <p className="text-sm text-gray-400 dark:text-gray-500 italic">
-                  No se registraron datos de contacto. Presioná "Editar" para agregar.
+                  No se registraron datos de contacto. Presioná &quot;Editar&quot; para agregar.
                 </p>
               )}
             </div>

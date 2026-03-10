@@ -182,7 +182,7 @@ export function ProductManagementView({ tenant, initialProductos, productosError
             </div>
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">Sin productos cargados</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-              Esta lomitería aún no tiene productos. Presiona "Nuevo producto" para comenzar a cargar el menú.
+              Esta lomitería aún no tiene productos. Presiona &quot;Nuevo producto&quot; para comenzar a cargar el menú.
             </p>
           </div>
         ) : (
@@ -276,7 +276,7 @@ export function ProductManagementView({ tenant, initialProductos, productosError
 
             <p className="text-sm text-gray-700 dark:text-gray-300">
               ¿Estás seguro que querés eliminar{' '}
-              <span className="font-semibold text-gray-900 dark:text-gray-100">"{productoToDelete.nombre}"</span>?
+              <span className="font-semibold text-gray-900 dark:text-gray-100">&quot;{productoToDelete.nombre}&quot;</span>?
             </p>
 
             {deleteError && (
@@ -337,7 +337,7 @@ export function ProductManagementView({ tenant, initialProductos, productosError
             {/* Lista de lo que se eliminará */}
             <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
               <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold mb-2">
-                Se eliminarán TODOS los datos de "{tenant.nombre}":
+                Se eliminarán TODOS los datos de &quot;{tenant.nombre}&quot;:
               </p>
               <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 ml-4 list-disc">
                 <li>Todos los productos y categorías</li>

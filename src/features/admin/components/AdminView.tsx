@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { IngredienteModal } from './IngredienteModal'
+import { ProductModal } from './ProductModal'
 import { useAdminDashboard } from '../hooks/useAdminDashboard'
 import { AdminHeader } from './AdminHeader'
 import { AdminLoading } from './AdminLoading'
@@ -26,7 +27,8 @@ import { InventoryGrid } from './InventoryGrid'
 export const AdminView = () => {
   const { tenant, usuario, darkMode } = useTenant()
   const [showIngredienteModal, setShowIngredienteModal] = useState(false)
-  
+  const [showProductModal, setShowProductModal] = useState(false)
+
   const {
     loading,
     stats,
@@ -55,6 +57,11 @@ export const AdminView = () => {
 
   const handleIngredienteSaved = () => {
     setShowIngredienteModal(false)
+    refetch()
+  }
+
+  const handleProductSaved = () => {
+    setShowProductModal(false)
     refetch()
   }
 
@@ -112,6 +119,14 @@ export const AdminView = () => {
         onClose={() => setShowIngredienteModal(false)}
         tenantId={tenant.id}
         onSaved={handleIngredienteSaved}
+      />
+
+      {/* Modal para registrar nuevos productos */}
+      <ProductModal
+        open={showProductModal}
+        onClose={() => setShowProductModal(false)}
+        tenantId={tenant.id}
+        onSaved={handleProductSaved}
       />
     </>
   )

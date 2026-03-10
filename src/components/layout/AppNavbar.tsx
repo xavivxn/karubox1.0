@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState, useEffect, useRef } from 'react'
+import { ReactNode, Suspense, useState, useEffect, useRef } from 'react'
 import { LogOut, Menu, UserCircle2, Sun, Moon, BarChart3, ChevronDown } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { Breadcrumb } from './Breadcrumb'
@@ -105,9 +105,11 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
             </div>
           </div>
         </div>
-        {/* Breadcrumb Navigation */}
+        {/* Breadcrumb Navigation (Suspense por useSearchParams en prerender) */}
         <div className="mt-3 pt-3 border-t border-gray-200/50 dark:border-gray-800/50">
-          <Breadcrumb />
+          <Suspense fallback={null}>
+            <Breadcrumb />
+          </Suspense>
         </div>
       </div>
     </header>
