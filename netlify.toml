@@ -1,8 +1,10 @@
 # Netlify config para Next.js (SSR)
-# El plugin oficial hace que las rutas y el servidor Next.js funcionen; sin él sale 404.
+# El plugin @netlify/plugin-nextjs gestiona el output. NO pongas "Publish directory" en la UI
+# (o déjalo vacío), sino el plugin falla porque no acepta publish = raíz del repo.
 
 [build]
   command = "npm run build"
+  publish = ".netlify/output"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
