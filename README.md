@@ -314,3 +314,6 @@ Desarrollado para **Atlas Burger** y preparado para escalar a todas las lomiter�
 ---
 
 *Última actualización: Diciembre 2026*
+
+ *ajuste prueba vercel*
+
