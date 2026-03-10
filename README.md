@@ -2,7 +2,7 @@
 
 Sistema completo de Punto de Venta (POS) diseñado específicamente para lomiterías, con arquitectura multi-tenant que permite gestionar múltiples locales desde una sola plataforma.
 
-<!-- deploy trigger -->
+
 
 ## ✨ Características Principales
 
@@ -317,5 +317,4 @@ Desarrollado para **Atlas Burger** y preparado para escalar a todas las lomiter�
 
 *Última actualización: Diciembre 2026*
 
- *ajuste prueba vercel*
-
+ *ajuste prueba vercelllll*
