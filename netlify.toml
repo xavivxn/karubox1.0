@@ -1,0 +1,8 @@
+# Netlify config para Next.js (SSR)
+# El plugin oficial hace que las rutas y el servidor Next.js funcionen; sin él sale 404.
+
+[build]
+  command = "npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
