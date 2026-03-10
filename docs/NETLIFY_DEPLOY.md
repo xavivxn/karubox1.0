@@ -2,13 +2,11 @@
 
 ## 1. Publish directory (obligatorio)
 
-El plugin `@netlify/plugin-nextjs` **no acepta** que "Publish directory" sea la raíz del repo.
+El plugin `@netlify/plugin-nextjs` (OpenNext) **gestiona solo** el directorio de publicación. No le pongas valor en la UI.
 
-- En Netlify: **Site settings** → **Build & deploy** → **Continuous Deployment** → **Build settings** → **Edit settings**.
-- En **Publish directory**: **dejalo vacío** (borrá cualquier valor, por ejemplo `/` o el path del repo).
-- Guardá. El `netlify.toml` del repo ya define `publish = ".netlify/output"` para que el plugin funcione.
-
-Si dejás Publish directory en blanco, Netlify usará el valor de `netlify.toml`. No lo pongas en la UI a la raíz del repo.
+- En Netlify: **Site configuration** → **Build & deploy** → **Build settings** → **Edit settings**.
+- En **Publish directory**: dejalo **vacío** (borrá cualquier valor).
+- Guardá. No pongas `.next`, ni `.netlify/output`, ni la raíz del repo: el plugin lo define internamente.
 
 ## 2. Variables de entorno (Supabase)
 

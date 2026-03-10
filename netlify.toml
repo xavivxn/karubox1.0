@@ -1,10 +1,9 @@
 # Netlify config para Next.js (SSR)
-# El plugin @netlify/plugin-nextjs gestiona el output. NO pongas "Publish directory" en la UI
-# (o déjalo vacío), sino el plugin falla porque no acepta publish = raíz del repo.
+# Build: next build. El plugin @netlify/plugin-nextjs (OpenNext) corre después y genera
+# el output que Netlify publica. NO pongas "Publish directory" en la UI (dejalo vacío).
 
 [build]
   command = "npm run build"
-  publish = ".netlify/output"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
