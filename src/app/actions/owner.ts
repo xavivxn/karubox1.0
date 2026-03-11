@@ -359,7 +359,7 @@ export async function listProductosOwner(tenantId: string) {
   const adminClient = createAdminClient()
   const { data, error } = await adminClient
     .from('productos')
-    .select('id, nombre, precio, disponible, tiene_receta, imagen_url, categoria_id')
+    .select('id, nombre, descripcion, precio, disponible, tiene_receta, imagen_url, categoria_id')
     .eq('tenant_id', tenantId)
     .neq('is_deleted', true)       // cubre is_deleted = false Y is_deleted = null
     .order('nombre', { ascending: true })
@@ -577,6 +577,45 @@ export async function deleteProductoOwner(productoId: string, tenantId: string) 
     .eq('producto_id', productoId)
     .eq('tenant_id', tenantId)
 
+  return { error: null }
+}
+
+/**
+ * Actualiza los campos básicos de un producto (nombre, descripcion, precio, disponible, imagen_url, categoria_id).
+ */
+export async function updateProductoOwner(
+  productoId: string,
+  tenantId: string,
+  data: {
+    nombre: string
+    descripcion?: string | null
+    precio: number
+    disponible: boolean
+    imagen_url?: string | null
+    categoria_id?: string | null
+  }
+) {
+  const { error: authError } = await assertOwner()
+  if (authError) return { error: authError }
+
+  if (!data.nombre.trim()) return { error: 'El nombre del producto es obligatorio' }
+  if (!Number.isFinite(data.precio) || data.precio < 0) return { error: 'El precio no es válido' }
+
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
+    .from('productos')
+    .update({
+      nombre: data.nombre.trim(),
+      descripcion: data.descripcion?.trim() || null,
+      precio: data.precio,
+      disponible: data.disponible,
+      imagen_url: data.imagen_url?.trim() || null,
+      categoria_id: data.categoria_id || null,
+    })
+    .eq('id', productoId)
+    .eq('tenant_id', tenantId)
+
+  if (error) return { error: 'Error al actualizar el producto. Inténtalo de nuevo.' }
   return { error: null }
 }
 

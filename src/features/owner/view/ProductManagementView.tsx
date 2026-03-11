@@ -2,8 +2,9 @@
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Package, Plus, CheckCircle, XCircle, ChefHat, ClipboardList, Tag, Trash2, AlertTriangle, Users, Printer } from 'lucide-react'
+import { ArrowLeft, Package, Plus, CheckCircle, XCircle, ChefHat, ClipboardList, Tag, Trash2, AlertTriangle, Users, Printer, Pencil } from 'lucide-react'
 import { OwnerProductModal } from '../components/OwnerProductModal'
+import { EditProductoModal } from '../components/EditProductoModal'
 import { IngredienteModal } from '@/features/admin/components/IngredienteModal'
 import { CategoriaModal } from '@/features/admin/components/CategoriaModal'
 import { CajerosModal } from '../components/CajerosModal'
@@ -14,6 +15,7 @@ import { ROUTES } from '@/config/routes'
 interface Producto {
   id: string
   nombre: string
+  descripcion?: string | null
   precio: number
   disponible: boolean
   tiene_receta: boolean
@@ -50,6 +52,7 @@ export function ProductManagementView({ tenant, initialProductos, productosError
   const [tenantNameConfirmation, setTenantNameConfirmation] = useState('')
   const [showCajerosModal, setShowCajerosModal] = useState(false)
   const [showPrinterModal, setShowPrinterModal] = useState(false)
+  const [productoToEdit, setProductoToEdit] = useState<Producto | null>(null)
 
 
   const refreshProductos = useCallback(async () => {
@@ -155,7 +158,7 @@ export function ProductManagementView({ tenant, initialProductos, productosError
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 dark:bg-orange-900/40 group-hover:bg-orange-200 dark:group-hover:bg-orange-900/60 transition">
                     <Tag className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                   </div>
-                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 text-center leading-tight">Nueva categoría</span>
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 text-center leading-tight">Categorías</span>
                 </button>
               )}
 
@@ -237,20 +240,30 @@ export function ProductManagementView({ tenant, initialProductos, productosError
                 <div className="flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-snug">{producto.nombre}</h3>
-                    <span
-                      className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        producto.disponible
-                          ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                      }`}
-                    >
-                      {producto.disponible ? (
-                        <CheckCircle className="w-3 h-3" />
-                      ) : (
-                        <XCircle className="w-3 h-3" />
-                      )}
-                      {producto.disponible ? 'Disponible' : 'Oculto'}
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setProductoToEdit(producto)}
+                        className="rounded-lg p-1 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition"
+                        title="Editar producto"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                          producto.disponible
+                            ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                        }`}
+                      >
+                        {producto.disponible ? (
+                          <CheckCircle className="w-3 h-3" />
+                        ) : (
+                          <XCircle className="w-3 h-3" />
+                        )}
+                        {producto.disponible ? 'Disponible' : 'Oculto'}
+                      </span>
+                    </div>
                   </div>
 
                   <p className="text-base font-bold text-orange-600 dark:text-orange-400 mt-1">
@@ -466,6 +479,16 @@ export function ProductManagementView({ tenant, initialProductos, productosError
         open={showPrinterModal}
         onClose={() => setShowPrinterModal(false)}
         tenant={tenant}
+      />
+      <EditProductoModal
+        open={productoToEdit !== null}
+        onClose={() => setProductoToEdit(null)}
+        tenantId={tenant.id}
+        producto={productoToEdit}
+        onSaved={() => {
+          setProductoToEdit(null)
+          refreshProductos()
+        }}
       />
     </>
   )
