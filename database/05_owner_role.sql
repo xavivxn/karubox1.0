@@ -16,13 +16,13 @@ ALTER TABLE usuarios
 COMMENT ON COLUMN usuarios.rol IS
   'owner: dueño del sistema/plataforma, admin: dueño del local, cajero: POS, cocinero: KDS, repartidor: delivery';
 
--- 3. Crear el tenant "sistema" al que pertenece el usuario owner
+-- 3. Crear el tenant "Ardentium" al que pertenece el usuario owner
 --    (ID fijo para poder referenciarlo fácilmente)
 INSERT INTO tenants (id, nombre, slug, activo, is_deleted)
 VALUES (
   '00000000-0000-0000-0000-000000000001',
-  'Sistema',
-  'sistema',
+  'Ardentium',
+  'ardentium',
   true,
   false
 )
@@ -39,9 +39,9 @@ Paso 2: Ejecutar el siguiente INSERT reemplazando los valores:
 
 INSERT INTO usuarios (auth_user_id, tenant_id, email, nombre, rol, activo, is_deleted)
 VALUES (
-  'cf6c32ea-2452-4612-bcc6-a2ecac93666f',
+  '9d45c7c5-3d14-408c-86c3-d6a83dcacc46',
   '00000000-0000-0000-0000-000000000001',
-  'ardentium_owner@gmail.com',
+  'ardentium_owner@karubox.com',
   'Owner',
   'owner',
   true,

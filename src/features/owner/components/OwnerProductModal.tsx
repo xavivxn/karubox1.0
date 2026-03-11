@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Package, Image as ImageIcon, Loader2, ChefHat, Plus, Trash2 } from 'lucide-react'
+import { X, Package, Image as ImageIcon, Loader2, ChefHat, Plus, Trash2, Layers, Box, AlertCircle, CheckCircle2 } from 'lucide-react'
 import {
   listCategoriasOwner,
   listIngredientesOwner,
@@ -33,7 +33,6 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
-  const [activeTab, setActiveTab] = useState<'general' | 'receta'>('general')
 
   // Form fields
   const [tipoProducto, setTipoProducto] = useState<'con_receta' | 'combo' | 'sin_receta'>('con_receta')
@@ -103,7 +102,6 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
       setReceta([])
       setComboItems([])
       setSelectedIngredienteSinRecetaId('')
-      setActiveTab('general')
       setSuccessMessage(null)
       setErrorMessage(null)
     }
@@ -161,6 +159,15 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
     setComboItems(comboItems.filter((c) => c.producto_id !== productoId))
   }
 
+  const toTitleCase = (str: string): string =>
+    str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+
+  const formatGuaranies = (value: string): string => {
+    const digits = value.replace(/\D/g, '')
+    if (!digits) return ''
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage(null)
@@ -169,7 +176,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
     const result = await createProductoOwner(tenantId, {
       nombre,
       descripcion,
-      precio: parseFloat(precio),
+      precio: parseInt(precio.replace(/\./g, ''), 10) || 0,
       categoria_id: categoriaId,
       disponible,
       imagen_url: imagenUrl,
@@ -198,530 +205,356 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
   if (!open || !mounted) return null
 
   const inputClass =
-    'w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 focus:border-transparent outline-none transition disabled:opacity-50'
+    'w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:bg-white dark:focus:bg-gray-800 outline-none transition disabled:opacity-50'
 
   const modalContent = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="w-full max-w-3xl rounded-3xl shadow-2xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
-              <Package className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-500 shadow-lg shadow-orange-500/40 shrink-0">
+              <Package className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold">Cargar Producto POS</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Productos con receta, combos o sin receta para el menú</p>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">Cargar Producto POS</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Productos con receta, combos o sin receta para el men&uacute;</p>
             </div>
           </div>
           <button
             onClick={onClose}
             disabled={isSaving}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+            className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition disabled:opacity-50"
             aria-label="Cerrar"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b border-gray-100 dark:border-gray-700 px-6">
-          <div className="flex gap-1">
-            {(['general', 'receta'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-3 font-semibold text-sm transition-colors relative flex items-center gap-2 ${
-                  activeTab === tab
-                    ? 'text-orange-600 dark:text-orange-400'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-              >
-                {tab === 'receta' && <ChefHat className="w-4 h-4" />}
-                {tab === 'general' ? 'Información General' : tipoProducto === 'combo' ? 'Items del Combo' : tipoProducto === 'sin_receta' ? 'Materia Prima' : 'Receta'}
-                {activeTab === tab && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 dark:bg-orange-400" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
           {errorMessage && (
-            <div className="mb-6 p-4 rounded-2xl bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-700">
-              <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
+            <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800/60 p-3.5">
+              <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">{errorMessage}</p>
             </div>
           )}
           {successMessage && (
-            <div className="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-700">
-              <p className="text-sm text-emerald-600 dark:text-emerald-400">{successMessage}</p>
+            <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800/60 p-3.5">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+              <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">{successMessage}</p>
             </div>
           )}
 
-          <form id="owner-product-form" onSubmit={handleSubmit} className="space-y-6">
-            {activeTab === 'general' && (
-              <>
-                {/* Tipo de producto */}
-                <div className="space-y-4 pb-6 border-b border-gray-100 dark:border-gray-700">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                    ¿Qué vas a crear?
-                  </h3>
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/50 p-4 hover:border-orange-500 dark:hover:border-orange-400 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:border-orange-400 dark:has-[:checked]:bg-orange-900/30">
-                      <input
-                        type="radio"
-                        value="con_receta"
-                        checked={tipoProducto === 'con_receta'}
-                        onChange={(e) => setTipoProducto(e.target.value as 'con_receta')}
-                        disabled={isSaving}
-                        className="peer sr-only"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Producto con Receta</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Fabricado a partir de materias primas</p>
-                      </div>
-                    </label>
-                    <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/50 p-4 hover:border-orange-500 dark:hover:border-orange-400 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:border-orange-400 dark:has-[:checked]:bg-orange-900/30">
-                      <input
-                        type="radio"
-                        value="combo"
-                        checked={tipoProducto === 'combo'}
-                        onChange={(e) => setTipoProducto(e.target.value as 'combo')}
-                        disabled={isSaving}
-                        className="peer sr-only"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Combo</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Agrupaci&oacute;n de productos existentes</p>
-                      </div>
-                    </label>
-                    <label className="relative flex cursor-pointer rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/50 p-4 hover:border-orange-500 dark:hover:border-orange-400 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:border-orange-400 dark:has-[:checked]:bg-orange-900/30">
-                      <input
-                        type="radio"
-                        value="sin_receta"
-                        checked={tipoProducto === 'sin_receta'}
-                        onChange={(e) => setTipoProducto(e.target.value as 'sin_receta')}
-                        disabled={isSaving}
-                        className="peer sr-only"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Producto sin receta</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Vinculado a un item del inventario</p>
-                      </div>
-                    </label>
+          <form id="owner-product-form" onSubmit={handleSubmit} className="space-y-5">
+
+            {/* ── Sección 1: Tipo de producto ── */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white shrink-0">1</span>
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Tipo de producto</h3>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="group relative flex cursor-pointer gap-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3.5 hover:border-orange-400 dark:hover:border-orange-500 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:bg-orange-900/20">
+                  <input type="radio" value="con_receta" checked={tipoProducto === 'con_receta'} onChange={(e) => setTipoProducto(e.target.value as 'con_receta')} disabled={isSaving} className="peer sr-only" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 group-has-[:checked]:bg-orange-100 dark:group-has-[:checked]:bg-orange-900/40 transition">
+                    <ChefHat className="h-4 w-4 text-gray-500 dark:text-gray-400 group-has-[:checked]:text-orange-600 dark:group-has-[:checked]:text-orange-400" />
                   </div>
-                </div>
-
-                {/* Nombre */}
-                <div>
-                  <label htmlFor="nombre" className="block text-sm font-semibold mb-2">
-                    Nombre del producto <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="nombre"
-                    type="text"
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Ej: Hamburguesa clásica"
-                    disabled={isSaving}
-                    className={inputClass}
-                  />
-                </div>
-
-                {/* Descripción */}
-                <div>
-                  <label htmlFor="descripcion" className="block text-sm font-semibold mb-2">
-                    Descripción
-                  </label>
-                  <textarea
-                    id="descripcion"
-                    value={descripcion}
-                    onChange={(e) => setDescripcion(e.target.value)}
-                    placeholder="Descripción del producto (opcional)"
-                    rows={3}
-                    disabled={isSaving}
-                    className={`${inputClass} resize-none`}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Precio */}
-                  <div>
-                    <label htmlFor="precio" className="block text-sm font-semibold mb-2">
-                      Precio (Gs.) <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="precio"
-                      type="number"
-                      step="100"
-                      min="0"
-                      value={precio}
-                      onChange={(e) => setPrecio(e.target.value)}
-                      placeholder="0"
-                      disabled={isSaving}
-                      className={inputClass}
-                    />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-900 dark:text-white">Con Receta</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">A partir de materias primas</p>
                   </div>
-
-                  {/* Categoría */}
-                  <div>
-                    <label htmlFor="categoria" className="block text-sm font-semibold mb-2">
-                      Categoría <span className="text-red-500">*</span>
-                    </label>
-                    {loadingData ? (
-                      <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50 dark:bg-gray-900/50">
-                        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                      </div>
-                    ) : (
-                      <select
-                        id="categoria"
-                        value={categoriaId}
-                        onChange={(e) => setCategoriaId(e.target.value)}
-                        disabled={isSaving}
-                        className={inputClass}
-                      >
-                        <option value="">Seleccionar categoría</option>
-                        {categorias.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                </label>
+                <label className="group relative flex cursor-pointer gap-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3.5 hover:border-orange-400 dark:hover:border-orange-500 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:bg-orange-900/20">
+                  <input type="radio" value="sin_receta" checked={tipoProducto === 'sin_receta'} onChange={(e) => setTipoProducto(e.target.value as 'sin_receta')} disabled={isSaving} className="peer sr-only" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 group-has-[:checked]:bg-orange-100 dark:group-has-[:checked]:bg-orange-900/40 transition">
+                    <Box className="h-4 w-4 text-gray-500 dark:text-gray-400 group-has-[:checked]:text-orange-600 dark:group-has-[:checked]:text-orange-400" />
                   </div>
-                </div>
-
-                {/* URL de imagen */}
-                <div>
-                  <label htmlFor="imagen" className="block text-sm font-semibold mb-2">
-                    URL de imagen
-                  </label>
-                  <div className="relative">
-                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-                    <input
-                      id="imagen"
-                      type="url"
-                      value={imagenUrl}
-                      onChange={(e) => setImagenUrl(e.target.value)}
-                      placeholder="https://ejemplo.com/imagen.jpg"
-                      disabled={isSaving}
-                      className={`${inputClass} pl-11`}
-                    />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-900 dark:text-white">Sin Receta</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Vinculado a inventario</p>
                   </div>
-                </div>
+                </label>
+                <label className="group relative flex cursor-pointer gap-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3.5 hover:border-orange-400 dark:hover:border-orange-500 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 dark:has-[:checked]:bg-orange-900/20">
+                  <input type="radio" value="combo" checked={tipoProducto === 'combo'} onChange={(e) => setTipoProducto(e.target.value as 'combo')} disabled={isSaving} className="peer sr-only" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 group-has-[:checked]:bg-orange-100 dark:group-has-[:checked]:bg-orange-900/40 transition">
+                    <Layers className="h-4 w-4 text-gray-500 dark:text-gray-400 group-has-[:checked]:text-orange-600 dark:group-has-[:checked]:text-orange-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-900 dark:text-white">Combo</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Agrupa productos existentes</p>
+                  </div>
+                </label>
+              </div>
+            </section>
 
-                {/* Disponibilidad */}
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700">
-                  <input
-                    id="disponible"
-                    type="checkbox"
-                    checked={disponible}
-                    onChange={(e) => setDisponible(e.target.checked)}
-                    disabled={isSaving}
-                    className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500 focus:ring-offset-0 disabled:opacity-50"
-                  />
-                  <label htmlFor="disponible" className="text-sm font-semibold cursor-pointer select-none">
-                    Producto disponible para la venta
-                  </label>
-                </div>
-              </>
-            )}
+            <div className="border-t border-dashed border-gray-200 dark:border-gray-700" />
 
-            {activeTab === 'receta' && (
-              <div className="space-y-6">
-                {tipoProducto === 'con_receta' ? (
-                  <>
-                    <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-700">
-                      <p className="text-sm text-blue-600 dark:text-blue-400">
-                        Define qué ingredientes lleva este producto y en qué cantidad
-                      </p>
-                    </div>
-
-                    {/* Agregar ingrediente */}
-                    <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600">
-                      <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Agregar ingrediente</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="md:col-span-2">
-                          <label htmlFor="ingrediente" className="block text-sm font-medium mb-2">
-                            Ingrediente
-                          </label>
-                          {loadingData ? (
-                            <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50 dark:bg-gray-900/50">
-                              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                            </div>
-                          ) : (
-                            <select
-                              id="ingrediente"
-                              value={selectedIngredienteId}
-                              onChange={(e) => setSelectedIngredienteId(e.target.value)}
-                              disabled={isSaving}
-                              className={inputClass}
-                            >
-                              <option value="">Seleccionar ingrediente</option>
-                              {ingredientes
-                                .filter((ing) => !receta.some((r) => r.ingrediente_id === ing.id))
-                                .map((ing) => (
-                                  <option key={ing.id} value={ing.id}>
-                                    {ing.nombre} ({ing.unidad})
-                                  </option>
-                                ))}
-                            </select>
-                          )}
-                        </div>
-                        <div>
-                          <label htmlFor="cantidad" className="block text-sm font-medium mb-2">
-                            Cantidad
-                          </label>
-                          <input
-                            id="cantidad"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={cantidad}
-                            onChange={(e) => setCantidad(e.target.value)}
-                            placeholder="0"
-                            disabled={isSaving}
-                            className={inputClass}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <input
-                          id="obligatorio"
-                          type="checkbox"
-                          checked={obligatorio}
-                          onChange={(e) => setObligatorio(e.target.checked)}
-                          disabled={isSaving}
-                          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500 focus:ring-offset-0 disabled:opacity-50"
-                        />
-                        <label htmlFor="obligatorio" className="text-sm cursor-pointer select-none">
-                          Ingrediente obligatorio (no se puede remover)
-                        </label>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAddIngrediente}
-                        disabled={isSaving || !selectedIngredienteId || !cantidad}
-                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition disabled:opacity-50"
-                      >
-                        <Plus className="w-5 h-5" />
-                        Agregar a la receta
-                      </button>
-                    </div>
-
-                    {/* Lista de ingredientes */}
-                    {receta.length > 0 ? (
-                      <div className="space-y-2">
-                        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
-                          Ingredientes de la receta ({receta.length})
-                        </h3>
-                        <div className="space-y-2">
-                          {receta.map((item) => {
-                            const ingrediente = ingredientes.find((i) => i.id === item.ingrediente_id)
-                            return (
-                              <div
-                                key={item.ingrediente_id}
-                                className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <ChefHat className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-                                  <div>
-                                    <p className="font-semibold text-sm">{ingrediente?.nombre}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                      {item.cantidad} {item.unidad}{' '}
-                                      {item.obligatorio ? '• Obligatorio' : '• Opcional'}
-                                    </p>
-                                  </div>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveIngrediente(item.ingrediente_id)}
-                                  disabled={isSaving}
-                                  className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 transition disabled:opacity-50"
-                                  aria-label="Eliminar ingrediente"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-400 dark:text-gray-500">
-                        <ChefHat className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p className="text-sm">No hay ingredientes en la receta</p>
-                      </div>
-                    )}
-                  </>
-                ) : tipoProducto === 'combo' ? (
-                  <>
-                    <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-700">
-                      <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                        Selecciona los productos que incluye este combo
-                      </p>
-                    </div>
-
-                    {/* Agregar producto al combo */}
-                    <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600">
-                      <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Agregar producto</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="md:col-span-2">
-                          <label htmlFor="producto" className="block text-sm font-medium mb-2">
-                            Producto
-                          </label>
-                          {loadingData ? (
-                            <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50 dark:bg-gray-900/50">
-                              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                            </div>
-                          ) : (
-                            <select
-                              id="producto"
-                              value={selectedProductoId}
-                              onChange={(e) => setSelectedProductoId(e.target.value)}
-                              disabled={isSaving}
-                              className={inputClass}
-                            >
-                              <option value="">Seleccionar producto</option>
-                              {productos
-                                .filter((p) => !comboItems.some((c) => c.producto_id === p.id))
-                                .map((prod) => (
-                                  <option key={prod.id} value={prod.id}>
-                                    {prod.nombre}
-                                  </option>
-                                ))}
-                            </select>
-                          )}
-                        </div>
-                        <div>
-                          <label htmlFor="cantidadProducto" className="block text-sm font-medium mb-2">
-                            Cantidad
-                          </label>
-                          <input
-                            id="cantidadProducto"
-                            type="number"
-                            step="1"
-                            min="1"
-                            value={cantidadProducto}
-                            onChange={(e) => setCantidadProducto(e.target.value)}
-                            placeholder="1"
-                            disabled={isSaving}
-                            className={inputClass}
-                          />
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAddProducto}
-                        disabled={isSaving || !selectedProductoId || !cantidadProducto}
-                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition disabled:opacity-50"
-                      >
-                        <Plus className="w-5 h-5" />
-                        Agregar al combo
-                      </button>
-                    </div>
-
-                    {/* Lista de productos del combo */}
-                    {comboItems.length > 0 ? (
-                      <div className="space-y-2">
-                        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
-                          Productos del combo ({comboItems.length})
-                        </h3>
-                        <div className="space-y-2">
-                          {comboItems.map((item) => {
-                            const producto = productos.find((p) => p.id === item.producto_id)
-                            return (
-                              <div
-                                key={item.producto_id}
-                                className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Package className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-                                  <div>
-                                    <p className="font-semibold text-sm">{producto?.nombre}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Cantidad: {item.cantidad}</p>
-                                  </div>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveProducto(item.producto_id)}
-                                  disabled={isSaving}
-                                  className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 transition disabled:opacity-50"
-                                  aria-label="Eliminar producto"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-400 dark:text-gray-500">
-                        <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p className="text-sm">No hay productos en el combo</p>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/30 border border-purple-100 dark:border-purple-700">
-                      <p className="text-sm text-purple-600 dark:text-purple-400">
-                        Selecciona la materia prima que corresponde a este producto
-                      </p>
-                    </div>
-
-                    <div className="space-y-4 p-5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600">
-                      <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Materia prima</h3>
-                      {loadingData ? (
-                        <div className="flex items-center justify-center h-12 rounded-xl bg-gray-50 dark:bg-gray-900/50">
-                          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                        </div>
-                      ) : ingredientes.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400 dark:text-gray-500">
-                          <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                          <p className="text-sm">No hay materias primas registradas</p>
-                          <p className="text-xs mt-1">Registra materias primas primero usando &quot;Registrar inventario&quot;</p>
-                        </div>
-                      ) : (
-                        <select
-                          value={selectedIngredienteSinRecetaId}
-                          onChange={(e) => setSelectedIngredienteSinRecetaId(e.target.value)}
-                          disabled={isSaving}
-                          className={inputClass}
-                        >
-                          <option value="">Seleccionar materia prima</option>
-                          {ingredientes.map((ing) => (
-                            <option key={ing.id} value={ing.id}>
-                              {ing.nombre} ({ing.unidad})
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-
-                    {selectedIngredienteSinRecetaId && (
-                      <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700">
-                        <div className="flex items-center gap-3">
-                          <Package className="w-5 h-5 text-orange-500 dark:text-orange-400" />
-                          <div>
-                            <p className="font-semibold text-sm">
-                              {ingredientes.find((i) => i.id === selectedIngredienteSinRecetaId)?.nombre}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              Unidad: {ingredientes.find((i) => i.id === selectedIngredienteSinRecetaId)?.unidad}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
+            {/* ── Sección 2: Receta / Combo / Materia Prima (contextual) ── */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white shrink-0">2</span>
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                  {tipoProducto === 'combo' ? 'Items del Combo' : tipoProducto === 'sin_receta' ? 'Materia Prima' : 'Receta'}
+                </h3>
+                {(receta.length > 0 || comboItems.length > 0) && (
+                  <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-bold text-white">
+                    {tipoProducto === 'combo' ? comboItems.length : receta.length}
+                  </span>
                 )}
               </div>
-            )}
+
+              {tipoProducto === 'con_receta' && (
+                <>
+                  <div className="flex items-center gap-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/60 px-3.5 py-2.5">
+                    <ChefHat className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                    <p className="text-xs font-medium text-blue-600 dark:text-blue-400">Define qu&eacute; ingredientes lleva este producto y en qu&eacute; cantidad</p>
+                  </div>
+                  <div className="space-y-4 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="md:col-span-2">
+                        <label htmlFor="ingrediente" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Ingrediente</label>
+                        {loadingData ? (
+                          <div className="flex items-center justify-center h-[42px] rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                          </div>
+                        ) : (
+                          <select id="ingrediente" value={selectedIngredienteId} onChange={(e) => setSelectedIngredienteId(e.target.value)} disabled={isSaving} className={inputClass}>
+                            <option value="">Seleccionar ingrediente</option>
+                            {ingredientes.filter((ing) => !receta.some((r) => r.ingrediente_id === ing.id)).map((ing) => (
+                              <option key={ing.id} value={ing.id}>{ing.nombre} ({ing.unidad})</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                      <div>
+                        <label htmlFor="cantidad" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Cantidad</label>
+                        <input id="cantidad" type="number" step="0.01" min="0" value={cantidad} onChange={(e) => setCantidad(e.target.value)} placeholder="0" disabled={isSaving} className={inputClass} />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input id="obligatorio" type="checkbox" checked={obligatorio} onChange={(e) => setObligatorio(e.target.checked)} disabled={isSaving} className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500 focus:ring-offset-0 disabled:opacity-50" />
+                      <label htmlFor="obligatorio" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">Ingrediente obligatorio (no se puede remover)</label>
+                    </div>
+                    <button type="button" onClick={handleAddIngrediente} disabled={isSaving || !selectedIngredienteId || !cantidad} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition disabled:opacity-50">
+                      <Plus className="w-4 h-4" />
+                      Agregar a la receta
+                    </button>
+                  </div>
+                  {receta.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ingredientes ({receta.length})</p>
+                      {receta.map((item) => {
+                        const ing = ingredientes.find((i) => i.id === item.ingrediente_id)
+                        return (
+                          <div key={item.ingrediente_id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center gap-3">
+                              <ChefHat className="w-4 h-4 text-gray-400 shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">{ing?.nombre}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{item.cantidad} {item.unidad} &bull; {item.obligatorio ? 'Obligatorio' : 'Opcional'}</p>
+                              </div>
+                            </div>
+                            <button type="button" onClick={() => handleRemoveIngrediente(item.ingrediente_id)} disabled={isSaving} className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-400 hover:text-red-600 transition disabled:opacity-50">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center py-6 text-gray-400 dark:text-gray-500">
+                      <ChefHat className="w-8 h-8 mb-2 opacity-40" />
+                      <p className="text-xs">Sin ingredientes a&uacute;n</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {tipoProducto === 'combo' && (
+                <>
+                  <div className="flex items-center gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/60 px-3.5 py-2.5">
+                    <Layers className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Selecciona los productos que incluye este combo</p>
+                  </div>
+                  <div className="space-y-4 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="md:col-span-2">
+                        <label htmlFor="producto" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Producto</label>
+                        {loadingData ? (
+                          <div className="flex items-center justify-center h-[42px] rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                          </div>
+                        ) : (
+                          <select id="producto" value={selectedProductoId} onChange={(e) => setSelectedProductoId(e.target.value)} disabled={isSaving} className={inputClass}>
+                            <option value="">Seleccionar producto</option>
+                            {productos.filter((p) => !comboItems.some((c) => c.producto_id === p.id)).map((prod) => (
+                              <option key={prod.id} value={prod.id}>{prod.nombre}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                      <div>
+                        <label htmlFor="cantidadProducto" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Cantidad</label>
+                        <input id="cantidadProducto" type="number" step="1" min="1" value={cantidadProducto} onChange={(e) => setCantidadProducto(e.target.value)} placeholder="1" disabled={isSaving} className={inputClass} />
+                      </div>
+                    </div>
+                    <button type="button" onClick={handleAddProducto} disabled={isSaving || !selectedProductoId || !cantidadProducto} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition disabled:opacity-50">
+                      <Plus className="w-4 h-4" />
+                      Agregar al combo
+                    </button>
+                  </div>
+                  {comboItems.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Productos ({comboItems.length})</p>
+                      {comboItems.map((item) => {
+                        const prod = productos.find((p) => p.id === item.producto_id)
+                        return (
+                          <div key={item.producto_id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center gap-3">
+                              <Package className="w-4 h-4 text-gray-400 shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">{prod?.nombre}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Cantidad: {item.cantidad}</p>
+                              </div>
+                            </div>
+                            <button type="button" onClick={() => handleRemoveProducto(item.producto_id)} disabled={isSaving} className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-400 hover:text-red-600 transition disabled:opacity-50">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center py-6 text-gray-400 dark:text-gray-500">
+                      <Package className="w-8 h-8 mb-2 opacity-40" />
+                      <p className="text-xs">Sin productos en el combo a&uacute;n</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {tipoProducto === 'sin_receta' && (
+                <>
+                  <div className="flex items-center gap-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/60 px-3.5 py-2.5">
+                    <Box className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+                    <p className="text-xs font-medium text-purple-600 dark:text-purple-400">Selecciona la materia prima que corresponde a este producto</p>
+                  </div>
+                  {loadingData ? (
+                    <div className="flex items-center justify-center h-[42px] rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                      <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                    </div>
+                  ) : ingredientes.length === 0 ? (
+                    <div className="flex flex-col items-center py-6 text-gray-400 dark:text-gray-500">
+                      <Package className="w-8 h-8 mb-2 opacity-40" />
+                      <p className="text-xs">No hay materias primas registradas</p>
+                      <p className="text-[11px] mt-0.5">Registr&aacute; primero usando &quot;Registrar inventario&quot;</p>
+                    </div>
+                  ) : (
+                    <select value={selectedIngredienteSinRecetaId} onChange={(e) => setSelectedIngredienteSinRecetaId(e.target.value)} disabled={isSaving} className={inputClass}>
+                      <option value="">Seleccionar materia prima</option>
+                      {ingredientes.map((ing) => (
+                        <option key={ing.id} value={ing.id}>{ing.nombre} ({ing.unidad})</option>
+                      ))}
+                    </select>
+                  )}
+                  {selectedIngredienteSinRecetaId && (
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                      <Package className="w-4 h-4 text-orange-500 shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{ingredientes.find((i) => i.id === selectedIngredienteSinRecetaId)?.nombre}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Unidad: {ingredientes.find((i) => i.id === selectedIngredienteSinRecetaId)?.unidad}</p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+
+            <div className="border-t border-dashed border-gray-200 dark:border-gray-700" />
+
+            {/* ── Sección 3: Información ── */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white shrink-0">3</span>
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Informaci&oacute;n</h3>
+              </div>
+              <div>
+                <label htmlFor="nombre" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Nombre del producto <span className="text-orange-500">*</span>
+                </label>
+                <input id="nombre" type="text" value={nombre} onChange={(e) => setNombre(toTitleCase(e.target.value))} placeholder="Ej: Hamburguesa Clásica" disabled={isSaving} className={inputClass} />
+              </div>
+              <div>
+                <label htmlFor="descripcion" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Descripci&oacute;n <span className="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <textarea id="descripcion" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Ej: Medallón 120g con papas fritas y bebida" rows={2} disabled={isSaving} className={`${inputClass} resize-none`} />
+              </div>
+            </section>
+
+            <div className="border-t border-dashed border-gray-200 dark:border-gray-700" />
+
+            {/* ── Sección 4: Precio y Categoría ── */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white shrink-0">4</span>
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Precio y categor&iacute;a</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="precio" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Precio <span className="text-orange-500">*</span>
+                  </label>
+                  <div className="flex rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 overflow-hidden focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition">
+                    <span className="flex items-center px-3.5 text-sm font-semibold text-gray-400 border-r border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700/60 select-none whitespace-nowrap">Gs.</span>
+                    <input id="precio" type="text" inputMode="numeric" value={precio} onChange={(e) => setPrecio(formatGuaranies(e.target.value))} placeholder="0" disabled={isSaving} className="flex-1 bg-transparent px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="categoria" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Categor&iacute;a <span className="text-orange-500">*</span>
+                  </label>
+                  {loadingData ? (
+                    <div className="flex items-center justify-center h-[42px] rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                      <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                    </div>
+                  ) : (
+                    <select id="categoria" value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)} disabled={isSaving} className={inputClass}>
+                      <option value="">Seleccionar categor&iacute;a</option>
+                      {categorias.map((cat) => <option key={cat.id} value={cat.id}>{cat.nombre}</option>)}
+                    </select>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* Imagen + Disponible */}
+            <div>
+              <label htmlFor="imagen" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                URL de imagen <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+              <div className="flex rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 overflow-hidden focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition">
+                <span className="flex items-center px-3.5 border-r border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700/60">
+                  <ImageIcon className="h-4 w-4 text-gray-400" />
+                </span>
+                <input id="imagen" type="url" value={imagenUrl} onChange={(e) => setImagenUrl(e.target.value)} placeholder="https://ejemplo.com/imagen.jpg" disabled={isSaving} className="flex-1 bg-transparent px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
+              </div>
+            </div>
+
+            <label className="flex cursor-pointer items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 px-4 py-3.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+              <div className="relative">
+                <input id="disponible" type="checkbox" checked={disponible} onChange={(e) => setDisponible(e.target.checked)} disabled={isSaving} className="sr-only peer" />
+                <div className="h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 peer-checked:bg-orange-500 peer-disabled:opacity-50 transition-colors" />
+                <div className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Disponible para la venta</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">El producto aparece habilitado en el POS</p>
+              </div>
+            </label>
+
           </form>
         </div>
 

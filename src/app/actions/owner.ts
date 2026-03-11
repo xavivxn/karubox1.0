@@ -114,7 +114,8 @@ export async function listTenants() {
       usuarios(count)
     `)
     .eq('is_deleted', false)
-    .neq('slug', 'sistema')
+    .neq('slug', 'ardentium')
+    .neq('id', '00000000-0000-0000-0000-000000000001')
     .order('created_at', { ascending: false })
 
   if (error) return { error: 'Error al cargar lomiterías', tenants: [] }
@@ -339,7 +340,7 @@ export async function getTenantForOwner(tenantId: string) {
 
   const { data, error } = await supabase
     .from('tenants')
-    .select('id, nombre, slug')
+    .select('id, nombre, slug, logo_url')
     .eq('id', tenantId)
     .eq('is_deleted', false)
     .single()

@@ -98,7 +98,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <div className="max-w-7xl mx-auto space-y-10">{children}</div>
         )}
       </main>
-      <AppFooter />
+      <AppFooter isDark={hideNavbar || darkMode} />
     </div>
   );
 }
