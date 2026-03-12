@@ -15,11 +15,13 @@ export type ClienteLocal = Cliente & {
 }
 
 /**
- * Datos del formulario de cliente
+ * Datos del formulario de cliente (receptor en factura)
  */
 export interface ClienteFormData {
   nombre: string
   ci: string
+  ruc: string
+  pasaporte: string
   telefono: string
   email: string
   direccion: string
@@ -31,6 +33,8 @@ export interface ClienteFormData {
 export const INITIAL_FORM_DATA: ClienteFormData = {
   nombre: '',
   ci: '',
+  ruc: '',
+  pasaporte: '',
   telefono: '',
   email: '',
   direccion: ''

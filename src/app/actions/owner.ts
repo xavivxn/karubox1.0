@@ -8,6 +8,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export interface CreateTenantData {
   nombreNegocio: string
   ruc?: string
+  razon_social?: string
+  actividad_economica?: string
   email?: string
   telefono?: string
   direccion?: string
@@ -17,6 +19,8 @@ export interface CreateTenantData {
 export interface UpdateTenantData {
   nombre?: string
   ruc?: string
+  razon_social?: string
+  actividad_economica?: string
   email?: string
   telefono?: string
   direccion?: string
@@ -142,6 +146,8 @@ export async function createTenant(data: CreateTenantData) {
       nombre: data.nombreNegocio.trim(),
       slug,
       ruc: data.ruc?.trim() || null,
+      razon_social: data.razon_social?.trim() || null,
+      actividad_economica: data.actividad_economica?.trim() || null,
       email: data.email?.trim() || null,
       telefono: data.telefono?.trim() || null,
       direccion: data.direccion?.trim() || null,
@@ -269,7 +275,7 @@ export async function getTenantDetail(tenantId: string) {
 
   const { data, error } = await supabase
     .from('tenants')
-    .select('id, nombre, slug, ruc, email, telefono, direccion, logo_url, activo, created_at')
+    .select('id, nombre, slug, ruc, razon_social, actividad_economica, email, telefono, direccion, logo_url, activo, created_at')
     .eq('id', tenantId)
     .eq('is_deleted', false)
     .single()
@@ -292,6 +298,8 @@ export async function updateTenant(tenantId: string, data: UpdateTenantData) {
     updatePayload.nombre = data.nombre.trim()
   }
   if (data.ruc !== undefined) updatePayload.ruc = data.ruc.trim() || null
+  if (data.razon_social !== undefined) updatePayload.razon_social = data.razon_social.trim() || null
+  if (data.actividad_economica !== undefined) updatePayload.actividad_economica = data.actividad_economica.trim() || null
   if (data.email !== undefined) updatePayload.email = data.email.trim() || null
   if (data.telefono !== undefined) updatePayload.telefono = data.telefono.trim() || null
   if (data.direccion !== undefined) updatePayload.direccion = data.direccion.trim() || null

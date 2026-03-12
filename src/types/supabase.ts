@@ -47,6 +47,7 @@ export interface Database {
           imagen_url: string | null
           created_at: string
           updated_at: string
+          tasa_iva: number
         }
         Insert: {
           id?: string
@@ -58,6 +59,7 @@ export interface Database {
           imagen_url?: string | null
           created_at?: string
           updated_at?: string
+          tasa_iva?: number
         }
         Update: {
           id?: string
@@ -69,6 +71,7 @@ export interface Database {
           imagen_url?: string | null
           created_at?: string
           updated_at?: string
+          tasa_iva?: number
         }
       }
       clientes: {
@@ -86,6 +89,8 @@ export interface Database {
           is_deleted: boolean
           deleted_at: string | null
           ci: string | null
+          ruc: string | null
+          pasaporte: string | null
         }
         Insert: {
           id?: string
@@ -100,6 +105,9 @@ export interface Database {
           updated_at?: string
           is_deleted?: boolean
           deleted_at?: string | null
+          ci?: string | null
+          ruc?: string | null
+          pasaporte?: string | null
         }
         Update: {
           id?: string
@@ -114,6 +122,9 @@ export interface Database {
           updated_at?: string
           is_deleted?: boolean
           deleted_at?: string | null
+          ci?: string | null
+          ruc?: string | null
+          pasaporte?: string | null
         }
       }
       pedidos: {
@@ -171,6 +182,9 @@ export interface Database {
           subtotal: number
           personalizaciones: Json
           created_at: string
+          iva_porcentaje: number
+          monto_iva: number
+          notas: string | null
         }
         Insert: {
           id?: string
@@ -182,6 +196,9 @@ export interface Database {
           subtotal: number
           personalizaciones?: Json
           created_at?: string
+          iva_porcentaje?: number
+          monto_iva?: number
+          notas?: string | null
         }
         Update: {
           id?: string
@@ -193,6 +210,9 @@ export interface Database {
           subtotal?: number
           personalizaciones?: Json
           created_at?: string
+          iva_porcentaje?: number
+          monto_iva?: number
+          notas?: string | null
         }
       }
       transacciones_puntos: {
@@ -318,6 +338,91 @@ export interface Database {
           updated_at?: string
         }
       }
+      tenant_facturacion: {
+        Row: {
+          tenant_id: string
+          timbrado: string
+          vigencia_inicio: string
+          vigencia_fin: string
+          establecimiento: string
+          punto_expedicion: string
+          ultimo_numero: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          tenant_id: string
+          timbrado: string
+          vigencia_inicio: string
+          vigencia_fin: string
+          establecimiento?: string
+          punto_expedicion?: string
+          ultimo_numero?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          tenant_id?: string
+          timbrado?: string
+          vigencia_inicio?: string
+          vigencia_fin?: string
+          establecimiento?: string
+          punto_expedicion?: string
+          ultimo_numero?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      facturas: {
+        Row: {
+          id: string
+          tenant_id: string
+          pedido_id: string
+          numero_factura: string
+          timbrado: string
+          fecha_emision: string
+          cliente_id: string | null
+          total: number
+          total_iva_10: number
+          total_iva_5: number
+          total_exento: number
+          total_letras: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          pedido_id: string
+          numero_factura: string
+          timbrado: string
+          fecha_emision?: string
+          cliente_id?: string | null
+          total: number
+          total_iva_10?: number
+          total_iva_5?: number
+          total_exento?: number
+          total_letras?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          pedido_id?: string
+          numero_factura?: string
+          timbrado?: string
+          fecha_emision?: string
+          cliente_id?: string | null
+          total?: number
+          total_iva_10?: number
+          total_iva_5?: number
+          total_exento?: number
+          total_letras?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       vista_productos_completos: {
@@ -360,6 +465,37 @@ export interface Database {
           ultima_compra: string | null
         }
       }
+      vista_factura_impresion: {
+        Row: {
+          factura_id: string
+          pedido_id: string
+          tenant_id: string
+          numero_pedido: number
+          emisor_ruc: string | null
+          emisor_razon_social: string | null
+          emisor_direccion: string | null
+          emisor_telefono: string | null
+          emisor_email: string | null
+          emisor_actividad_economica: string | null
+          receptor_ruc: string | null
+          receptor_ci: string | null
+          receptor_nombre: string | null
+          receptor_direccion: string | null
+          receptor_telefono: string | null
+          receptor_email: string | null
+          numero_factura: string
+          timbrado: string
+          timbrado_vigencia_inicio: string
+          timbrado_vigencia_fin: string
+          fecha_emision: string
+          total_iva_10: number
+          total_iva_5: number
+          total_exento: number
+          total_a_pagar: number
+          total_letras: string | null
+          detalle: unknown
+        }
+      }
     }
     Functions: {
       calcular_puntos: {
@@ -379,6 +515,8 @@ export type ItemPedido = Database['public']['Tables']['items_pedido']['Row']
 export type TransaccionPuntos = Database['public']['Tables']['transacciones_puntos']['Row']
 export type Promocion = Database['public']['Tables']['promociones']['Row']
 export type PrinterConfig = Database['public']['Tables']['printer_config']['Row']
+export type TenantFacturacion = Database['public']['Tables']['tenant_facturacion']['Row']
+export type Factura = Database['public']['Tables']['facturas']['Row']
 
 export type ProductoCompleto = Database['public']['Views']['vista_productos_completos']['Row']
 export type PedidoCompleto = Database['public']['Views']['vista_pedidos_completos']['Row']
@@ -389,4 +527,5 @@ export type NuevoProducto = Database['public']['Tables']['productos']['Insert']
 export type NuevoCliente = Database['public']['Tables']['clientes']['Insert']
 export type NuevoPedido = Database['public']['Tables']['pedidos']['Insert']
 export type NuevoItemPedido = Database['public']['Tables']['items_pedido']['Insert']
+export type NuevaFactura = Database['public']['Tables']['facturas']['Insert']
 

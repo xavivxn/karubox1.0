@@ -9,7 +9,7 @@ export function useOrderConfirmation() {
   const [isProcessing, setIsProcessing] = useState(false)
 
   const { usuario, tenant } = useTenant()
-  const { items, cliente, tipo, clearCart, getTotal } = useCartStore()
+  const { items, cliente, tipo, conFactura, clearCart, getTotal } = useCartStore()
 
   const showInlineError = (title: string, message: string, details?: FeedbackDetail[]) => {
     return {
@@ -55,7 +55,8 @@ export function useOrderConfirmation() {
         cliente,
         tipo,
         items,
-        total
+        total,
+        conFactura: Boolean(cliente && conFactura)
       })
 
       clearCart()
@@ -67,8 +68,9 @@ export function useOrderConfirmation() {
         details: successDetails
       }
     } catch (error) {
-      console.error('Error confirmando pedido:', error)
-      return buildUnexpectedErrorState('No pudimos confirmar el pedido', error)
+      const err = error instanceof Error ? error : new Error(String((error as { message?: string })?.message ?? 'Error desconocido'))
+      console.error('Error confirmando pedido:', err.message, error)
+      return buildUnexpectedErrorState('No pudimos confirmar el pedido', err)
     } finally {
       setIsProcessing(false)
     }

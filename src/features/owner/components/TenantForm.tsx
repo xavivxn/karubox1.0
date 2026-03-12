@@ -57,6 +57,39 @@ export function TenantForm({ form, onChange, onSubmit, loading, error }: TenantF
         />
       </div>
 
+      <div>
+        <label htmlFor="razon_social" className={labelClass}>
+          Razón social (para factura) <span className={optionalClass}>(opcional)</span>
+        </label>
+        <input
+          id="razon_social"
+          type="text"
+          value={form.razon_social}
+          onChange={(e) => onChange('razon_social', e.target.value)}
+          className={inputClass}
+          placeholder="Nombre completo del dueño o empresa"
+          disabled={loading}
+        />
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+          Si no se completa, en la factura se usará el nombre del negocio.
+        </p>
+      </div>
+
+      <div>
+        <label htmlFor="actividad_economica" className={labelClass}>
+          Actividad económica <span className={optionalClass}>(opcional)</span>
+        </label>
+        <input
+          id="actividad_economica"
+          type="text"
+          value={form.actividad_economica}
+          onChange={(e) => onChange('actividad_economica', e.target.value)}
+          className={inputClass}
+          placeholder="Ej: Venta de comidas y bebidas"
+          disabled={loading}
+        />
+      </div>
+
       {/* Sección de contacto */}
       <div className="border-t border-gray-200 dark:border-gray-700 pt-5">
         <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">

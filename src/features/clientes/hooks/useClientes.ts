@@ -103,6 +103,8 @@ export const useClientes = (tenantId: string | undefined): UseClientesReturn => 
     setFormData({
       nombre: cliente.nombre || '',
       ci: cliente.ci || '',
+      ruc: cliente.ruc || '',
+      pasaporte: cliente.pasaporte || '',
       telefono: cliente.telefono || '',
       email: cliente.email || '',
       direccion: cliente.direccion || ''

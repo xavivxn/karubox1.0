@@ -16,6 +16,12 @@ interface Tenant {
   email?: string
   config_impresion?: any
   activo: boolean
+  /** RUC del local (emisor) */
+  ruc?: string
+  /** Razón social para factura (si no se define, se usa nombre) */
+  razon_social?: string
+  /** Actividad económica del negocio */
+  actividad_economica?: string
 }
 
 interface Usuario {

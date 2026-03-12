@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { PostgrestError } from '@supabase/supabase-js'
 import { descontarIngredientesPorPedido } from '@/lib/inventory/consumption'
 import type { CartItem } from '@/store/cartStore'
 import type { Cliente } from '@/types/supabase'
@@ -6,6 +7,15 @@ import type { TipoPedido, FeedbackDetail } from '../types/pos.types'
 import { calcularPuntos, formatTipoPedido, formatItemModificacionesForTicket } from '../utils/pos.utils'
 import { formatGuaranies } from '@/lib/utils/format'
 import { printService } from './printService'
+
+/** Convierte error de Supabase en Error con mensaje legible para el usuario y la consola */
+function toError(err: PostgrestError | Error, context: string): Error {
+  if (err instanceof Error) return err
+  const e = err as PostgrestError
+  const msg = e?.message ?? 'Error desconocido'
+  const detail = e?.details != null ? ` (${e.details})` : ''
+  return new Error(`${context}: ${msg}${detail}`)
+}
 
 interface ConfirmOrderParams {
   tenantId: string
@@ -16,12 +26,14 @@ interface ConfirmOrderParams {
   tipo: TipoPedido
   items: CartItem[]
   total: number
+  /** Si se debe emitir factura fiscal (requiere cliente y config de facturación) */
+  conFactura?: boolean
 }
 
 export const orderService = {
   async confirmOrder(params: ConfirmOrderParams) {
     const supabase = createClient()
-    const { tenantId, usuarioId, tenantNombre, usuarioNombre, cliente, tipo, items, total } = params
+    const { tenantId, usuarioId, tenantNombre, usuarioNombre, cliente, tipo, items, total, conFactura } = params
 
     if (!tipo) {
       throw new Error('El tipo de pedido es requerido')
@@ -48,7 +60,7 @@ export const orderService = {
       .select()
       .single()
 
-    if (errorPedido) throw errorPedido
+    if (errorPedido) throw toError(errorPedido, 'Error al crear el pedido')
 
     // Insertar items del pedido (notas = texto de modificaciones para el ticket de cocina)
     const itemsToInsert = items.map((item) => ({
@@ -66,7 +78,7 @@ export const orderService = {
       .insert(itemsToInsert)
       .select()
 
-    if (errorItems) throw errorItems
+    if (errorItems) throw toError(errorItems, 'Error al guardar los ítems del pedido')
 
     // Mapear los CartItems con sus IDs reales de items_pedido para la customización
     const cartItemsConId = items.map((item, index) => ({
@@ -83,7 +95,7 @@ export const orderService = {
         .update({ puntos_totales: nuevosPuntos })
         .eq('id', cliente.id)
 
-      if (errorCliente) throw errorCliente
+      if (errorCliente) throw toError(errorCliente, 'Error al actualizar puntos del cliente')
 
       await supabase.from('transacciones_puntos').insert({
         tenant_id: tenantId,
@@ -115,6 +127,47 @@ export const orderService = {
       // El pedido ya fue creado, solo notificamos los errores
     }
 
+    let facturaEmitida = false
+    if (conFactura && cliente) {
+      try {
+        const { data: config } = await supabase
+          .from('tenant_facturacion')
+          .select('timbrado, establecimiento, punto_expedicion, ultimo_numero')
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+
+        if (config) {
+          const siguiente = (config.ultimo_numero ?? 0) + 1
+          const numeroFactura = `${config.establecimiento}-${config.punto_expedicion}-${String(siguiente).padStart(7, '0')}`
+
+          const totalIva10 = Math.round((total / 1.1) * 0.1 * 100) / 100
+          const totalExento = Math.round((total - totalIva10) * 100) / 100
+
+          const { error: errFactura } = await supabase.from('facturas').insert({
+            tenant_id: tenantId,
+            pedido_id: pedido.id,
+            numero_factura: numeroFactura,
+            timbrado: config.timbrado,
+            cliente_id: cliente.id,
+            total,
+            total_iva_10: totalIva10,
+            total_iva_5: 0,
+            total_exento: totalExento
+          })
+
+          if (!errFactura) {
+            facturaEmitida = true
+            await supabase
+              .from('tenant_facturacion')
+              .update({ ultimo_numero: siguiente, updated_at: new Date().toISOString() })
+              .eq('tenant_id', tenantId)
+          }
+        }
+      } catch (facturaErr) {
+        console.warn('No se pudo emitir factura (config puede no existir):', facturaErr)
+      }
+    }
+
     // Imprimir ticket de cocina (no crítico - si falla, el pedido se guarda igual)
     printService
       .printKitchenTicket(tenantId, pedido, items, tenantNombre)
@@ -136,6 +189,10 @@ export const orderService = {
 
     if (cliente && puntosGenerados > 0) {
       successDetails.push({ label: 'Puntos sumados', value: `${puntosGenerados} ⭐` })
+    }
+
+    if (facturaEmitida) {
+      successDetails.push({ label: 'Factura', value: 'Emitida' })
     }
 
     return {

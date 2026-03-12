@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Search, UserPlus } from 'lucide-react'
+import { X, Search, UserPlus, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
@@ -17,47 +17,86 @@ export default function ClientModal({ isOpen, onClose }: Props) {
   const [telefono, setTelefono] = useState('')
   const [nombre, setNombre] = useState('')
   const [ci, setCi] = useState('')
+  const [ruc, setRuc] = useState('')
+  const [pasaporte, setPasaporte] = useState('')
+  const [email, setEmail] = useState('')
+  const [direccion, setDireccion] = useState('')
   const [searching, setSearching] = useState(false)
   const [clienteEncontrado, setClienteEncontrado] = useState<Cliente | null>(null)
   const [modoCrear, setModoCrear] = useState(false)
+  const [editingClienteId, setEditingClienteId] = useState<string | null>(null)
+  const [clienteEnEdicion, setClienteEnEdicion] = useState<Cliente | null>(null)
   const { setCliente } = useCartStore()
+
+  const estaEditando = editingClienteId !== null
 
   if (!isOpen) return null
 
+  const autocompletarDesdeCliente = (data: Cliente & { ruc?: string; pasaporte?: string }) => {
+    setNombre(data.nombre || '')
+    setTelefono(data.telefono || '')
+    setCi(data.ci || '')
+    setRuc(data.ruc || '')
+    setEmail(data.email || '')
+    setDireccion(data.direccion || '')
+    setPasaporte(data.pasaporte || '')
+    setClienteEncontrado(data as Cliente)
+    setModoCrear(false)
+  }
+
   const buscarCliente = async () => {
-    if ((!telefono.trim() && !ci.trim()) || !tenant) return
-    
+    const tieneNombre = nombre.trim().length > 0
+    const tieneTelefono = telefono.trim().length > 0
+    const tieneCi = ci.trim().length > 0
+    const tieneRuc = ruc.trim().length > 0
+    if ((!tieneNombre && !tieneTelefono && !tieneCi && !tieneRuc) || !tenant) return
+
     const supabase = createClient()
     setSearching(true)
+    setClienteEncontrado(null)
+    setModoCrear(false)
     try {
-      let query = supabase
-        .from('clientes')
-        .select('*')
-        .eq('tenant_id', tenant.id)
+      // Búsqueda exacta por teléfono, CI o RUC (prioridad)
+      if (tieneTelefono || tieneCi || tieneRuc) {
+        let query = supabase
+          .from('clientes')
+          .select('*')
+          .eq('tenant_id', tenant.id)
+          .eq('is_deleted', false)
 
-      // Buscar por teléfono o CI
-      if (telefono.trim()) {
-        query = query.eq('telefono', telefono.trim())
-      } else if (ci.trim()) {
-        query = query.eq('ci', ci.trim())
-      }
+        if (tieneTelefono) query = query.eq('telefono', telefono.trim())
+        else if (tieneCi) query = query.eq('ci', ci.trim())
+        else if (tieneRuc) query = query.eq('ruc', ruc.trim())
 
-      const { data, error } = await query.single()
+        const { data, error } = await query.single()
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No se encontró el cliente
-          setClienteEncontrado(null)
-          setModoCrear(true)
-        } else {
-          throw error
+        if (!error && data) {
+          autocompletarDesdeCliente(data as Cliente & { ruc?: string; pasaporte?: string })
+          setSearching(false)
+          return
         }
-      } else {
-        setClienteEncontrado(data as Cliente)
-        setNombre(data.nombre)
-        setCi(data.ci || '')
-        setModoCrear(false)
       }
+
+      // Búsqueda por nombre y apellido (ilike)
+      if (tieneNombre) {
+        const { data: datos, error } = await supabase
+          .from('clientes')
+          .select('*')
+          .eq('tenant_id', tenant.id)
+          .eq('is_deleted', false)
+          .ilike('nombre', `%${nombre.trim()}%`)
+          .limit(5)
+
+        if (!error && datos && datos.length > 0) {
+          // Tomar el primero y autocompletar todos los campos
+          autocompletarDesdeCliente(datos[0] as Cliente & { ruc?: string; pasaporte?: string })
+          setSearching(false)
+          return
+        }
+      }
+
+      setClienteEncontrado(null)
+      setModoCrear(true)
     } catch (error) {
       console.error('Error buscando cliente:', error)
       alert('Error al buscar cliente')
@@ -67,8 +106,8 @@ export default function ClientModal({ isOpen, onClose }: Props) {
   }
 
   const crearCliente = async () => {
-    if ((!telefono.trim() && !ci.trim()) || !nombre.trim()) {
-      alert('Por favor completa nombre y al menos teléfono o CI')
+    if ((!telefono.trim() && !ci.trim() && !ruc.trim()) || !nombre.trim()) {
+      alert('Por favor completa nombre y al menos teléfono, CI o RUC')
       return
     }
 
@@ -86,6 +125,10 @@ export default function ClientModal({ isOpen, onClose }: Props) {
           tenant_id: tenant.id,
           telefono: telefono.trim() || null,
           ci: ci.trim() || null,
+          ruc: ruc.trim() || null,
+          pasaporte: pasaporte.trim() || null,
+          email: email.trim() || null,
+          direccion: direccion.trim() || null,
           nombre: nombre.trim(),
           puntos_totales: 0
         })
@@ -111,11 +154,71 @@ export default function ClientModal({ isOpen, onClose }: Props) {
     }
   }
 
+  const iniciarEdicion = () => {
+    if (clienteEncontrado) {
+      setClienteEnEdicion(clienteEncontrado)
+      setEditingClienteId(clienteEncontrado.id)
+      setClienteEncontrado(null)
+    }
+  }
+
+  const cancelarEdicion = () => {
+    if (clienteEnEdicion) {
+      autocompletarDesdeCliente(clienteEnEdicion as Cliente & { ruc?: string; pasaporte?: string })
+    }
+    setClienteEnEdicion(null)
+    setEditingClienteId(null)
+  }
+
+  const guardarCambiosCliente = async () => {
+    if (!editingClienteId || !tenant) return
+    if (!nombre.trim()) {
+      alert('El nombre es requerido')
+      return
+    }
+
+    setSearching(true)
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('clientes')
+        .update({
+          nombre: nombre.trim(),
+          telefono: telefono.trim() || null,
+          ci: ci.trim() || null,
+          ruc: ruc.trim() || null,
+          pasaporte: pasaporte.trim() || null,
+          email: email.trim() || null,
+          direccion: direccion.trim() || null,
+        })
+        .eq('id', editingClienteId)
+        .eq('tenant_id', tenant.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setCliente(data as Cliente)
+      handleClose()
+    } catch (error: any) {
+      console.error('Error actualizando cliente:', error)
+      alert(`Error al guardar: ${error.message || 'Error desconocido'}`)
+    } finally {
+      setSearching(false)
+    }
+  }
+
   const handleClose = () => {
     setTelefono('')
     setNombre('')
     setCi('')
+    setRuc('')
+    setPasaporte('')
+    setEmail('')
+    setDireccion('')
     setClienteEncontrado(null)
+    setClienteEnEdicion(null)
+    setEditingClienteId(null)
     setModoCrear(false)
     onClose()
   }
@@ -146,8 +249,8 @@ export default function ClientModal({ isOpen, onClose }: Props) {
 
         {/* Body */}
         <div className="p-6 space-y-5">
-          {/* Si no hay cliente encontrado, mostrar formulario completo */}
-          {!clienteEncontrado && (
+          {/* Formulario: búsqueda/crear o editar cliente encontrado */}
+          {(!clienteEncontrado || estaEditando) && (
             <>
               {/* Nombre - Siempre visible */}
               <div>
@@ -158,13 +261,14 @@ export default function ClientModal({ isOpen, onClose }: Props) {
                   type="text"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (nombre.trim() || telefono.trim() || ci.trim() || ruc.trim()) && buscarCliente()}
                   placeholder="Ej: Juan Pérez"
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-base"
                   disabled={searching}
                 />
               </div>
 
-              {/* Teléfono y CI */}
+              {/* Teléfono, CI, RUC */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -174,7 +278,7 @@ export default function ClientModal({ isOpen, onClose }: Props) {
                     type="tel"
                     value={telefono}
                     onChange={(e) => setTelefono(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (telefono.trim() || ci.trim()) && buscarCliente()}
+                    onKeyPress={(e) => e.key === 'Enter' && (nombre.trim() || telefono.trim() || ci.trim() || ruc.trim()) && buscarCliente()}
                     placeholder="(0981) 123-456"
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-base"
                     disabled={searching}
@@ -188,43 +292,120 @@ export default function ClientModal({ isOpen, onClose }: Props) {
                     type="text"
                     value={ci}
                     onChange={(e) => setCi(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (telefono.trim() || ci.trim()) && buscarCliente()}
+                    onKeyPress={(e) => e.key === 'Enter' && (nombre.trim() || telefono.trim() || ci.trim() || ruc.trim()) && buscarCliente()}
                     placeholder="1234567"
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-base"
                     disabled={searching}
                   />
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  RUC <span className="text-gray-500 font-normal">(opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={ruc}
+                  onChange={(e) => setRuc(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (nombre.trim() || telefono.trim() || ci.trim() || ruc.trim()) && buscarCliente()}
+                  placeholder="80012345-6"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-base"
+                  disabled={searching}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Email <span className="text-gray-500 font-normal">(opcional)</span>
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="cliente@email.com"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-base"
+                  disabled={searching}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Dirección <span className="text-gray-500 font-normal">(opcional, para factura)</span>
+                </label>
+                <input
+                  type="text"
+                  value={direccion}
+                  onChange={(e) => setDireccion(e.target.value)}
+                  placeholder="Av. Principal 123"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-base"
+                  disabled={searching}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Pasaporte <span className="text-gray-500 font-normal">(extranjeros, opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={pasaporte}
+                  onChange={(e) => setPasaporte(e.target.value)}
+                  placeholder="AB123456"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-base"
+                  disabled={searching}
+                />
+              </div>
 
               {/* Botones de acción */}
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={buscarCliente}
-                  disabled={searching || !nombre.trim() || (!telefono.trim() && !ci.trim())}
-                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold transition-all shadow-md hover:shadow-lg disabled:shadow-none flex items-center justify-center gap-2"
-                >
-                  <Search size={18} />
-                  {searching ? 'Buscando...' : 'Buscar Cliente'}
-                </button>
-                {!modoCrear && (
-                  <button
-                    onClick={() => {
-                      if (!nombre.trim()) {
-                        alert('Por favor ingresa el nombre del cliente')
-                        return
-                      }
-                      if (!telefono.trim() && !ci.trim()) {
-                        alert('Por favor ingresa teléfono o CI')
-                        return
-                      }
-                      crearCliente()
-                    }}
-                    disabled={searching || !nombre.trim() || (!telefono.trim() && !ci.trim())}
-                    className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold transition-all shadow-md hover:shadow-lg disabled:shadow-none flex items-center justify-center gap-2"
-                  >
-                    <UserPlus size={18} />
-                    {searching ? 'Creando...' : 'Crear Nuevo'}
-                  </button>
+              <div className="flex flex-col gap-3 pt-2">
+                {estaEditando ? (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={guardarCambiosCliente}
+                      disabled={searching || !nombre.trim()}
+                      className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold transition-all shadow-md hover:shadow-lg disabled:shadow-none flex items-center justify-center gap-2"
+                    >
+                      {searching ? 'Guardando...' : 'Guardar cambios'}
+                    </button>
+                    <button
+                      onClick={cancelarEdicion}
+                      disabled={searching}
+                      className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 font-semibold transition-all"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={buscarCliente}
+                      disabled={searching || (!nombre.trim() && !telefono.trim() && !ci.trim() && !ruc.trim())}
+                      className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold transition-all shadow-md hover:shadow-lg disabled:shadow-none flex items-center justify-center gap-2"
+                    >
+                      <Search size={18} />
+                      {searching ? 'Buscando...' : 'Buscar Cliente'}
+                    </button>
+                    {!modoCrear && (
+                      <button
+                        onClick={() => {
+                          if (!nombre.trim()) {
+                            alert('Por favor ingresa el nombre del cliente')
+                            return
+                          }
+                          if (!telefono.trim() && !ci.trim() && !ruc.trim()) {
+                            alert('Por favor ingresa teléfono, CI o RUC')
+                            return
+                          }
+                          crearCliente()
+                        }}
+                        disabled={searching || !nombre.trim() || (!telefono.trim() && !ci.trim() && !ruc.trim())}
+                        className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold transition-all shadow-md hover:shadow-lg disabled:shadow-none flex items-center justify-center gap-2"
+                      >
+                        <UserPlus size={18} />
+                        {searching ? 'Creando...' : 'Crear Nuevo'}
+                      </button>
+                    )}
+                  </div>
+                )}
+                {estaEditando && (
+                  <p className="text-sm text-gray-500 text-center">Editando datos del cliente. Guarda o cancela.</p>
                 )}
               </div>
             </>
@@ -245,16 +426,34 @@ export default function ClientModal({ isOpen, onClose }: Props) {
                   <span className="text-gray-600 font-medium min-w-[80px]">Nombre:</span>
                   <span className="text-gray-900 font-semibold">{clienteEncontrado.nombre}</span>
                 </div>
+                {clienteEncontrado.telefono && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600 font-medium min-w-[80px]">Teléfono:</span>
+                    <span className="text-gray-900">{clienteEncontrado.telefono}</span>
+                  </div>
+                )}
                 {clienteEncontrado.ci && (
                   <div className="flex items-center gap-2">
                     <span className="text-gray-600 font-medium min-w-[80px]">CI:</span>
                     <span className="text-gray-900">{clienteEncontrado.ci}</span>
                   </div>
                 )}
-                {clienteEncontrado.telefono && (
+                {(clienteEncontrado as { ruc?: string }).ruc && (
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-600 font-medium min-w-[80px]">Teléfono:</span>
-                    <span className="text-gray-900">{clienteEncontrado.telefono}</span>
+                    <span className="text-gray-600 font-medium min-w-[80px]">RUC:</span>
+                    <span className="text-gray-900">{(clienteEncontrado as { ruc?: string }).ruc}</span>
+                  </div>
+                )}
+                {clienteEncontrado.email && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600 font-medium min-w-[80px]">Email:</span>
+                    <span className="text-gray-900">{clienteEncontrado.email}</span>
+                  </div>
+                )}
+                {clienteEncontrado.direccion && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600 font-medium min-w-[80px]">Dirección:</span>
+                    <span className="text-gray-900">{clienteEncontrado.direccion}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
@@ -264,12 +463,21 @@ export default function ClientModal({ isOpen, onClose }: Props) {
                 </div>
               </div>
 
-              <button
-                onClick={seleccionarCliente}
-                className="w-full px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 font-bold text-lg transition-all shadow-lg hover:shadow-xl"
-              >
-                ✓ Seleccionar este Cliente
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={iniciarEdicion}
+                  className="flex-1 px-6 py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 font-semibold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                >
+                  <Pencil size={18} />
+                  Editar
+                </button>
+                <button
+                  onClick={seleccionarCliente}
+                  className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 font-bold text-lg transition-all shadow-lg hover:shadow-xl"
+                >
+                  ✓ Seleccionar este Cliente
+                </button>
+              </div>
             </div>
           )}
 

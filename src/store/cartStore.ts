@@ -47,7 +47,9 @@ interface CartState {
   items: CartItem[]
   cliente: Cliente | null
   tipo: 'delivery' | 'local' | 'para_llevar' | null
-  
+  /** Si el cliente quiere factura fiscal (solo aplica cuando hay cliente) */
+  conFactura: boolean
+
   // Acciones
   addItem: (producto: { id: string; nombre: string; descripcion?: string; precio: number; tiene_receta?: boolean }) => void
   addComboItem: (combo: { id: string; nombre: string; descripcion?: string; precio: number; comboItems: ComboProductItem[] }) => void
@@ -58,7 +60,8 @@ interface CartState {
   clearCart: () => void
   setCliente: (cliente: Cliente | null) => void
   setTipo: (tipo: 'delivery' | 'local' | 'para_llevar') => void
-  
+  setConFactura: (conFactura: boolean) => void
+
   // Computed
   getTotal: () => number
   getItemCount: () => number
@@ -73,6 +76,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   cliente: null,
   tipo: null,
+  conFactura: false,
 
   addItem: (producto) => {
     const items = get().items
@@ -216,7 +220,8 @@ export const useCartStore = create<CartState>((set, get) => ({
     set({
       items: [],
       cliente: null,
-      tipo: null
+      tipo: null,
+      conFactura: false
     })
   },
 
@@ -226,6 +231,10 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   setTipo: (tipo) => {
     set({ tipo })
+  },
+
+  setConFactura: (conFactura) => {
+    set({ conFactura })
   },
 
   getTotal: () => {

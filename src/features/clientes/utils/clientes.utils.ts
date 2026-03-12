@@ -38,6 +38,8 @@ export const limpiarFormData = (formData: ClienteFormData) => {
   return {
     nombre: formData.nombre.trim(),
     ci: formData.ci.trim() || null,
+    ruc: formData.ruc?.trim() || null,
+    pasaporte: formData.pasaporte?.trim() || null,
     telefono: formData.telefono.trim() || null,
     email: formData.email.trim() || null,
     direccion: formData.direccion.trim() || null,

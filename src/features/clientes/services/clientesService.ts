@@ -49,6 +49,8 @@ export const crearCliente = async (
     tenant_id: tenantId,
     nombre: datosLimpios.nombre,
     ci: datosLimpios.ci,
+    ruc: datosLimpios.ruc,
+    pasaporte: datosLimpios.pasaporte,
     telefono: datosLimpios.telefono,
     email: datosLimpios.email,
     direccion: datosLimpios.direccion,
@@ -68,6 +70,8 @@ export const actualizarCliente = async (
   await actualizarClienteDB(clienteId, {
     nombre: datosLimpios.nombre,
     ci: datosLimpios.ci,
+    ruc: datosLimpios.ruc,
+    pasaporte: datosLimpios.pasaporte,
     telefono: datosLimpios.telefono,
     email: datosLimpios.email,
     direccion: datosLimpios.direccion,

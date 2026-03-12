@@ -11,6 +11,8 @@ interface TenantDetail {
   nombre: string
   slug: string
   ruc: string | null
+  razon_social: string | null
+  actividad_economica: string | null
   email: string | null
   telefono: string | null
   direccion: string | null
@@ -38,6 +40,8 @@ export function TenantDetailView({ tenant }: TenantDetailViewProps) {
   const [form, setForm] = useState({
     nombre: tenant.nombre,
     ruc: tenant.ruc ?? '',
+    razon_social: tenant.razon_social ?? '',
+    actividad_economica: tenant.actividad_economica ?? '',
     email: tenant.email ?? '',
     telefono: tenant.telefono ?? '',
     direccion: tenant.direccion ?? '',
@@ -52,6 +56,8 @@ export function TenantDetailView({ tenant }: TenantDetailViewProps) {
     setForm({
       nombre: tenant.nombre,
       ruc: tenant.ruc ?? '',
+      razon_social: tenant.razon_social ?? '',
+      actividad_economica: tenant.actividad_economica ?? '',
       email: tenant.email ?? '',
       telefono: tenant.telefono ?? '',
       direccion: tenant.direccion ?? '',
@@ -76,6 +82,8 @@ export function TenantDetailView({ tenant }: TenantDetailViewProps) {
     const result = await updateTenant(tenant.id, {
       nombre: form.nombre,
       ruc: form.ruc,
+      razon_social: form.razon_social,
+      actividad_economica: form.actividad_economica,
       email: form.email,
       telefono: form.telefono,
       direccion: form.direccion,
@@ -198,6 +206,36 @@ export function TenantDetailView({ tenant }: TenantDetailViewProps) {
                 onChange={(e) => setField('ruc', e.target.value)}
                 className={inputClass}
                 placeholder="80012345-6"
+                disabled={saving}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="edit-razon_social" className={labelClass}>
+                Razón social (para factura)
+              </label>
+              <input
+                id="edit-razon_social"
+                type="text"
+                value={form.razon_social}
+                onChange={(e) => setField('razon_social', e.target.value)}
+                className={inputClass}
+                placeholder="Nombre completo del dueño o empresa"
+                disabled={saving}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="edit-actividad_economica" className={labelClass}>
+                Actividad económica
+              </label>
+              <input
+                id="edit-actividad_economica"
+                type="text"
+                value={form.actividad_economica}
+                onChange={(e) => setField('actividad_economica', e.target.value)}
+                className={inputClass}
+                placeholder="Ej: Venta de comidas y bebidas"
                 disabled={saving}
               />
             </div>
@@ -326,6 +364,24 @@ export function TenantDetailView({ tenant }: TenantDetailViewProps) {
                   <div>
                     <p className="text-xs text-gray-400 dark:text-gray-500">RUC</p>
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{tenant.ruc}</p>
+                  </div>
+                </div>
+              )}
+              {tenant.razon_social && (
+                <div className="flex items-center gap-3">
+                  <FileText className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Razón social (factura)</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{tenant.razon_social}</p>
+                  </div>
+                </div>
+              )}
+              {tenant.actividad_economica && (
+                <div className="flex items-center gap-3">
+                  <FileText className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Actividad económica</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{tenant.actividad_economica}</p>
                   </div>
                 </div>
               )}
