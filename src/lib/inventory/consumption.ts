@@ -280,9 +280,31 @@ export async function descontarIngredientesPorPedido({
   const errores: string[] = []
 
   try {
+    // ── Expandir combos en items individuales para descuento de inventario ──
+    // Cada sub-producto de un combo se trata como un item independiente.
+    const expandedItems: CartItem[] = []
+    for (const item of items) {
+      if (item.tipo === 'combo' && item.comboItems?.length) {
+        for (const ci of item.comboItems) {
+          expandedItems.push({
+            id: item.id,
+            producto_id: ci.producto_id,
+            nombre: ci.nombre,
+            precio: 0,
+            cantidad: ci.cantidad * item.cantidad,
+            subtotal: 0,
+            tipo: 'producto',
+            customization: ci.customization,
+          })
+        }
+      } else {
+        expandedItems.push(item)
+      }
+    }
+
     // ── QUERY 1: todos los productos del pedido ───────────────────────────
     const productoIds = [
-      ...new Set(items.map(i => i.producto_id).filter((id): id is string => Boolean(id)))
+      ...new Set(expandedItems.map(i => i.producto_id).filter((id): id is string => Boolean(id)))
     ]
 
     const { data: productos, error: productosError } = await supabase
@@ -297,10 +319,10 @@ export async function descontarIngredientesPorPedido({
     }
 
     const productosMap = new Map((productos ?? []).map(p => [p.id, p]))
-    const itemsConReceta = items.filter(
+    const itemsConReceta = expandedItems.filter(
       i => i.producto_id && productosMap.get(i.producto_id)?.tiene_receta
     )
-    const itemsSinReceta = items.filter(
+    const itemsSinReceta = expandedItems.filter(
       i =>
         i.producto_id &&
         productosMap.get(i.producto_id) &&

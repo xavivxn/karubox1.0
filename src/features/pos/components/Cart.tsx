@@ -93,8 +93,15 @@ export default function Cart({
             >
               <div className="mb-2">
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <div className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {item.nombre}
+                  <div className="flex items-center gap-1.5">
+                    <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {item.nombre}
+                    </span>
+                    {item.tipo === 'combo' && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300">
+                        COMBO
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => onEditItem?.(item.id)}
@@ -109,26 +116,46 @@ export default function Cart({
                     Editar
                   </button>
                 </div>
-                {item.descripcion && (
-                  <div className={`text-xs leading-relaxed mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {item.descripcion}
+                {item.tipo === 'combo' && item.comboItems ? (
+                  <div className={`text-[11px] space-y-1 mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {item.comboItems.map((ci) => (
+                      <div key={ci.producto_id}>
+                        <div className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                          - {ci.nombre}{ci.cantidad > 1 ? ` x${ci.cantidad}` : ''}
+                        </div>
+                        {ci.customization?.removedIngredients.map((r) => (
+                          <div key={r.slug} className="ml-3 text-red-400 text-[10px]">- {r.label}</div>
+                        ))}
+                        {ci.customization?.extras.map((e) => (
+                          <div key={e.slug} className="ml-3 text-green-500 text-[10px]">+ {e.label}{e.quantityPerItem > 1 ? ` (x${e.quantityPerItem})` : ''}</div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
-                )}
-                {item.customization && (
-                  <div className={`text-[11px] space-y-1 mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    {item.customization.extras.length > 0 && (
-                      <p>
-                        <span className="font-semibold text-green-500 mr-1">+ Extras:</span>
-                        {item.customization.extras.map((extra) => `${extra.label} (${extra.quantityPerItem}${extra.unit})`).join(', ')}
-                      </p>
+                ) : (
+                  <>
+                    {item.descripcion && (
+                      <div className={`text-xs leading-relaxed mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {item.descripcion}
+                      </div>
                     )}
-                    {item.customization.removedIngredients.length > 0 && (
-                      <p>
-                        <span className="font-semibold text-red-400 mr-1">- Sin:</span>
-                        {item.customization.removedIngredients.map((ing) => ing.label).join(', ')}
-                      </p>
+                    {item.customization && (
+                      <div className={`text-[11px] space-y-1 mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        {item.customization.extras.length > 0 && (
+                          <p>
+                            <span className="font-semibold text-green-500 mr-1">+ Extras:</span>
+                            {item.customization.extras.map((extra) => `${extra.label} (${extra.quantityPerItem}${extra.unit})`).join(', ')}
+                          </p>
+                        )}
+                        {item.customization.removedIngredients.length > 0 && (
+                          <p>
+                            <span className="font-semibold text-red-400 mr-1">- Sin:</span>
+                            {item.customization.removedIngredients.map((ing) => ing.label).join(', ')}
+                          </p>
+                        )}
+                      </div>
                     )}
-                  </div>
+                  </>
                 )}
                 <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   {formatGuaranies(item.precio + (item.extraCostPerUnit ?? 0))} × {item.cantidad}

@@ -2,20 +2,17 @@
 
 import { Plus } from 'lucide-react'
 import { formatGuaranies } from '@/lib/utils/format'
-
-interface Product {
-  id: string
-  nombre: string
-  descripcion?: string
-  precio: number
-  disponible: boolean
-}
+import type { Producto } from '../types/pos.types'
 
 interface Props {
-  products: Product[]
-  onAddProduct: (product: Product) => void
+  products: Producto[]
+  onAddProduct: (product: Producto) => void
   loading?: boolean
   darkMode?: boolean
+}
+
+function isCombo(product: Producto): boolean {
+  return Boolean(product.combo_items && product.combo_items.length > 0)
 }
 
 export default function ProductGrid({ products, onAddProduct, loading, darkMode }: Props) {
@@ -62,8 +59,15 @@ export default function ProductGrid({ products, onAddProduct, loading, darkMode 
             }`}
           >
             <div className="flex-1 min-w-0">
-              <div className={`text-sm font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                {product.nombre}
+              <div className="flex items-center gap-1.5">
+                <span className={`text-sm font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {product.nombre}
+                </span>
+                {isCombo(product) && (
+                  <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300">
+                    COMBO
+                  </span>
+                )}
               </div>
             </div>
             <div className="text-sm font-bold text-orange-600 whitespace-nowrap">
@@ -90,16 +94,27 @@ export default function ProductGrid({ products, onAddProduct, loading, darkMode 
                 : 'bg-white border-gray-200 hover:bg-orange-50/40'
             }`}
           >
+            {isCombo(product) && (
+              <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300">
+                COMBO
+              </span>
+            )}
             <div className={`font-semibold text-sm mb-1 group-hover:text-orange-600 transition-colors ${
               darkMode ? 'text-white' : 'text-gray-900'
             }`}>
               {product.nombre}
             </div>
-            {product.descripcion && (
+            {isCombo(product) ? (
+              <div className={`text-[10px] mb-2 space-y-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {product.combo_items!.map((ci) => (
+                  <div key={ci.producto_id}>- {ci.producto.nombre}{ci.cantidad > 1 ? ` x${ci.cantidad}` : ''}</div>
+                ))}
+              </div>
+            ) : product.descripcion ? (
               <div className={`text-xs mb-2 line-clamp-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 {product.descripcion}
               </div>
-            )}
+            ) : null}
             <div className="flex items-center justify-between">
               <span className="text-lg font-bold text-orange-600">
                 {formatGuaranies(product.precio)}

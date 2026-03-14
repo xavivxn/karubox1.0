@@ -14,9 +14,34 @@ export const calcularPuntos = (total: number): number => {
 /**
  * Arma el texto de modificaciones del ítem para el ticket de cocina.
  * Se guarda en items_pedido.notas para que la vista / agente lo muestre.
- * Formato: "Sin X · Extra Y (+N) · Notas"
+ *
+ * Producto individual: "Sin X · Extra Y (+N) · Notas"
+ * Combo: "Pancholo's Burger (Sin cheddar · Extra bacon) | Coca Cola Lata 354ml | Papas Fritas Medianas"
  */
 export function formatItemModificacionesForTicket(item: CartItem): string | null {
+  // ── Combo: listar sub-productos con sus modificaciones ──
+  if (item.tipo === 'combo' && item.comboItems?.length) {
+    const parts = item.comboItems.map((ci) => {
+      const mods: string[] = []
+      if (ci.customization?.removedIngredients?.length) {
+        mods.push(...ci.customization.removedIngredients.map((r) => `Sin ${r.label}`))
+      }
+      if (ci.customization?.extras?.length) {
+        mods.push(
+          ...ci.customization.extras.map((e) =>
+            e.quantityPerItem > 1 ? `Extra ${e.label} (+${e.quantityPerItem})` : `Extra ${e.label}`
+          )
+        )
+      }
+      const qty = ci.cantidad > 1 ? ` x${ci.cantidad}` : ''
+      return mods.length > 0
+        ? `${ci.nombre}${qty} (${mods.join(' · ')})`
+        : `${ci.nombre}${qty}`
+    })
+    return parts.join(' | ')
+  }
+
+  // ── Producto individual ──
   const c = item.customization
   if (!c && !item.notas?.trim()) return null
 

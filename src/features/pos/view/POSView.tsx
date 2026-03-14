@@ -10,7 +10,7 @@ import { usePOSData } from '../hooks/usePOSData'
 import { useOrderConfirmation } from '../hooks/useOrderConfirmation'
 import { POSLoading } from '../components/POSLoading'
 import { FeedbackModal } from '@/components/ui/FeedbackModal'
-import type { FeedbackState } from '../types/pos.types'
+import type { FeedbackState, Producto } from '../types/pos.types'
 import { ItemCustomizationDrawer } from '../components/ItemCustomizationDrawer'
 import Cart from '../components/Cart'
 import ClientModal from '../components/ClientModal'
@@ -25,7 +25,7 @@ export default function POSView() {
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
 
   const { usuario, tenant, loading: tenantLoading, darkMode, isAdmin } = useTenant()
-  const { addItem } = useCartStore()
+  const { addItem, addComboItem } = useCartStore()
   const { categorias, productos, loading, feedback: dataFeedback } = usePOSData()
   const { handleConfirmOrder, isProcessing } = useOrderConfirmation()
 
@@ -77,7 +77,24 @@ export default function POSView() {
 
             <ProductGrid
               products={filteredProducts}
-              onAddProduct={(product) => addItem(product)}
+              onAddProduct={(product: Producto) => {
+                if (product.combo_items && product.combo_items.length > 0) {
+                  addComboItem({
+                    id: product.id,
+                    nombre: product.nombre,
+                    descripcion: product.descripcion,
+                    precio: product.precio,
+                    comboItems: product.combo_items.map((ci) => ({
+                      producto_id: ci.producto_id,
+                      nombre: ci.producto.nombre,
+                      cantidad: ci.cantidad,
+                      tiene_receta: ci.producto.tiene_receta,
+                    }))
+                  })
+                } else {
+                  addItem(product)
+                }
+              }}
               loading={loading}
               darkMode={darkMode}
             />
