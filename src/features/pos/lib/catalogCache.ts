@@ -24,16 +24,21 @@ export function setCachedCatalog(
 }
 
 /**
- * Prefetch categorías y productos en segundo plano. Útil al cargar el tenant
- * para que la primera entrada al POS tenga datos en caché.
+ * Prefetch categorías, productos y combo items en segundo plano. Útil al cargar
+ * el tenant para que la primera entrada al POS tenga datos en caché.
  */
 export function prefetchPOSCatalog(tenantId: string): void {
   Promise.all([
     posService.loadCategorias(tenantId),
-    posService.loadProductos(tenantId)
+    posService.loadProductos(tenantId),
+    posService.loadComboItems(tenantId)
   ])
-    .then(([categorias, productos]) => {
-      setCachedCatalog(tenantId, categorias, productos)
+    .then(([categorias, productos, comboMap]) => {
+      const productosConCombos = productos.map((p) => {
+        const items = comboMap.get(p.id)
+        return items && items.length > 0 ? { ...p, combo_items: items } : p
+      })
+      setCachedCatalog(tenantId, categorias, productosConCombos)
     })
     .catch(() => {})
 }

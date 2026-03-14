@@ -4,6 +4,12 @@ export interface Categoria {
   orden: number
 }
 
+export interface ComboItemDB {
+  producto_id: string
+  cantidad: number
+  producto: { id: string; nombre: string; tiene_receta: boolean }
+}
+
 export interface Producto {
   id: string
   nombre: string
@@ -11,6 +17,8 @@ export interface Producto {
   precio: number
   categoria_id?: string
   disponible: boolean
+  tiene_receta: boolean
+  combo_items?: ComboItemDB[]
 }
 
 export interface FeedbackDetail {

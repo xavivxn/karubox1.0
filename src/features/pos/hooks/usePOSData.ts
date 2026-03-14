@@ -33,14 +33,22 @@ export function usePOSData() {
 
     async function loadData() {
       try {
-        const [cats, prods] = await Promise.all([
+        const [cats, prods, comboMap] = await Promise.all([
           posService.loadCategorias(tenantId),
-          posService.loadProductos(tenantId)
+          posService.loadProductos(tenantId),
+          posService.loadComboItems(tenantId)
         ])
         if (cancelled) return
-        setCachedCatalog(tenantId, cats, prods)
+
+        // Inyectar combo_items en los productos que son combos
+        const productosConCombos = prods.map((p) => {
+          const items = comboMap.get(p.id)
+          return items && items.length > 0 ? { ...p, combo_items: items } : p
+        })
+
+        setCachedCatalog(tenantId, cats, productosConCombos)
         setCategorias(cats)
-        setProductos(prods)
+        setProductos(productosConCombos)
       } catch (error) {
         if (!cancelled) {
           console.error('Error cargando datos:', error)
