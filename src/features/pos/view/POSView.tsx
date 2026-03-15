@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { LayoutDashboard, FileText, Loader2, ShoppingCart } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
+import { useEstadoCaja } from '@/features/caja/hooks/useEstadoCaja'
+import { CajaCerradaModal } from '@/features/caja/components/CajaCerradaModal'
 import { ROUTES } from '@/config/routes'
 import { usePOSData } from '../hooks/usePOSData'
 import { useOrderConfirmation } from '../hooks/useOrderConfirmation'
@@ -25,9 +27,11 @@ export default function POSView() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
+  const [showCajaCerradaModal, setShowCajaCerradaModal] = useState(false)
 
   const { usuario, tenant, loading: tenantLoading, darkMode, isAdmin } = useTenant()
-  const { addItem, addComboItem } = useCartStore()
+  const { items, addItem, addComboItem } = useCartStore()
+  const { sesionAbierta } = useEstadoCaja(tenant?.id ?? null)
   const { categorias, productos, loading, feedback: dataFeedback } = usePOSData()
   const { handleConfirmOrder, isProcessing } = useOrderConfirmation()
 
@@ -39,9 +43,36 @@ export default function POSView() {
     : productos
 
   const onConfirmOrder = async () => {
+    if (!sesionAbierta) {
+      setShowCajaCerradaModal(true)
+      return
+    }
     const result = await handleConfirmOrder()
     if (result) {
       setFeedback(result)
+    }
+  }
+
+  const onAddProduct = (product: Producto) => {
+    if (items.length === 0 && !sesionAbierta) {
+      setShowCajaCerradaModal(true)
+      return
+    }
+    if (product.combo_items && product.combo_items.length > 0) {
+      addComboItem({
+        id: product.id,
+        nombre: product.nombre,
+        descripcion: product.descripcion,
+        precio: product.precio,
+        comboItems: product.combo_items.map((ci) => ({
+          producto_id: ci.producto_id,
+          nombre: ci.producto.nombre,
+          cantidad: ci.cantidad,
+          tiene_receta: ci.producto.tiene_receta,
+        }))
+      })
+    } else {
+      addItem({ ...product, puntos_extra: product.puntos_extra ?? 0 })
     }
   }
 
@@ -126,24 +157,7 @@ export default function POSView() {
 
             <ProductGrid
               products={filteredProducts}
-              onAddProduct={(product: Producto) => {
-                if (product.combo_items && product.combo_items.length > 0) {
-                  addComboItem({
-                    id: product.id,
-                    nombre: product.nombre,
-                    descripcion: product.descripcion,
-                    precio: product.precio,
-                    comboItems: product.combo_items.map((ci) => ({
-                      producto_id: ci.producto_id,
-                      nombre: ci.producto.nombre,
-                      cantidad: ci.cantidad,
-                      tiene_receta: ci.producto.tiene_receta,
-                    }))
-                  })
-                } else {
-                  addItem({ ...product, puntos_extra: product.puntos_extra ?? 0 })
-                }
-              }}
+              onAddProduct={onAddProduct}
               loading={loading}
               darkMode={darkMode}
             />
@@ -189,6 +203,11 @@ export default function POSView() {
           darkMode={darkMode}
         />
       )}
+      <CajaCerradaModal
+        open={showCajaCerradaModal}
+        onClose={() => setShowCajaCerradaModal(false)}
+        darkMode={darkMode}
+      />
     </div>
   )
 }

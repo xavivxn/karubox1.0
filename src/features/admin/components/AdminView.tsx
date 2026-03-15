@@ -5,13 +5,18 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { IngredienteModal } from './IngredienteModal'
 import { OwnerProductModal } from '@/features/owner/components/OwnerProductModal'
 import { ProductosListModal } from './ProductosListModal'
 import { useAdminDashboard } from '../hooks/useAdminDashboard'
+import { useEstadoCaja } from '@/features/caja/hooks/useEstadoCaja'
+import { CerrarCajaModal } from '@/features/caja/components/CerrarCajaModal'
+import { abrirCajaAction } from '@/app/actions/caja'
+import { resetCocinaDailyData } from '@/features/cocina/utils/achievements'
 import { AdminHeader } from './AdminHeader'
 import { AdminLoading } from './AdminLoading'
 import { KpiCards } from './KpiCards'
@@ -32,6 +37,37 @@ export const AdminView = () => {
   const [showOwnerProductModal, setShowOwnerProductModal] = useState(false)
   const [showProductosListModal, setShowProductosListModal] = useState(false)
   const [showStockDrawer, setShowStockDrawer] = useState(false)
+  const [showCerrarCajaModal, setShowCerrarCajaModal] = useState(false)
+  const [showConfirmEmpezar, setShowConfirmEmpezar] = useState(false)
+  const [showConfirmCerrar, setShowConfirmCerrar] = useState(false)
+  const [isEmpezando, setIsEmpezando] = useState(false)
+  const [errorEmpezar, setErrorEmpezar] = useState<string | null>(null)
+
+  const { sesionAbierta, ultimaSesionCerrada, loading: loadingCaja, refetch: refetchCaja } = useEstadoCaja(tenant?.id ?? null)
+
+  const handleEmpezarDia = useCallback(async () => {
+    if (!tenant?.id) return { success: false as const, error: 'Tenant no disponible.' }
+    return await abrirCajaAction(tenant.id)
+  }, [tenant?.id])
+
+  const onConfirmEmpezar = useCallback(async () => {
+    setErrorEmpezar(null)
+    setIsEmpezando(true)
+    const result = await handleEmpezarDia()
+    setIsEmpezando(false)
+    if (result.success) {
+      if (tenant?.id) resetCocinaDailyData(tenant.id)
+      await refetchCaja()
+      setShowConfirmEmpezar(false)
+    } else {
+      setErrorEmpezar(result.error)
+    }
+  }, [handleEmpezarDia, refetchCaja])
+
+  const onConfirmCerrarCaja = useCallback(async () => {
+    setShowConfirmCerrar(false)
+    setShowCerrarCajaModal(true)
+  }, [])
 
   // Admin puede crear productos a partir de materias primas (recetas, combos, sin receta)
   const canManageProducts = usuario?.rol === 'admin'
@@ -46,7 +82,7 @@ export const AdminView = () => {
     lowStockItems,
     totalInventoryItems,
     refetch
-  } = useAdminDashboard(tenant?.id ?? null)
+  } = useAdminDashboard(tenant?.id ?? null, { desde: sesionAbierta?.apertura_at ?? null })
 
   // Si no hay tenant, mostrar loader
   if (!tenant) {
@@ -77,21 +113,48 @@ export const AdminView = () => {
     refetch()
   }
 
+  // Resumen: si caja abierta = stats del turno actual; si cerrada = último cierre (registrado hasta que se abra de nuevo)
+  const displayStats = sesionAbierta
+    ? stats
+    : ultimaSesionCerrada
+      ? {
+          ...stats,
+          todayOrders: ultimaSesionCerrada.cantidad_pedidos,
+          todayRevenue: ultimaSesionCerrada.total_ventas,
+          todayCost: ultimaSesionCerrada.total_costo_estimado,
+          todayProfit: ultimaSesionCerrada.ganancia_neta,
+          avgTicket: ultimaSesionCerrada.cantidad_pedidos
+            ? Math.round(ultimaSesionCerrada.total_ventas / ultimaSesionCerrada.cantidad_pedidos)
+            : 0
+        }
+      : stats
+
+  const resumenLabel = sesionAbierta
+    ? `Turno actual (desde ${new Date(sesionAbierta.apertura_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })})`
+    : ultimaSesionCerrada
+      ? `Último cierre (${new Date(ultimaSesionCerrada.cierre_at!).toLocaleDateString('es-PY', { day: 'numeric', month: 'short', year: 'numeric' })})`
+      : 'Resumen diario'
+
   return (
     <>
-      {/* Header con resumen diario */}
+      {/* Header con resumen del turno actual o último cierre */}
       <AdminHeader
         tenantName={tenant.nombre}
-        stats={stats}
+        stats={displayStats}
+        resumenLabel={resumenLabel}
         onOpenIngredienteModal={() => setShowIngredienteModal(true)}
         onOpenStockDrawer={() => setShowStockDrawer(true)}
         onOpenProductosList={canManageProducts ? () => setShowProductosListModal(true) : undefined}
         onOpenProductModal={canManageProducts ? () => setShowOwnerProductModal(true) : undefined}
+        sesionAbierta={sesionAbierta}
+        loadingCaja={loadingCaja}
+        onEmpezarDia={() => setShowConfirmEmpezar(true)}
+        onAbrirModalCerrarCaja={() => setShowConfirmCerrar(true)}
       />
 
-      {/* KPI Cards principales */}
+      {/* KPI Cards principales (mismo criterio: turno actual o último cierre) */}
       <KpiCards
-        stats={stats}
+        stats={displayStats}
         totalInventoryItems={totalInventoryItems}
         lowStockCount={lowStockItems.length}
         darkMode={darkMode}
@@ -163,6 +226,47 @@ export const AdminView = () => {
         usuarioId={usuario?.id ?? null}
         onSaved={handleStockDrawerSaved}
       />
+
+      {/* Confirmación: Empezar el día */}
+      <ConfirmModal
+        open={showConfirmEmpezar}
+        onClose={() => { setShowConfirmEmpezar(false); setErrorEmpezar(null) }}
+        title="¿Empezar el día?"
+        message="Se habilitarán POS y Cocina para operar. El resumen de ingresos y ganancias se calculará desde este momento."
+        errorMessage={errorEmpezar}
+        confirmLabel="Sí, empezar el día"
+        cancelLabel="Cancelar"
+        onConfirm={onConfirmEmpezar}
+        variant="primary"
+        loading={isEmpezando}
+        darkMode={darkMode}
+      />
+
+      {/* Confirmación: Cerrar caja */}
+      <ConfirmModal
+        open={showConfirmCerrar}
+        onClose={() => setShowConfirmCerrar(false)}
+        title="¿Cerrar la caja?"
+        message="Se calcularán los totales del turno y deberás ingresar el monto pagado a empleados. Esta acción registra el cierre del día."
+        confirmLabel="Sí, cerrar caja"
+        cancelLabel="Cancelar"
+        onConfirm={onConfirmCerrarCaja}
+        variant="warning"
+        darkMode={darkMode}
+      />
+
+      {/* Modal cerrar caja (solo cuando hay sesión abierta) */}
+      {sesionAbierta && (
+        <CerrarCajaModal
+          open={showCerrarCajaModal}
+          onClose={() => setShowCerrarCajaModal(false)}
+          sesion={sesionAbierta}
+          tenantId={tenant.id}
+          tenantNombre={tenant.nombre}
+          onCerrarExitoso={refetchCaja}
+          darkMode={darkMode}
+        />
+      )}
     </>
   )
 }

@@ -11,7 +11,7 @@ import { formatearFecha } from './clientes.utils'
 import { PDF_LOGO_URL, PDF_FOOTER_TEXT } from './pdf.constants'
 
 const LOGO_PLACEHOLDER = '🍔'
-const HEADER_TITLE = 'Reporte de Clientes'
+const HEADER_TITLE = 'REPORTE DE CLIENTES'
 const MARGIN = 14
 const HEADER_HEIGHT = 22
 const FOOTER_HEIGHT = 14

@@ -441,15 +441,19 @@ export default function KitchenCanvas({
   newDeliveryIds,
   onDeliveryAnimated,
   onStreakChange,
+  sessionId,
 }: {
   orders: KitchenOrder[]
   stats: { todayRevenue: number; todayTotal: number; deliveredCount: number }
   newDeliveryIds: string[]
   onDeliveryAnimated: (id: string) => void
   onStreakChange?: (streak: number) => void
+  /** Id del turno de caja; al cambiar (nuevo turno = Empezar el día), se reinicia la racha. */
+  sessionId?: string | null
 }) {
   const soundPlayed = useRef<Set<string>>(new Set())
   const prevOrderCount = useRef(orders.length)
+  const prevSessionId = useRef<string | undefined>(sessionId ?? undefined)
   const [newOrderStages, setNewOrderStages] = useState<Set<KitchenStage>>(new Set())
   const [tickerEvents, setTickerEvents] = useState<TickerEvent[]>([])
   const [streak, setStreak] = useState(0)
@@ -457,6 +461,14 @@ export default function KitchenCanvas({
   const prevRevenueRef = useRef(stats.todayRevenue)
   const [record, setRecord] = useState<string | null>(null)
   const bestRevenueRef = useRef(0)
+
+  // Reiniciar racha solo al empezar un nuevo turno (Empezar el día), no al cerrar caja
+  useEffect(() => {
+    if (sessionId && sessionId !== prevSessionId.current) {
+      setStreak(0)
+      prevSessionId.current = sessionId
+    }
+  }, [sessionId])
 
   // Detect new orders → sound + streak + ticker
   useEffect(() => {
@@ -603,30 +615,30 @@ export default function KitchenCanvas({
         </div>
       </div>
 
-      {/* ─── Record Banner ─── */}
-      {record && (
-        <div className="px-4 pt-2">
-          <RecordBanner text={record} />
+      {/* ─── Contenido: kanban + ticker ─── */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        {record && (
+          <div className="px-4 pt-2 flex-shrink-0">
+            <RecordBanner text={record} />
+          </div>
+        )}
+
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 p-3 overflow-hidden min-h-0">
+          {KITCHEN_STAGES.map((stage) => (
+            <StageColumn
+              key={stage}
+              stage={stage}
+              orders={groups[stage]}
+              hasNewDelivery={hasNewDeliveryInStage(stage)}
+              hasNewOrder={newOrderStages.has(stage)}
+              onConfettiDone={() => handleConfettiDone(stage)}
+            />
+          ))}
         </div>
-      )}
 
-      {/* ─── Kanban Columns ─── */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 p-3 overflow-hidden">
-        {KITCHEN_STAGES.map((stage) => (
-          <StageColumn
-            key={stage}
-            stage={stage}
-            orders={groups[stage]}
-            hasNewDelivery={hasNewDeliveryInStage(stage)}
-            hasNewOrder={newOrderStages.has(stage)}
-            onConfettiDone={() => handleConfettiDone(stage)}
-          />
-        ))}
-      </div>
-
-      {/* ─── Activity Ticker ─── */}
-      <div className="px-3 pb-3">
-        <ActivityTicker events={tickerEvents} />
+        <div className="px-3 pb-3 flex-shrink-0">
+          <ActivityTicker events={tickerEvents} />
+        </div>
       </div>
     </div>
   )

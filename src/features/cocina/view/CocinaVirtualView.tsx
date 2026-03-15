@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { useTenant } from '@/contexts/TenantContext'
+import { useEstadoCaja } from '@/features/caja/hooks/useEstadoCaja'
 import { useRealtimeOrders } from '../hooks/useRealtimeOrders'
 import { useAchievements } from '../hooks/useAchievements'
 import { STAGE_COLORS, STAGE_EMOJIS, STAGE_LABELS, type KitchenStage } from '../utils/cocina.utils'
@@ -118,8 +119,13 @@ function StatCard({
 /* ═══ Main View ═══ */
 export default function CocinaVirtualView() {
   const { tenant } = useTenant()
+  const { sesionAbierta, ultimaSesionCerrada, loading: loadingCaja } = useEstadoCaja(tenant?.id ?? null)
   const { orders, stats, newDeliveryIds, clearDelivery } = useRealtimeOrders({
     tenantId: tenant?.id,
+    desde: loadingCaja
+      ? undefined
+      : sesionAbierta?.apertura_at ?? ultimaSesionCerrada?.apertura_at ?? null,
+    hasta: sesionAbierta ? null : ultimaSesionCerrada?.cierre_at ?? undefined,
   })
 
   const [streak, setStreak] = useState(0)
@@ -245,18 +251,8 @@ export default function CocinaVirtualView() {
           newDeliveryIds={newDeliveryIds}
           onDeliveryAnimated={clearDelivery}
           onStreakChange={handleStreakChange}
+          sessionId={sesionAbierta?.id}
         />
-
-        {orders.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center space-y-2">
-              <div className="text-5xl">🍳</div>
-              <p className="text-sm font-medium text-gray-400 dark:text-gray-500">
-                Sin pedidos activos. La cocina espera...
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Achievement Toasts */}
