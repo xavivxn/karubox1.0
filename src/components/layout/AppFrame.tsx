@@ -91,9 +91,13 @@ export function AppFrame({ children }: { children: ReactNode }) {
     PAGE_MAP.find((entry) => entry.test(pathname))?.info ??
     DEFAULT_INFO
 
+  const isLoginPage = pathname === '/'
+
   return (
     <div
-      className={`min-h-screen flex flex-col ${
+      className={`flex flex-col ${
+        isLoginPage ? 'h-screen overflow-hidden' : 'min-h-screen'
+      } ${
         hideNavbar
           ? THEME_CONFIG.DARK.background
           : darkMode
@@ -105,7 +109,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <AppNavbar pageTitle={pageInfo.title} pageSubtitle={pageInfo.subtitle} />
       )}
       <InactiveTenantOverlay />
-      <main className={`flex-1 ${pageInfo.fullWidth ? "py-4" : "px-4 py-6"}`}>
+      <main className={`flex-1 min-h-0 flex flex-col ${isLoginPage ? 'overflow-y-auto' : ''} ${pageInfo.fullWidth ? "py-4" : "px-4 py-6"}`}>
         {pageInfo.fullWidth ? (
           children
         ) : (

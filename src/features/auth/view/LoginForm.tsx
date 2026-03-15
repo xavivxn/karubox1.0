@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth } from '../hooks/useAuth'
+import { LoginBackground } from '../components/LoginBackground'
 import { LoginHeader } from '../components/LoginHeader'
 import { ErrorAlert } from '../components/ErrorAlert'
 import { LoginFields } from '../components/LoginFields'
@@ -19,34 +20,36 @@ export default function LoginForm() {
   } = useAuth()
 
   return (
-    <div className="flex items-center justify-center min-h-full px-4 py-8">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden">
-        <div className="grid md:grid-cols-2 gap-0 relative">
-          {/* Sección izquierda - Header */}
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-8 md:p-12 flex items-center justify-center">
-            <LoginHeader />
-          </div>
+    <div className="relative min-h-0 flex-1 flex items-center justify-center px-4 py-4 sm:py-6">
+      <LoginBackground />
+      {/* Card contenedor: responsive y animado */}
+      <div className="relative z-10 w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-4xl animate-login-card">
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden ring-1 ring-white/20">
+          <div className="grid grid-cols-1 lg:grid-cols-2 min-h-0">
+            {/* Panel izquierdo: marca — en móvil más compacto */}
+            <div className="relative bg-gradient-to-br from-orange-500 to-orange-600 p-6 sm:p-8 md:p-10 lg:p-12 flex items-center justify-center min-h-[180px] sm:min-h-[220px] lg:min-h-0 animate-login-panel">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(255,255,255,0.15),transparent)] pointer-events-none" aria-hidden />
+              <LoginHeader />
+            </div>
 
-          {/* Separador sutil - solo visible en desktop */}
-          <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-gray-200 -translate-x-1/2"></div>
+            {/* Panel derecho: formulario */}
+            <div className="p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-center animate-login-form">
+              <form onSubmit={handleLogin} className="space-y-5 sm:space-y-6">
+                <ErrorAlert message={error} />
 
-          {/* Sección derecha - Form */}
-          <div className="p-8 md:p-12 flex flex-col justify-center">
-            <form onSubmit={handleLogin} className="space-y-6">
-              <ErrorAlert message={error} />
+                <LoginFields
+                  email={email}
+                  password={password}
+                  onEmailChange={setEmail}
+                  onPasswordChange={setPassword}
+                  disabled={loading}
+                />
 
-              <LoginFields
-                email={email}
-                password={password}
-                onEmailChange={setEmail}
-                onPasswordChange={setPassword}
-                disabled={loading}
-              />
+                <LoginButton loading={loading} />
+              </form>
 
-              <LoginButton loading={loading} />
-            </form>
-
-            <DevCredentials />
+              <DevCredentials />
+            </div>
           </div>
         </div>
       </div>
