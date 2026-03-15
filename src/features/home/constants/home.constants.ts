@@ -4,8 +4,8 @@ export interface DashboardCard {
   title: string
   description: string
   href: string
-  icon: 'pos' | 'admin'
-  color: 'orange' | 'blue'
+  icon: 'pos' | 'admin' | 'pedidos'
+  color: 'orange' | 'blue' | 'green'
 }
 
 export interface Feature {
@@ -21,6 +21,13 @@ export const DASHBOARD_CARDS: DashboardCard[] = [
     href: ROUTES.PROTECTED.POS,
     icon: 'pos',
     color: 'orange'
+  },
+  {
+    title: 'Historial de pedidos',
+    description: 'Consultá pedidos por fecha y estado. Solo administradores pueden anular.',
+    href: ROUTES.PROTECTED.PEDIDOS,
+    icon: 'pedidos',
+    color: 'green'
   },
   {
     title: 'Administración',

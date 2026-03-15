@@ -40,6 +40,13 @@ const PAGE_MAP: Array<{ test: (pathname: string) => boolean; info: PageInfo }> =
     }
   },
   {
+    test: (path) => path.startsWith('/home/pedidos'),
+    info: {
+      title: 'Historial de pedidos',
+      subtitle: 'Consultá y anulá pedidos (solo admin).'
+    }
+  },
+  {
     test: (path) => path === '/owner',
     info: {
       title: 'Panel Owner',

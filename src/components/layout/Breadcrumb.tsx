@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ChevronRight, Home, Users, ShoppingCart, LayoutDashboard, ChefHat, Store, PlusCircle, Package, UserCog, Building2 } from 'lucide-react'
+import { ChevronRight, Home, Users, ShoppingCart, LayoutDashboard, ChefHat, Store, PlusCircle, Package, UserCog, Building2, FileText } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { ROUTES } from '@/config/routes'
 
@@ -94,6 +94,12 @@ export function Breadcrumb() {
         label: 'Punto de Venta',
         path: '/home/pos',
         icon: <ShoppingCart className="w-4 h-4" />,
+      })
+    } else if (pathname.startsWith('/home/pedidos')) {
+      items.push({
+        label: 'Historial de pedidos',
+        path: '/home/pedidos',
+        icon: <FileText className="w-4 h-4" />,
       })
     } else if (pathname.startsWith('/home/kds')) {
       items.push({

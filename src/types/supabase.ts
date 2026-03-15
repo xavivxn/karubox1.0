@@ -141,6 +141,9 @@ export interface Database {
           notas: string | null
           created_at: string
           updated_at: string
+          cancelado_por_id: string | null
+          cancelado_at: string | null
+          motivo_cancelacion: string | null
         }
         Insert: {
           id?: string
@@ -155,6 +158,9 @@ export interface Database {
           notas?: string | null
           created_at?: string
           updated_at?: string
+          cancelado_por_id?: string | null
+          cancelado_at?: string | null
+          motivo_cancelacion?: string | null
         }
         Update: {
           id?: string
@@ -169,6 +175,9 @@ export interface Database {
           notas?: string | null
           created_at?: string
           updated_at?: string
+          cancelado_por_id?: string | null
+          cancelado_at?: string | null
+          motivo_cancelacion?: string | null
         }
       }
       items_pedido: {
@@ -389,6 +398,9 @@ export interface Database {
           total_letras: string | null
           created_at: string
           updated_at: string
+          anulada: boolean
+          anulada_at: string | null
+          anulada_por_id: string | null
         }
         Insert: {
           id?: string
@@ -405,6 +417,9 @@ export interface Database {
           total_letras?: string | null
           created_at?: string
           updated_at?: string
+          anulada?: boolean
+          anulada_at?: string | null
+          anulada_por_id?: string | null
         }
         Update: {
           id?: string
@@ -421,6 +436,9 @@ export interface Database {
           total_letras?: string | null
           created_at?: string
           updated_at?: string
+          anulada?: boolean
+          anulada_at?: string | null
+          anulada_por_id?: string | null
         }
       }
     }

@@ -22,18 +22,15 @@ export const ROLE_ACCESS = {
     allowedRoutes: [
       ROUTES.PROTECTED.HOME,
       ROUTES.PROTECTED.POS,
+      ROUTES.PROTECTED.PEDIDOS,
       ROUTES.PROTECTED.ADMIN,
-      // ROUTES.PROTECTED.KDS,
-      // ROUTES.PROTECTED.CLIENTES,
-      // ROUTES.PROTECTED.INVENTARIO,
-      // ROUTES.PROTECTED.REPORTES,
     ],
   },
   cajero: {
     defaultRoute: ROUTES.PROTECTED.POS,
     allowedRoutes: [
       ROUTES.PROTECTED.POS,
-      // ROUTES.PROTECTED.CLIENTES,
+      ROUTES.PROTECTED.PEDIDOS,
     ],
   },
   // cocinero: {
