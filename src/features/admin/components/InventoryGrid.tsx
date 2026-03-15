@@ -8,11 +8,12 @@ import type { InventoryRecord } from '../types/admin.types'
 
 interface InventoryGridProps {
   inventory: InventoryRecord[]
-  onOpenInventoryDrawer: () => void
+  onOpenIngredienteModal: () => void
+  onOpenStockDrawer: () => void
   onOpenProductModal?: () => void
 }
 
-export const InventoryGrid = ({ inventory, onOpenInventoryDrawer, onOpenProductModal }: InventoryGridProps) => {
+export const InventoryGrid = ({ inventory, onOpenIngredienteModal, onOpenStockDrawer, onOpenProductModal }: InventoryGridProps) => {
   return (
     <section className="rounded-3xl border border-white/60 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
@@ -33,10 +34,18 @@ export const InventoryGrid = ({ inventory, onOpenInventoryDrawer, onOpenProductM
             </button>
           )}
           <button
-            onClick={onOpenInventoryDrawer}
+            type="button"
+            onClick={onOpenStockDrawer}
             className="rounded-2xl bg-gray-900 text-white px-4 py-2 text-sm font-semibold hover:bg-gray-800 transition"
           >
-            Nuevo movimiento
+            Cargar stock
+          </button>
+          <button
+            type="button"
+            onClick={onOpenIngredienteModal}
+            className="rounded-2xl border border-orange-500 text-orange-500 dark:border-orange-400 dark:text-orange-400 px-4 py-2 text-sm font-semibold hover:bg-orange-50 dark:hover:bg-orange-500/10 transition"
+          >
+            Registrar materia prima
           </button>
         </div>
       </div>
@@ -52,7 +61,7 @@ export const InventoryGrid = ({ inventory, onOpenInventoryDrawer, onOpenProductM
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-semibold">
-                    {item.productos?.nombre ?? 'Insumo sin nombre'}
+                    {item.nombre ?? item.productos?.nombre ?? 'Insumo sin nombre'}
                   </p>
                   <p className="text-xs text-gray-500">
                     Min {item.stock_minimo} {item.unidad}
@@ -90,9 +99,8 @@ export const InventoryGrid = ({ inventory, onOpenInventoryDrawer, onOpenProductM
           )
         })}
         {!inventory.length && (
-          <div className="col-span-full text-sm text-gray-500">
-            Aún no tienes insumos cargados en inventario. Usá el botón &quot;Nuevo movimiento&quot; para
-            registrar el primero.
+          <div className="col-span-full text-sm text-gray-500 dark:text-gray-400">
+            Aún no tienes insumos cargados. Usá &quot;Registrar materia prima&quot; para el primero y &quot;Cargar stock&quot; para agregar cantidades a insumos existentes.
           </div>
         )}
       </div>

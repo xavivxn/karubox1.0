@@ -1,12 +1,30 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Loader2, X, PlusCircle, Search } from 'lucide-react'
+import { Loader2, X, PlusCircle, Search, Trash2, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { IngredientDefinition } from '@/types/ingredients'
 
 type Operation = 'entrada' | 'salida' | 'ajuste'
 const INGREDIENT_CATEGORY_NAME = 'Insumos Base'
+
+/** Formatea número con separador de miles (punto) y decimales (coma). Ej: 1000 → "1.000", 1500.5 → "1.500,5" */
+function formatNumberWithThousands(value: number): string {
+  if (Number.isNaN(value) || value === null || value === undefined) return '0'
+  const num = Number(value)
+  if (!Number.isFinite(num)) return '0'
+  const [intPart, decPart] = num.toString().split('.')
+  const intFormatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return decPart != null && decPart !== '' ? `${intFormatted},${decPart}` : intFormatted
+}
+
+/** Parsea string formateado (1.000 o 1.000,5) a número */
+function parseFormattedNumber(str: string): number {
+  if (!str || typeof str !== 'string') return 0
+  const normalized = str.trim().replace(/\./g, '').replace(',', '.')
+  const parsed = parseFloat(normalized)
+  return Number.isFinite(parsed) ? parsed : 0
+}
 
 interface InventoryDrawerProps {
   open: boolean
@@ -31,6 +49,8 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
   const [loadingInventory, setLoadingInventory] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -85,8 +105,33 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
       setNote('')
       setErrorMessage(null)
       setSearch('')
+      setShowDeleteConfirm(false)
     }
   }, [open])
+
+  const handleConfirmDelete = async () => {
+    if (!selectedIngredient) return
+    setIsDeleting(true)
+    setErrorMessage(null)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('ingredientes')
+        .update({ activo: false })
+        .eq('id', selectedIngredient.id)
+        .eq('tenant_id', tenantId)
+
+      if (error) throw error
+      setShowDeleteConfirm(false)
+      onSaved?.()
+      onClose()
+    } catch (err: unknown) {
+      console.error('Error al eliminar materia prima:', err)
+      setErrorMessage(err instanceof Error ? err.message : 'No se pudo eliminar la materia prima')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const filteredIngredients = useMemo(() => {
     if (!search.trim()) return ingredients
@@ -258,36 +303,53 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
   const noIngredientsAvailable = !loadingIngredients && ingredients.length === 0
 
   return (
-    <div className="fixed inset-0 z-50 flex">
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+    <div className="fixed inset-0 z-[100] overflow-hidden">
+      {/* Overlay: cubre todo el viewport, clic cierra */}
+      <button
+        type="button"
+        className="absolute inset-0 w-full h-full cursor-default border-0 bg-black/70 backdrop-blur-sm focus:outline-none"
         onClick={() => !isSaving && onClose()}
+        aria-label="Cerrar"
+        tabIndex={-1}
       />
-      <div className="relative ml-auto h-full w-full max-w-lg bg-white dark:bg-gray-900 shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <PlusCircle className="w-5 h-5 text-orange-500" />
-              Cargar insumos críticos
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Controlá huevos, panes, queso y salsas con una sola acción.
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            disabled={isSaving}
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        <form
-          id="inventory-form"
-          onSubmit={handleSubmit}
-          className="flex-1 overflow-y-auto px-6 py-6 space-y-6"
+      {/* Contenedor de centrado */}
+      <div className="relative z-10 flex h-full items-center justify-center p-4 pointer-events-none">
+        <div
+          className="pointer-events-auto flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-white dark:bg-gray-900 shadow-2xl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="stock-modal-title"
         >
+          {/* Header */}
+          <div className="flex shrink-0 items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-500 shadow-lg shadow-orange-500/40">
+                <PlusCircle className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 id="stock-modal-title" className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                  Cargar stock
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Agregar o ajustar stock de materias primas existentes
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              disabled={isSaving}
+              className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition disabled:opacity-50"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <form
+            id="inventory-form"
+            onSubmit={handleSubmit}
+            className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-6"
+          >
           <div>
             <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">
               Ingrediente
@@ -399,12 +461,16 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
                 Cantidad
               </label>
               <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-                className="mt-2 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                type="text"
+                inputMode="decimal"
+                value={formatNumberWithThousands(quantity)}
+                onChange={(e) => setQuantity(parseFormattedNumber(e.target.value))}
+                onBlur={(e) => {
+                  const v = parseFormattedNumber(e.target.value)
+                  if (v >= 0) setQuantity(v)
+                }}
+                placeholder="0"
+                className="mt-2 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 [appearance:textfield]"
                 required
               />
             </div>
@@ -425,12 +491,16 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
                 Stock mínimo
               </label>
               <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={stockMin}
-                onChange={(e) => setStockMin(Number(e.target.value))}
-                className="mt-2 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                type="text"
+                inputMode="decimal"
+                value={formatNumberWithThousands(stockMin)}
+                onChange={(e) => setStockMin(parseFormattedNumber(e.target.value))}
+                onBlur={(e) => {
+                  const v = parseFormattedNumber(e.target.value)
+                  if (v >= 0) setStockMin(v)
+                }}
+                placeholder="0"
+                className="mt-2 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 [appearance:textfield]"
               />
             </div>
           </div>
@@ -466,36 +536,91 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
               {errorMessage}
             </p>
           )}
-        </form>
+          </form>
 
-        <div className="border-t border-gray-100 dark:border-gray-800 px-6 py-4 flex items-center justify-between bg-gray-50/60 dark:bg-gray-900/60">
-          <div>
-            {selectedIngredient && currentStock !== null && (
-              <p className="text-xs text-gray-500">
-                Stock después de la operación:{' '}
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
-                  {operation === 'entrada'
-                    ? (currentStock + quantity).toLocaleString()
-                    : operation === 'salida'
-                      ? Math.max(currentStock - quantity, 0).toLocaleString()
-                      : quantity.toLocaleString()}{' '}
-                  {selectedIngredient.unidad}
-                </span>
-              </p>
-            )}
+          {/* Footer */}
+          <div className="flex shrink-0 items-center justify-between gap-4 border-t border-gray-100 dark:border-gray-800 px-6 py-4 pb-6">
+            <div className="flex flex-col items-start gap-1 min-w-0">
+              {selectedIngredient && currentStock !== null && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Stock después de la operación:{' '}
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {operation === 'entrada'
+                      ? (currentStock + quantity).toLocaleString()
+                      : operation === 'salida'
+                        ? Math.max(currentStock - quantity, 0).toLocaleString()
+                        : quantity.toLocaleString()}{' '}
+                    {selectedIngredient.unidad}
+                  </span>
+                </p>
+              )}
+              {selectedIngredient && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isSaving}
+                  className="text-xs text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:underline focus:outline-none focus:underline disabled:opacity-50 disabled:cursor-not-allowed mt-0.5"
+                >
+                  Eliminar esta materia prima
+                </button>
+              )}
+            </div>
+            <button type="submit" form="inventory-form" className="hidden" />
+            <button
+              type="submit"
+              form="inventory-form"
+              disabled={isSaving || !selectedIngredient}
+              className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 active:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-orange-500/30 shrink-0"
+            >
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+              Guardar movimiento
+            </button>
           </div>
-          <button type="submit" form="inventory-form" className="hidden" />
-          <button
-            type="submit"
-            form="inventory-form"
-            disabled={isSaving || !selectedIngredient}
-            className="px-5 py-3 rounded-xl font-semibold bg-orange-500 text-white hover:bg-orange-600 transition disabled:opacity-50 flex items-center gap-2"
-          >
-            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-            Guardar movimiento
-          </button>
         </div>
       </div>
+
+      {/* Modal de confirmación para eliminar materia prima */}
+      {showDeleteConfirm && selectedIngredient && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-modal-title"
+            className="relative w-full max-w-sm rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-6 space-y-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              </div>
+              <h2 id="delete-modal-title" className="text-lg font-bold text-gray-900 dark:text-white">
+                Eliminar materia prima
+              </h2>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              ¿Está seguro de eliminar <strong className="text-gray-900 dark:text-white">&quot;{selectedIngredient.nombre}&quot;</strong>? Esta acción no se puede deshacer y la materia prima dejará de aparecer en el sistema.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="flex-1 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

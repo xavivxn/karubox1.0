@@ -13,9 +13,11 @@ interface KpiCardsProps {
   stats: DashboardStats
   totalInventoryItems: number
   lowStockCount: number
+  darkMode?: boolean
 }
 
-export const KpiCards = ({ stats, totalInventoryItems, lowStockCount }: KpiCardsProps) => {
+export const KpiCards = ({ stats, totalInventoryItems, lowStockCount, darkMode }: KpiCardsProps) => {
+  const mutedClass = darkMode ? 'text-gray-400' : 'text-gray-500'
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
       <KpiCard
@@ -23,14 +25,16 @@ export const KpiCards = ({ stats, totalInventoryItems, lowStockCount }: KpiCards
         value={formatGuaranies(stats.todayRevenue)}
         subtitle={`${stats.todayOrders} pedidos • Ticket prom. ${formatGuaranies(stats.avgTicket)}`}
         accent="orange"
+        darkMode={darkMode}
       />
       <KpiCard
         title="Ganancia estimada"
         value={formatGuaranies(stats.todayProfit)}
         subtitle={`Costo aprox. ${formatGuaranies(stats.todayCost)}`}
         accent="purple"
+        darkMode={darkMode}
       >
-        <div className="text-xs text-gray-500 flex items-center gap-1">
+        <div className={`text-xs ${mutedClass} flex items-center gap-1`}>
           <Coins className="w-4 h-4 text-purple-500" />
           Ratio aplicado: {(ESTIMATED_COST_RATIO * 100).toFixed(0)}% del precio
         </div>
@@ -40,8 +44,9 @@ export const KpiCards = ({ stats, totalInventoryItems, lowStockCount }: KpiCards
         value={formatNumber(stats.activeClients)}
         subtitle="+ Fidelización en tiempo real"
         accent="green"
+        darkMode={darkMode}
       >
-        <div className="text-xs text-gray-500 flex items-center gap-1">
+        <div className={`text-xs ${mutedClass} flex items-center gap-1`}>
           <ShieldCheck className="w-4 h-4 text-green-500" /> 
           Puntos emitidos: {formatNumber(stats.loyaltyPoints)}
         </div>
@@ -51,6 +56,7 @@ export const KpiCards = ({ stats, totalInventoryItems, lowStockCount }: KpiCards
         value={`${totalInventoryItems - lowStockCount}/${totalInventoryItems}`}
         subtitle={`${lowStockCount} insumos con alertas`}
         accent="blue"
+        darkMode={darkMode}
       />
     </div>
   )

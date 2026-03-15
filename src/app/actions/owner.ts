@@ -102,6 +102,28 @@ async function assertOwner() {
   return { error: null, supabase }
 }
 
+/**
+ * Verifica que el usuario sea owner (cualquier tenant) o admin del tenant indicado.
+ * Usado para gestión de productos: owner y admin del tenant pueden crear/listar.
+ */
+async function assertOwnerOrAdminForTenant(tenantId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' as const }
+
+  const { data: usuario } = await supabase
+    .from('usuarios')
+    .select('rol, tenant_id')
+    .eq('auth_user_id', user.id)
+    .eq('is_deleted', false)
+    .single()
+
+  if (!usuario) return { error: 'No autenticado' as const }
+  if (usuario.rol === 'owner') return { error: null }
+  if (usuario.rol === 'admin' && usuario.tenant_id === tenantId) return { error: null }
+  return { error: 'Sin permisos' as const }
+}
+
 // ─── Actions ────────────────────────────────────────────────────────────────
 
 /**
@@ -363,7 +385,7 @@ export async function getTenantForOwner(tenantId: string) {
  * Lista los productos de un tenant específico (sin filtrar por disponible para la vista owner).
  */
 export async function listProductosOwner(tenantId: string) {
-  const { error: authError } = await assertOwner()
+  const { error: authError } = await assertOwnerOrAdminForTenant(tenantId)
   if (authError) return { error: authError, productos: [] }
 
   const adminClient = createAdminClient()
@@ -387,7 +409,7 @@ export async function listProductosOwner(tenantId: string) {
  * Lista las categorías activas de un tenant específico.
  */
 export async function listCategoriasOwner(tenantId: string) {
-  const { error: authError } = await assertOwner()
+  const { error: authError } = await assertOwnerOrAdminForTenant(tenantId)
   if (authError) return { error: authError, categorias: [] }
 
   const adminClient = createAdminClient()
@@ -406,7 +428,7 @@ export async function listCategoriasOwner(tenantId: string) {
  * Lista los ingredientes activos de un tenant específico.
  */
 export async function listIngredientesOwner(tenantId: string) {
-  const { error: authError } = await assertOwner()
+  const { error: authError } = await assertOwnerOrAdminForTenant(tenantId)
   if (authError) return { error: authError, ingredientes: [] }
 
   const adminClient = createAdminClient()
@@ -445,7 +467,7 @@ export async function listInventarioSinProducto(tenantId: string) {
  * Usa el admin client para bypass de RLS cross-tenant.
  */
 export async function createProductoOwner(tenantId: string, data: CreateProductoOwnerData) {
-  const { error: authError } = await assertOwner()
+  const { error: authError } = await assertOwnerOrAdminForTenant(tenantId)
   if (authError) return { error: authError, producto: null }
 
   if (!data.nombre.trim()) return { error: 'El nombre del producto es requerido', producto: null }
@@ -569,7 +591,7 @@ export async function createProductoOwner(tenantId: string, data: CreateProducto
  * Elimina (soft delete) un producto de un tenant, ejecutado desde el rol owner.
  */
 export async function deleteProductoOwner(productoId: string, tenantId: string) {
-  const { error: authError } = await assertOwner()
+  const { error: authError } = await assertOwnerOrAdminForTenant(tenantId)
   if (authError) return { error: authError }
 
   const adminClient = createAdminClient()
@@ -607,7 +629,7 @@ export async function updateProductoOwner(
     puntos_extra?: number | null
   }
 ) {
-  const { error: authError } = await assertOwner()
+  const { error: authError } = await assertOwnerOrAdminForTenant(tenantId)
   if (authError) return { error: authError }
 
   if (!data.nombre.trim()) return { error: 'El nombre del producto es obligatorio' }

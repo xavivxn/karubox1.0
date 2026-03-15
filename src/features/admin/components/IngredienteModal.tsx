@@ -164,17 +164,32 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
   const unitLabel = tipoInventario === 'discreto' ? 'uds' : unidad
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl border border-white/10 bg-white dark:bg-gray-900 shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-[100] overflow-hidden">
+      {/* Overlay: cubre todo el viewport, clic cierra */}
+      <button
+        type="button"
+        className="absolute inset-0 w-full h-full cursor-default border-0 bg-black/70 backdrop-blur-sm focus:outline-none"
+        onClick={() => !isSaving && onClose()}
+        aria-label="Cerrar"
+        tabIndex={-1}
+      />
+      {/* Contenedor de centrado */}
+      <div className="relative z-10 flex h-full items-center justify-center p-4 pointer-events-none">
+        <div
+          className="pointer-events-auto flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-white dark:bg-gray-900 shadow-2xl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ingrediente-modal-title"
+        >
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-800">
+          {/* Header */}
+          <div className="flex shrink-0 items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-500 shadow-lg shadow-orange-500/40">
               <Package className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+              <h2 id="ingrediente-modal-title" className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
                 Registrar Materias Primas
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -191,8 +206,8 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-6">
+        {/* Body: scroll interno, footer queda fijo abajo */}
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
 
           {/* Feedback messages */}
           {errorMessage && (
@@ -448,8 +463,8 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
           </section>
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-gray-100 dark:border-gray-800 px-6 py-4 pb-6 flex items-center justify-end gap-3">
+        {/* Footer: fijo abajo */}
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-100 dark:border-gray-800 px-6 py-4 pb-6">
           <button
             type="button"
             onClick={onClose}
@@ -473,6 +488,7 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
               'Registrar materia prima'
             )}
           </button>
+        </div>
         </div>
       </div>
     </div>

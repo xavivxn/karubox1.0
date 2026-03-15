@@ -17,6 +17,8 @@ export interface InventoryRecord {
   stock_minimo: number
   unidad: string
   controlar_stock: boolean
+  /** Nombre para mostrar: inventario.nombre o producto asociado */
+  nombre?: string | null
   productos?: {
     nombre?: string | null
   } | null
