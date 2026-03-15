@@ -35,6 +35,13 @@ export const DASHBOARD_CARDS: DashboardCard[] = [
     href: ROUTES.PROTECTED.CLIENTES,
     icon: 'clientes',
     color: 'purple'
+  },
+  {
+    title: 'Cocina Virtual',
+    description: 'Visualizá el flujo de pedidos en tu cocina 3D en tiempo real.',
+    href: ROUTES.PROTECTED.COCINA,
+    icon: 'cocina',
+    color: 'red'
   }
 ]
 
