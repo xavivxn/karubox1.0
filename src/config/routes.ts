@@ -15,6 +15,7 @@ export const ROUTES = {
     PEDIDOS: '/home/pedidos',
     ADMIN: '/home/admin',
     CLIENTES: '/home/admin/clientes',
+    COCINA: '/home/admin/cocina',
     OWNER: '/owner',
     // KDS: '/home/kds',
     // INVENTARIO: '/home/dashboard/inventario',

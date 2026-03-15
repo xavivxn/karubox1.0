@@ -2,8 +2,8 @@ export interface DashboardCard {
   title: string
   description: string
   href: string
-  icon: 'pos' | 'admin' | 'pedidos' | 'clientes'
-  color: 'orange' | 'blue' | 'green' | 'purple'
+  icon: 'pos' | 'admin' | 'pedidos' | 'clientes' | 'cocina'
+  color: 'orange' | 'blue' | 'green' | 'purple' | 'red'
 }
 
 export interface Feature {

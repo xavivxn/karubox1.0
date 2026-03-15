@@ -1,12 +1,5 @@
 import { ROUTES } from '@/config'
-
-export interface DashboardCard {
-  title: string
-  description: string
-  href: string
-  icon: 'pos' | 'admin' | 'pedidos'
-  color: 'orange' | 'blue' | 'green'
-}
+import type { DashboardCard } from '../types/home.types'
 
 export interface Feature {
   icon: string
@@ -42,6 +35,13 @@ export const DASHBOARD_CARDS: DashboardCard[] = [
     href: ROUTES.PROTECTED.CLIENTES,
     icon: 'clientes',
     color: 'purple'
+  },
+  {
+    title: 'Cocina Virtual',
+    description: 'Visualizá el flujo de pedidos en tu cocina 3D en tiempo real.',
+    href: ROUTES.PROTECTED.COCINA,
+    icon: 'cocina',
+    color: 'red'
   }
 ]
 
