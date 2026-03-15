@@ -1,26 +1,34 @@
 /**
  * Clientes Module - Table Component
- * Tabla de clientes con acciones
+ * Tabla de clientes con acciones y exportación a PDF
  */
 
 import Link from 'next/link'
-import { Edit2 } from 'lucide-react'
+import { Edit2, FileDown } from 'lucide-react'
 import type { ClienteLocal } from '../types/clientes.types'
 import { formatearFecha } from '../utils/clientes.utils'
+import { generarPdfClientes } from '../utils/generarPdfClientes'
 
 interface ClientesTableProps {
   clientes: ClienteLocal[]
   loading: boolean
   searchTerm: string
   onEdit: (cliente: ClienteLocal) => void
+  /** Nombre del negocio para el encabezado del PDF (opcional) */
+  tenantNombre?: string
 }
 
 export const ClientesTable = ({
   clientes,
   loading,
   searchTerm,
-  onEdit
+  onEdit,
+  tenantNombre,
 }: ClientesTableProps) => {
+  const handleDescargarPdf = () => {
+    generarPdfClientes(clientes, { tenantNombre })
+  }
+
   if (loading) {
     return (
       <div className="bg-white dark:bg-gray-800/80 rounded-2xl shadow-sm dark:shadow-black/20 border border-gray-200 dark:border-gray-700 p-12 text-center">
@@ -32,6 +40,18 @@ export const ClientesTable = ({
 
   return (
     <div className="bg-white dark:bg-gray-800/80 rounded-2xl shadow-sm dark:shadow-black/20 border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* Barra de acciones: exportar PDF */}
+      <div className="flex items-center justify-end gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50">
+        <button
+          type="button"
+          onClick={handleDescargarPdf}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          title="Descargar reporte en PDF"
+        >
+          <FileDown size={18} />
+          Descargar PDF
+        </button>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-100 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
@@ -95,14 +115,14 @@ export const ClientesTable = ({
                     <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => onEdit(cliente)}
-                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                        className="p-2 rounded-lg transition-colors text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-700 dark:hover:text-blue-300"
                         title="Editar"
                       >
                         <Edit2 size={18} />
                       </button>
                       <Link
                         href={`/admin/clientes/${cliente.id}/puntos`}
-                        className="p-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
+                        className="p-2 rounded-lg transition-colors text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 hover:text-purple-700 dark:hover:text-purple-300"
                         title="Ver puntos"
                       >
                         ⭐

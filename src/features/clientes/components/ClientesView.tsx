@@ -71,6 +71,7 @@ export const ClientesView = () => {
           loading={loading}
           searchTerm={searchTerm}
           onEdit={handleEditarCliente}
+          tenantNombre={tenant?.nombre}
         />
 
         {/* Modal de Crear/Editar Cliente */}

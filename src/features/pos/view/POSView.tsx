@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, FileText } from 'lucide-react'
+import { LayoutDashboard, FileText, Loader2, ShoppingCart } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
 import { ROUTES } from '@/config/routes'
@@ -16,13 +16,15 @@ import Cart from '../components/Cart'
 import ClientModal from '../components/ClientModal'
 import CategoryList from '../components/CategoryList'
 import ProductGrid from '../components/ProductGrid'
-import { ScrollToCartFAB, CART_SECTION_ID } from '../components/ScrollToCartFAB'
+import { CartBottomBar } from '../components/CartBottomBar'
+import { CART_SECTION_ID } from '../components/ScrollToCartFAB'
 
 export default function POSView() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [isClientModalOpen, setIsClientModalOpen] = useState(false)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
   const { usuario, tenant, loading: tenantLoading, darkMode, isAdmin } = useTenant()
   const { addItem, addComboItem } = useCartStore()
@@ -49,34 +51,70 @@ export default function POSView() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+      <div className="flex-1 overflow-y-auto px-4 pt-2 pb-24 md:px-6 md:pt-3 lg:pb-6">
         <div className="max-w-7xl mx-auto">
-        <div className="flex justify-end gap-2 mb-3 flex-wrap">
+        {/* Título de sección + acciones — compacto en móvil */}
+        <header className="flex flex-row items-center justify-between gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${darkMode ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+            </div>
+            <div className="min-w-0">
+              <h1 className={`truncate text-base font-bold tracking-tight sm:text-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Punto de venta
+              </h1>
+              <p className={`hidden sm:block text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Selecciona productos y confirma el pedido
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <Link
             href={ROUTES.PROTECTED.PEDIDOS}
-            className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition ${
+            onClick={() => setNavigatingTo(ROUTES.PROTECTED.PEDIDOS)}
+            title="Historial de pedidos"
+            className={`inline-flex items-center justify-center rounded-lg border p-2 sm:rounded-xl sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-medium transition min-h-[40px] min-w-[40px] sm:min-h-0 sm:min-w-0 ${
+              navigatingTo !== null && navigatingTo !== ROUTES.PROTECTED.PEDIDOS
+                ? 'pointer-events-none cursor-not-allowed opacity-50'
+                : ''
+            } ${
               darkMode
                 ? 'border-gray-600 text-gray-300 hover:bg-gray-700/50 hover:text-white'
                 : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200'
             }`}
           >
-            <FileText className="w-4 h-4" />
-            Historial de pedidos
+            {navigatingTo === ROUTES.PROTECTED.PEDIDOS ? (
+              <Loader2 className="h-4 w-4 animate-spin sm:h-4 sm:w-4" />
+            ) : (
+              <FileText className="h-4 w-4 sm:h-4 sm:w-4" />
+            )}
+            <span className="hidden sm:inline">Historial de pedidos</span>
           </Link>
           {isAdmin && (
             <Link
               href={ROUTES.PROTECTED.ADMIN}
-              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition ${
+              onClick={() => setNavigatingTo(ROUTES.PROTECTED.ADMIN)}
+              title="Administración"
+              className={`inline-flex items-center justify-center rounded-lg border p-2 sm:rounded-xl sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-medium transition min-h-[40px] min-w-[40px] sm:min-h-0 sm:min-w-0 ${
+                navigatingTo !== null && navigatingTo !== ROUTES.PROTECTED.ADMIN
+                  ? 'pointer-events-none cursor-not-allowed opacity-50'
+                  : ''
+              } ${
                 darkMode
                   ? 'border-gray-600 text-gray-300 hover:bg-gray-700/50 hover:text-white'
                   : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200'
               }`}
             >
-              <LayoutDashboard className="w-4 h-4" />
-              Administración
+              {navigatingTo === ROUTES.PROTECTED.ADMIN ? (
+                <Loader2 className="h-4 w-4 animate-spin sm:h-4 sm:w-4" />
+              ) : (
+                <LayoutDashboard className="h-4 w-4 sm:h-4 sm:w-4" />
+              )}
+              <span className="hidden sm:inline">Administración</span>
             </Link>
           )}
-        </div>
+          </div>
+        </header>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
             <CategoryList
@@ -131,6 +169,7 @@ export default function POSView() {
       <ClientModal
         isOpen={isClientModalOpen}
         onClose={() => setIsClientModalOpen(false)}
+        darkMode={darkMode}
       />
       <ItemCustomizationDrawer
         open={Boolean(editingItemId)}
@@ -138,7 +177,7 @@ export default function POSView() {
         onClose={() => setEditingItemId(null)}
         darkMode={darkMode}
       />
-      <ScrollToCartFAB darkMode={darkMode} />
+      <CartBottomBar darkMode={darkMode} />
       {currentFeedback && (
         <FeedbackModal
           open

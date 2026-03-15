@@ -6,7 +6,8 @@
 
 'use client'
 
-import { UserPlus, Send, Users, BellOff, Bell, Loader2, Search, X as XIcon } from 'lucide-react'
+import { UserPlus, Send, Users, BellOff, Bell, Loader2, Search, X as XIcon, FileDown } from 'lucide-react'
+import { generarPdfClientes } from '../utils/generarPdfClientes'
 import { useTenant } from '@/contexts/TenantContext'
 import { useClientesPanel } from '../hooks/useClientesPanel'
 import { SegmentCards } from './SegmentCards'
@@ -154,7 +155,7 @@ export const ClientesPanelView = () => {
           </div>
         </section>
 
-        {/* ── Búsqueda ── */}
+        {/* ── Búsqueda y exportar PDF ── */}
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
@@ -174,10 +175,21 @@ export const ClientesPanelView = () => {
               </button>
             )}
           </div>
-          <div className="flex-shrink-0 flex items-center justify-center sm:justify-start gap-1.5 text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5">
-            <Users size={15} />
-            <span className="font-semibold text-gray-800 dark:text-gray-200">{filteredClientes.length}</span>
-            clientes
+          <div className="flex flex-shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => generarPdfClientes(filteredClientes, { tenantNombre: tenant.nombre })}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              title="Descargar reporte en PDF"
+            >
+              <FileDown size={18} />
+              Descargar PDF
+            </button>
+            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5">
+              <Users size={15} />
+              <span className="font-semibold text-gray-800 dark:text-gray-200">{filteredClientes.length}</span>
+              clientes
+            </div>
           </div>
         </div>
 

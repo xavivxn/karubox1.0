@@ -1,7 +1,8 @@
 'use client'
 
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { listTenants } from '@/app/actions/owner'
 import { TenantCard } from '../components/TenantCard'
 
@@ -24,8 +25,15 @@ interface OwnerDashboardProps {
 }
 
 export function OwnerDashboard({ initialTenants }: OwnerDashboardProps) {
+  const router = useRouter()
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants)
   const [refreshing, setRefreshing] = useState(false)
+  const [navigatingToNew, setNavigatingToNew] = useState(false)
+
+  const handleNewTenant = useCallback(() => {
+    setNavigatingToNew(true)
+    router.push('/owner/tenants/new')
+  }, [router])
 
   const refresh = useCallback(async () => {
     setRefreshing(true)
@@ -46,12 +54,19 @@ export function OwnerDashboard({ initialTenants }: OwnerDashboardProps) {
               : `${tenants.length} lomitería${tenants.length !== 1 ? 's' : ''} en la plataforma.`}
           </p>
         </div>
-        <Link
-          href="/owner/tenants/new"
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-lg transition text-sm"
+        <button
+          type="button"
+          onClick={handleNewTenant}
+          disabled={navigatingToNew}
+          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-lg transition text-sm disabled:opacity-80 disabled:cursor-wait"
         >
-          <span>+</span> Nueva lomitería
-        </Link>
+          {navigatingToNew ? (
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+          ) : (
+            <span>+</span>
+          )}
+          {navigatingToNew ? 'Cargando...' : 'Nueva lomitería'}
+        </button>
       </div>
 
       {/* Estado vacío */}

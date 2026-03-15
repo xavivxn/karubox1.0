@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import Link from 'next/link'
-import { Package, Mail, Phone, MapPin, Eye } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Package, Mail, Phone, MapPin, Eye, Loader2 } from 'lucide-react'
 import { toggleTenantStatus } from '@/app/actions/owner'
+
+type LoadingAction = 'detalle' | 'gestionar' | 'toggle' | null
 
 interface Tenant {
   id: string
@@ -23,7 +25,8 @@ interface TenantCardProps {
 }
 
 export function TenantCard({ tenant, onStatusChange }: TenantCardProps) {
-  const [toggling, setToggling] = useState(false)
+  const router = useRouter()
+  const [loadingAction, setLoadingAction] = useState<LoadingAction>(null)
 
   const usuariosCount = tenant.usuarios?.[0]?.count ?? 0
   const fechaCreacion = new Date(tenant.created_at).toLocaleDateString('es-PY', {
@@ -32,10 +35,20 @@ export function TenantCard({ tenant, onStatusChange }: TenantCardProps) {
     year: 'numeric',
   })
 
+  const handleDetalle = () => {
+    setLoadingAction('detalle')
+    router.push(`/owner/tenants/${tenant.id}`)
+  }
+
+  const handleGestionar = () => {
+    setLoadingAction('gestionar')
+    router.push(`/owner/tenants/${tenant.id}/productos?name=${encodeURIComponent(tenant.nombre)}`)
+  }
+
   const handleToggle = async () => {
-    setToggling(true)
+    setLoadingAction('toggle')
     await toggleTenantStatus(tenant.id, !tenant.activo)
-    setToggling(false)
+    setLoadingAction(null)
     onStatusChange()
   }
 
@@ -124,31 +137,47 @@ export function TenantCard({ tenant, onStatusChange }: TenantCardProps) {
       {/* Acciones */}
       <div className="flex flex-col gap-2 mt-auto">
         <div className="flex gap-2">
-          <Link
-            href={`/owner/tenants/${tenant.id}`}
-            className="flex-1 py-2 px-4 rounded-lg text-sm font-medium text-center transition bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700 inline-flex items-center justify-center gap-2"
+          <button
+            type="button"
+            onClick={handleDetalle}
+            disabled={loadingAction !== null}
+            className="flex-1 py-2 px-4 rounded-lg text-sm font-medium text-center transition bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700 inline-flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
           >
-            <Eye className="w-4 h-4" />
-            Detalle
-          </Link>
-          <Link
-            href={`/owner/tenants/${tenant.id}/productos?name=${encodeURIComponent(tenant.nombre)}`}
-            className="flex-1 py-2 px-4 rounded-lg text-sm font-medium text-center transition bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-900/50 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-700 inline-flex items-center justify-center gap-2"
+            {loadingAction === 'detalle' ? (
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+            {loadingAction === 'detalle' ? 'Cargando...' : 'Detalle'}
+          </button>
+          <button
+            type="button"
+            onClick={handleGestionar}
+            disabled={loadingAction !== null}
+            className="flex-1 py-2 px-4 rounded-lg text-sm font-medium text-center transition bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-900/50 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-700 inline-flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
           >
-            <Package className="w-4 h-4" />
-            Gestionar
-          </Link>
+            {loadingAction === 'gestionar' ? (
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+            ) : (
+              <Package className="w-4 h-4" />
+            )}
+            {loadingAction === 'gestionar' ? 'Cargando...' : 'Gestionar'}
+          </button>
         </div>
         <button
+          type="button"
           onClick={handleToggle}
-          disabled={toggling}
-          className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
+          disabled={loadingAction !== null}
+          className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 ${
             tenant.activo
               ? 'bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700'
               : 'bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700'
           }`}
         >
-          {toggling ? 'Actualizando...' : tenant.activo ? 'Desactivar' : 'Activar'}
+          {loadingAction === 'toggle' ? (
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+          ) : null}
+          {loadingAction === 'toggle' ? 'Actualizando...' : tenant.activo ? 'Desactivar' : 'Activar'}
         </button>
       </div>
     </div>

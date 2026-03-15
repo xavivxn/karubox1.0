@@ -6,6 +6,19 @@
 import type { ClienteFormData } from '../types/clientes.types'
 
 /**
+ * Normaliza un texto para búsqueda: minúsculas y sin tildes/acentos.
+ * Así "Iván", "ivan" e "Ivan" coinciden al buscar.
+ */
+export function normalizarParaBusqueda(texto: string): string {
+  if (!texto || typeof texto !== 'string') return ''
+  return texto
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim()
+}
+
+/**
  * Formatea una fecha a formato dd/mm/yyyy
  */
 export const formatearFecha = (fecha: string): string => {

@@ -13,7 +13,7 @@ import type {
   Segmentos,
 } from '../types/clientes.types'
 import { INITIAL_FORM_DATA } from '../types/clientes.types'
-import { validarFormulario } from '../utils/clientes.utils'
+import { validarFormulario, normalizarParaBusqueda } from '../utils/clientes.utils'
 import {
   getClientesConVisita,
   getCampanaConfig,
@@ -118,17 +118,22 @@ export const useClientesPanel = (tenantId: string | undefined): UseClientesPanel
     fetchClientes()
   }, [fetchClientes])
 
-  // ── Búsqueda (cliente-side) ───────────────
+  // ── Búsqueda (cliente-side, ignora tildes) ───────────────
   const filteredClientes = useMemo(() => {
     if (!searchTerm.trim()) return clientes
-    const lower = searchTerm.toLowerCase()
-    return clientes.filter(
-      (c) =>
-        c.nombre.toLowerCase().includes(lower) ||
-        c.telefono?.toLowerCase().includes(lower) ||
-        c.email?.toLowerCase().includes(lower) ||
-        c.ci?.toLowerCase().includes(lower)
-    )
+    const termino = normalizarParaBusqueda(searchTerm)
+    return clientes.filter((c) => {
+      const nombre = normalizarParaBusqueda(c.nombre ?? '')
+      const telefono = normalizarParaBusqueda(c.telefono ?? '')
+      const email = normalizarParaBusqueda(c.email ?? '')
+      const ci = normalizarParaBusqueda(c.ci ?? '')
+      return (
+        nombre.includes(termino) ||
+        telefono.includes(termino) ||
+        email.includes(termino) ||
+        ci.includes(termino)
+      )
+    })
   }, [clientes, searchTerm])
 
   // ── Segmentos ─────────────────────────────
@@ -242,13 +247,13 @@ export const useClientesPanel = (tenantId: string | undefined): UseClientesPanel
   const handleEditarCliente = (cliente: ClienteLocal) => {
     setEditingCliente(cliente)
     setFormData({
-      nombre: cliente.nombre || '',
-      ci: cliente.ci || '',
-      ruc: (cliente as any).ruc || '',
-      pasaporte: (cliente as any).pasaporte || '',
-      telefono: cliente.telefono || '',
-      email: cliente.email || '',
-      direccion: (cliente as any).direccion || '',
+      nombre: cliente.nombre ?? '',
+      ci: cliente.ci ?? '',
+      ruc: cliente.ruc ?? '',
+      pasaporte: cliente.pasaporte ?? '',
+      telefono: cliente.telefono ?? '',
+      email: cliente.email ?? '',
+      direccion: cliente.direccion ?? '',
     })
     setShowModal(true)
   }

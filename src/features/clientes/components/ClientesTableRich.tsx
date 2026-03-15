@@ -172,14 +172,14 @@ export const ClientesTableRich = ({
                       >
                         <button
                           onClick={() => onRowClick(cliente)}
-                          className="p-2 text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
+                          className="p-2 rounded-lg transition-colors text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 hover:text-orange-700 dark:hover:text-orange-300"
                           title="Ver detalle"
                         >
                           <Eye size={17} />
                         </button>
                         <button
                           onClick={() => onEdit(cliente)}
-                          className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                          className="p-2 rounded-lg transition-colors text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-700 dark:hover:text-blue-300"
                           title="Editar"
                         >
                           <Edit2 size={17} />

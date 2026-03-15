@@ -128,13 +128,18 @@ export function Breadcrumb() {
     } else if (pathname.startsWith('/home/pos')) {
       items.push({
         label: 'Punto de Venta',
-        path: '/home/pos',
+        path: ROUTES.PROTECTED.POS,
         icon: <ShoppingCart className="w-4 h-4" />,
       })
     } else if (pathname.startsWith('/home/pedidos')) {
       items.push({
+        label: 'Punto de Venta',
+        path: ROUTES.PROTECTED.POS,
+        icon: <ShoppingCart className="w-4 h-4" />,
+      })
+      items.push({
         label: 'Historial de pedidos',
-        path: '/home/pedidos',
+        path: ROUTES.PROTECTED.PEDIDOS,
         icon: <FileText className="w-4 h-4" />,
       })
     } else if (pathname.startsWith('/home/kds')) {
