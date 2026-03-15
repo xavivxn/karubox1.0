@@ -30,10 +30,10 @@ const WORKER_EMOJIS: Record<KitchenStage, string[]> = {
 }
 
 const STAGE_BG: Record<KitchenStage, string> = {
-  nuevo: 'from-orange-50 to-orange-100/50',
-  cocinando: 'from-red-50 to-red-100/50',
-  empacando: 'from-green-50 to-green-100/50',
-  entregado: 'from-yellow-50 to-amber-100/50',
+  nuevo: 'from-orange-50 to-orange-100/50 dark:from-gray-800 dark:to-gray-800/90',
+  cocinando: 'from-red-50 to-red-100/50 dark:from-gray-800 dark:to-gray-800/90',
+  empacando: 'from-green-50 to-green-100/50 dark:from-gray-800 dark:to-gray-800/90',
+  entregado: 'from-yellow-50 to-amber-100/50 dark:from-gray-800 dark:to-gray-800/90',
 }
 
 const EMPTY_MESSAGES: Record<KitchenStage, string> = {
@@ -109,8 +109,8 @@ function MoneyCounter({ value, label, icon }: { value: number; label: string; ic
     <div className="flex items-center gap-2">
       <span className="text-xl">{icon}</span>
       <div className="flex flex-col">
-        <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{label}</span>
-        <span className="text-lg font-black text-gray-900 tabular-nums leading-tight">
+        <span className="text-[10px] text-gray-400 dark:text-gray-400 font-semibold uppercase tracking-wider">{label}</span>
+        <span className="text-lg font-black text-gray-900 dark:text-gray-100 tabular-nums leading-tight">
           {formatted.split('').map((ch, i) => (
             <RollingDigit key={`${i}-${ch}`} digit={ch} delay={i} />
           ))}
@@ -142,7 +142,7 @@ function ComboBadge({ streak, lastOrderTime }: { streak: number; lastOrderTime: 
         <span className="text-base">{threshold.emoji}</span>
         <span>{threshold.label}</span>
       </div>
-      <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+      <div className="w-20 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-1000 ease-linear"
           style={{
@@ -249,17 +249,17 @@ function OrderCard({ order, isNew }: { order: KitchenOrder; isNew: boolean }) {
   return (
     <div
       className={`
-        relative bg-white rounded-xl shadow-sm border p-3
+        relative bg-white dark:bg-gray-700/90 rounded-xl shadow-sm border p-3
         ${isNew ? 'animate-slam-in' : 'animate-fade-in-up'}
-        ${isDone ? 'opacity-75 scale-[0.97] border-yellow-200' : 'border-gray-100'}
+        ${isDone ? 'opacity-75 scale-[0.97] border-yellow-200 dark:border-amber-700/50' : 'border-gray-100 dark:border-gray-600'}
         ${isCooking ? 'animate-fire-shimmer' : ''}
-        hover:shadow-md transition-all duration-200
+        hover:shadow-md dark:hover:shadow-black/20 transition-all duration-200
       `}
     >
       {isCooking && <EmberParticles />}
 
       <div className="flex items-center justify-between mb-1.5 relative z-[1]">
-        <span className="text-sm font-extrabold text-gray-800">#{order.numero_pedido}</span>
+        <span className="text-sm font-extrabold text-gray-800 dark:text-gray-100">#{order.numero_pedido}</span>
         <span
           className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
           style={{ backgroundColor: typeColor }}
@@ -269,12 +269,12 @@ function OrderCard({ order, isNew }: { order: KitchenOrder; isNew: boolean }) {
       </div>
 
       <div className="flex items-center justify-between mb-1.5 relative z-[1]">
-        <span className="text-xs font-bold text-green-600">{formatGs(order.total)}</span>
+        <span className="text-xs font-bold text-green-600 dark:text-green-400">{formatGs(order.total)}</span>
       </div>
 
       {!isDone && (
         <>
-          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1 relative z-[1]">
+          <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-600 rounded-full overflow-hidden mb-1 relative z-[1]">
             <div
               className="h-full rounded-full transition-all duration-1000 ease-linear"
               style={{
@@ -284,10 +284,10 @@ function OrderCard({ order, isNew }: { order: KitchenOrder; isNew: boolean }) {
             />
           </div>
           <div className="flex items-center justify-between relative z-[1]">
-            <span className="text-[11px] text-gray-400 font-medium">
+            <span className="text-[11px] text-gray-400 dark:text-gray-400 font-medium">
               {formatElapsed(order.elapsed)}
             </span>
-            <span className="text-[10px] text-gray-300">
+            <span className="text-[10px] text-gray-300 dark:text-gray-500">
               {Math.round(order.progress * 100)}%
             </span>
           </div>
@@ -295,9 +295,9 @@ function OrderCard({ order, isNew }: { order: KitchenOrder; isNew: boolean }) {
       )}
 
       {isDone && (
-        <div className="text-[11px] text-green-600 font-semibold flex items-center gap-1 relative z-[1]">
+        <div className="text-[11px] text-green-600 dark:text-green-400 font-semibold flex items-center gap-1 relative z-[1]">
           <span>✅ Listo</span>
-          <span className="text-green-500">~{formatElapsed(order.elapsed)}</span>
+          <span className="text-green-500 dark:text-green-400/90">~{formatElapsed(order.elapsed)}</span>
         </div>
       )}
     </div>
@@ -327,7 +327,7 @@ function StageColumn({
       className={`
         relative flex flex-col rounded-2xl bg-gradient-to-b ${STAGE_BG[stage]}
         border overflow-hidden min-h-[300px]
-        ${isCooking && orders.length > 0 ? 'animate-fire-shimmer' : 'border-gray-100/80'}
+        ${isCooking && orders.length > 0 ? 'animate-fire-shimmer border-gray-100/80 dark:border-gray-600' : 'border-gray-100/80 dark:border-gray-600'}
         ${isDelivered && hasNewDelivery ? 'animate-gold-pulse' : ''}
         ${hasNewOrder ? 'animate-shake' : ''}
       `}
@@ -336,14 +336,14 @@ function StageColumn({
 
       {/* Header */}
       <div
-        className="px-4 py-3 flex items-center justify-between border-b"
+        className="px-4 py-3 flex items-center justify-between border-b dark:border-gray-600"
         style={{ borderColor: `${STAGE_COLORS[stage]}25` }}
       >
         <div className="flex items-center gap-2">
           <span className={`text-xl ${isCooking ? 'animate-pulse-fire' : ''}`}>
             {STAGE_EMOJIS[stage]}
           </span>
-          <span className="text-sm font-bold text-gray-700">{STAGE_LABELS[stage]}</span>
+          <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{STAGE_LABELS[stage]}</span>
         </div>
         <span
           className="text-xs font-extrabold px-2.5 py-1 rounded-full text-white min-w-[28px] text-center"
@@ -357,7 +357,7 @@ function StageColumn({
       <div className="flex-1 p-2.5 space-y-2 overflow-y-auto custom-scrollbar">
         {orders.length === 0 && (
           <div className="flex-1 flex items-center justify-center py-8">
-            <span className="text-sm text-gray-300 italic text-center px-2">
+            <span className="text-sm text-gray-500 dark:text-gray-300 italic text-center px-2">
               {EMPTY_MESSAGES[stage]}
             </span>
           </div>
@@ -368,7 +368,7 @@ function StageColumn({
       </div>
 
       {/* Workers footer */}
-      <div className="px-3 py-2 border-t border-gray-100/60 flex items-center gap-1">
+      <div className="px-3 py-2 border-t border-gray-100/60 dark:border-gray-600 flex items-center gap-1">
         {WORKER_EMOJIS[stage].map((emoji, j) => (
           <span
             key={j}
@@ -378,9 +378,9 @@ function StageColumn({
             {emoji}
           </span>
         ))}
-        <span className="text-[10px] text-gray-400 ml-auto font-medium">
+        <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto font-medium">
           {stage === 'nuevo' && 'Recepción'}
-          {stage === 'cocinando' && 'Parrilla'}
+          {stage === 'cocinando' && 'Cocina'}
           {stage === 'empacando' && 'Empaque'}
           {stage === 'entregado' && 'Despacho'}
         </span>
@@ -587,14 +587,14 @@ export default function KitchenCanvas({
   return (
     <div className="h-full flex flex-col">
       {/* ─── Top Bar: Money counter + Combo + Rate ─── */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex-wrap gap-2">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80 flex-wrap gap-2">
         <MoneyCounter value={stats.todayRevenue} label="Facturado hoy" icon="💰" />
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-xl">⚡</span>
             <div className="flex flex-col">
-              <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Pedidos/hora</span>
-              <span className="text-lg font-black text-gray-900">{pedidosHora}</span>
+              <span className="text-[10px] text-gray-400 dark:text-gray-400 font-semibold uppercase tracking-wider">Pedidos/hora</span>
+              <span className="text-lg font-black text-gray-900 dark:text-gray-100">{pedidosHora}</span>
             </div>
           </div>
           {streak >= 3 && (

@@ -19,17 +19,17 @@ interface ClientesTableRichProps {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const SEGMENTO_DOT: Record<string, string> = {
-  activo:     'bg-green-500',
-  en_riesgo:  'bg-amber-400',
-  inactivo:   'bg-red-500',
-  sin_visita: 'bg-gray-300',
+  activo:     'bg-green-500 dark:bg-green-400',
+  en_riesgo:  'bg-amber-400 dark:bg-amber-400',
+  inactivo:   'bg-red-500 dark:bg-red-400',
+  sin_visita: 'bg-gray-300 dark:bg-gray-500',
 }
 
 const SEGMENTO_BADGE: Record<string, { label: string; cls: string }> = {
-  activo:     { label: 'Activo',     cls: 'bg-green-100 text-green-700' },
-  en_riesgo:  { label: 'En riesgo',  cls: 'bg-amber-100 text-amber-700' },
-  inactivo:   { label: 'Inactivo',   cls: 'bg-red-100 text-red-700' },
-  sin_visita: { label: 'Sin visitas',cls: 'bg-gray-100 text-gray-500' },
+  activo:     { label: 'Activo',     cls: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' },
+  en_riesgo:  { label: 'En riesgo',  cls: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' },
+  inactivo:   { label: 'Inactivo',   cls: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' },
+  sin_visita: { label: 'Sin visitas',cls: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' },
 }
 
 function diasLabel(dias: number | null): string {
@@ -50,47 +50,47 @@ export const ClientesTableRich = ({
 }: ClientesTableRichProps) => {
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
-        <p className="mt-3 text-gray-500 text-sm">Cargando clientes...</p>
+      <div className="bg-white dark:bg-gray-800/80 rounded-2xl shadow-sm dark:shadow-black/20 border border-gray-200 dark:border-gray-700 p-12 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 dark:border-orange-400" />
+        <p className="mt-3 text-gray-500 dark:text-gray-400 text-sm">Cargando clientes...</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800/80 rounded-2xl shadow-sm dark:shadow-black/20 border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
             <tr>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Cliente
               </th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Teléfono
               </th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Email
               </th>
-              <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Puntos
               </th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Última visita
               </th>
-              <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Pedidos
               </th>
-              <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Acciones
               </th>
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-600">
             {clientes.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-5 py-14 text-center text-gray-400">
+                <td colSpan={7} className="px-5 py-14 text-center text-gray-400 dark:text-gray-500">
                   {searchTerm
                     ? `No se encontraron clientes para "${searchTerm}"`
                     : 'No hay clientes registrados. Creá el primero.'}
@@ -105,7 +105,7 @@ export const ClientesTableRich = ({
                 return (
                   <tr
                     key={cliente.id}
-                    className="hover:bg-orange-50/40 transition-colors cursor-pointer"
+                    className="hover:bg-orange-50/40 dark:hover:bg-orange-900/20 transition-colors cursor-pointer"
                     onClick={() => onRowClick(cliente)}
                   >
                     {/* Nombre + dot de segmento */}
@@ -116,7 +116,7 @@ export const ClientesTableRich = ({
                           title={badge.label}
                         />
                         <div>
-                          <p className="font-semibold text-gray-900">{cliente.nombre}</p>
+                          <p className="font-semibold text-gray-900 dark:text-gray-100">{cliente.nombre}</p>
                           <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${badge.cls}`}>
                             {badge.label}
                           </span>
@@ -125,18 +125,18 @@ export const ClientesTableRich = ({
                     </td>
 
                     {/* Teléfono */}
-                    <td className="px-5 py-3.5 text-gray-600">
-                      {cliente.telefono || <span className="text-gray-300">—</span>}
+                    <td className="px-5 py-3.5 text-gray-600 dark:text-gray-400">
+                      {cliente.telefono || <span className="text-gray-300 dark:text-gray-500">—</span>}
                     </td>
 
                     {/* Email */}
-                    <td className="px-5 py-3.5 text-gray-600 max-w-[180px] truncate">
-                      {cliente.email || <span className="text-gray-300">—</span>}
+                    <td className="px-5 py-3.5 text-gray-600 dark:text-gray-400 max-w-[180px] truncate">
+                      {cliente.email || <span className="text-gray-300 dark:text-gray-500">—</span>}
                     </td>
 
                     {/* Puntos */}
                     <td className="px-5 py-3.5 text-center">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold bg-yellow-100 text-yellow-800">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200">
                         ⭐ {cliente.puntos_totales.toLocaleString()}
                       </span>
                     </td>
@@ -144,15 +144,15 @@ export const ClientesTableRich = ({
                     {/* Última visita */}
                     <td className="px-5 py-3.5">
                       <div>
-                        <p className="text-gray-700 text-xs">
+                        <p className="text-gray-700 dark:text-gray-300 text-xs">
                           {cliente.ultima_visita
                             ? formatearFecha(cliente.ultima_visita)
-                            : <span className="text-gray-400">Sin visitas</span>}
+                            : <span className="text-gray-400 dark:text-gray-500">Sin visitas</span>}
                         </p>
                         <p className={`text-xs font-semibold mt-0.5 ${
-                          segmento === 'activo' ? 'text-green-600' :
-                          segmento === 'en_riesgo' ? 'text-amber-600' :
-                          segmento === 'inactivo' ? 'text-red-600' : 'text-gray-400'
+                          segmento === 'activo' ? 'text-green-600 dark:text-green-400' :
+                          segmento === 'en_riesgo' ? 'text-amber-600 dark:text-amber-400' :
+                          segmento === 'inactivo' ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'
                         }`}>
                           {diasLabel(cliente.dias_sin_visita)}
                         </p>
@@ -160,7 +160,7 @@ export const ClientesTableRich = ({
                     </td>
 
                     {/* Total pedidos */}
-                    <td className="px-5 py-3.5 text-center text-gray-600 font-medium">
+                    <td className="px-5 py-3.5 text-center text-gray-600 dark:text-gray-400 font-medium">
                       {cliente.total_pedidos}
                     </td>
 
@@ -172,14 +172,14 @@ export const ClientesTableRich = ({
                       >
                         <button
                           onClick={() => onRowClick(cliente)}
-                          className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+                          className="p-2 text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
                           title="Ver detalle"
                         >
                           <Eye size={17} />
                         </button>
                         <button
                           onClick={() => onEdit(cliente)}
-                          className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                           title="Editar"
                         >
                           <Edit2 size={17} />
@@ -196,7 +196,7 @@ export const ClientesTableRich = ({
 
       {/* Footer contador */}
       {clientes.length > 0 && (
-        <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
+        <div className="px-5 py-3 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-400">
           {clientes.length} cliente{clientes.length !== 1 ? 's' : ''}
           {searchTerm && ' encontrados'}
         </div>

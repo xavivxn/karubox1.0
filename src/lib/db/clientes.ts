@@ -25,7 +25,7 @@ export async function buscarClientePorTelefono(telefono: string, tenantId: strin
 }
 
 /**
- * Buscar clientes por nombre, CI o teléfono (filtrado por tenant)
+ * Buscar clientes por nombre, CI o teléfono (filtrado por tenant), ordenados por puntos totales (mayor a menor)
  */
 export async function buscarClientes(termino: string, tenantId: string) {
   const { data, error } = await supabase
@@ -34,7 +34,7 @@ export async function buscarClientes(termino: string, tenantId: string) {
     .eq('tenant_id', tenantId)
     .eq('is_deleted', false)
     .or(`nombre.ilike.%${termino}%,telefono.ilike.%${termino}%,ci.ilike.%${termino}%`)
-    .order('nombre')
+    .order('puntos_totales', { ascending: false })
     .limit(20)
   
   if (error) throw error
@@ -42,7 +42,7 @@ export async function buscarClientes(termino: string, tenantId: string) {
 }
 
 /**
- * Obtener todos los clientes de un tenant
+ * Obtener todos los clientes de un tenant, ordenados por puntos totales (mayor a menor)
  */
 export async function getClientesPorTenant(tenantId: string, limite: number = 100) {
   const { data, error } = await supabase
@@ -50,7 +50,7 @@ export async function getClientesPorTenant(tenantId: string, limite: number = 10
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('is_deleted', false)
-    .order('nombre')
+    .order('puntos_totales', { ascending: false })
     .limit(limite)
   
   if (error) throw error

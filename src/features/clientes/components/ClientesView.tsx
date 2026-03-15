@@ -37,8 +37,8 @@ export const ClientesView = () => {
   // Mostrar loader mientras carga el tenant
   if (tenantLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-600 dark:text-orange-400" />
       </div>
     )
   }
@@ -49,8 +49,8 @@ export const ClientesView = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
         <ClientesHeader
           tenantName={tenant.nombre}

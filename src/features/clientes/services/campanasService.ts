@@ -18,7 +18,7 @@ export async function getClientesConVisita(tenantId: string): Promise<ClienteCon
     .from('vista_clientes_con_ultima_visita')
     .select('*')
     .eq('tenant_id', tenantId)
-    .order('nombre', { ascending: true })
+    .order('puntos_totales', { ascending: false })
 
   if (error) throw error
 

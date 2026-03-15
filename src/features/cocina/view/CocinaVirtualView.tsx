@@ -88,11 +88,11 @@ function StatCard({
   return (
     <div
       className={`
-        bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3
+        bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-600 shadow-sm dark:shadow-black/30 px-4 py-3
         flex items-center gap-3 transition-all duration-300
         ${pulse ? 'animate-pulse-red' : ''}
         ${pop ? 'animate-celebrate' : ''}
-        hover:shadow-md
+        hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/40
       `}
     >
       <div
@@ -102,8 +102,8 @@ function StatCard({
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-gray-500 font-medium truncate">{label}</p>
-        <p className="text-lg font-bold text-gray-900 truncate tabular-nums">
+        <p className="text-xs text-gray-500 dark:text-gray-300 font-medium truncate">{label}</p>
+        <p className="text-lg font-bold text-gray-900 dark:text-white truncate tabular-nums">
           {isGs ? (
             <AnimatedNumber value={value} prefix="Gs." />
           ) : (
@@ -159,7 +159,7 @@ export default function CocinaVirtualView() {
   }, [stats.todayRevenue])
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100vh-160px)]">
+    <div className="flex flex-col gap-4 h-[calc(100vh-160px)] text-gray-900 dark:text-gray-100">
       {/* Stats bar */}
       <div className="flex items-start gap-3">
         <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -202,14 +202,14 @@ export default function CocinaVirtualView() {
         {/* Trophy button */}
         <button
           onClick={() => setPanelOpen(true)}
-          className="flex-shrink-0 bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-200 rounded-2xl px-4 py-3 flex flex-col items-center gap-1 hover:shadow-lg hover:border-amber-300 transition-all group"
+          className="flex-shrink-0 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/60 dark:to-yellow-950/40 border-2 border-amber-200 dark:border-amber-700/60 rounded-2xl px-4 py-3 flex flex-col items-center gap-1 hover:shadow-lg dark:hover:shadow-amber-500/10 hover:border-amber-300 dark:hover:border-amber-600 transition-all group"
         >
           <span className="text-2xl group-hover:animate-celebrate">🏆</span>
-          <span className="text-xs font-bold text-amber-700">
+          <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
             {totalUnlocked}/{totalAchievements}
           </span>
           {dailyProgress > 0 && (
-            <div className="w-12 h-1 bg-amber-100 rounded-full overflow-hidden">
+            <div className="w-12 h-1 bg-amber-100 dark:bg-amber-900/50 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full"
                 style={{
@@ -227,18 +227,18 @@ export default function CocinaVirtualView() {
         {stageCounts.map(({ stage, count }) => (
           <div
             key={stage}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-sm dark:shadow-black/30"
             style={{ backgroundColor: STAGE_COLORS[stage] }}
           >
             <span>{STAGE_EMOJIS[stage]}</span>
             <span>{STAGE_LABELS[stage]}</span>
-            <span className="bg-white/25 px-1.5 py-0.5 rounded-full text-[10px]">{count}</span>
+            <span className="bg-white/25 dark:bg-black/20 px-1.5 py-0.5 rounded-full text-[10px]">{count}</span>
           </div>
         ))}
       </div>
 
       {/* Kitchen panel */}
-      <div className="flex-1 rounded-2xl overflow-hidden shadow-lg border border-gray-100 bg-white relative">
+      <div className="flex-1 rounded-2xl overflow-hidden shadow-lg dark:shadow-black/30 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 relative">
         <KitchenCanvas
           orders={orders}
           stats={stats}
@@ -251,7 +251,7 @@ export default function CocinaVirtualView() {
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center space-y-2">
               <div className="text-5xl">🍳</div>
-              <p className="text-sm font-medium text-gray-400">
+              <p className="text-sm font-medium text-gray-400 dark:text-gray-500">
                 Sin pedidos activos. La cocina espera...
               </p>
             </div>

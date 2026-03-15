@@ -1,5 +1,6 @@
-import Link from 'next/link'
-import { ShoppingCart, BarChart3, FileText, Users, ChefHat } from 'lucide-react'
+'use client'
+
+import { ShoppingCart, BarChart3, FileText, Users, ChefHat, Loader2 } from 'lucide-react'
 import type { DashboardCard } from '../types/home.types'
 
 const CARD_ICONS = {
@@ -21,30 +22,75 @@ const CARD_LABELS: Record<DashboardCard['icon'], string> = {
 interface DashboardCardProps {
   card: DashboardCard
   darkMode: boolean
+  isGlobalLoading?: boolean
+  isThisCardLoading?: boolean
+  onNavigateStart?: (href: string) => void
 }
 
 type CardColor = DashboardCard['color']
 
-const COLOR_MAP: Record<CardColor, { shadow: string; bgLight: string; blob: string; iconBgLight: string; iconBgDark: string; iconLight: string; iconDark: string; barLight: string; barDark: string }> = {
-  orange:  { shadow: 'hover:shadow-orange-500/20',  bgLight: 'bg-gradient-to-br from-white to-orange-50',  blob: 'bg-orange-500/10',  iconBgLight: 'bg-orange-100',  iconBgDark: 'bg-orange-500/20',  iconLight: 'text-orange-600',  iconDark: 'text-orange-400',  barLight: 'bg-orange-500',  barDark: 'bg-orange-500/50' },
-  green:   { shadow: 'hover:shadow-emerald-500/20', bgLight: 'bg-gradient-to-br from-white to-emerald-50', blob: 'bg-emerald-500/10', iconBgLight: 'bg-emerald-100', iconBgDark: 'bg-emerald-500/20', iconLight: 'text-emerald-600', iconDark: 'text-emerald-400', barLight: 'bg-emerald-500', barDark: 'bg-emerald-500/50' },
-  blue:    { shadow: 'hover:shadow-blue-500/20',    bgLight: 'bg-gradient-to-br from-white to-blue-50',    blob: 'bg-blue-500/10',    iconBgLight: 'bg-blue-100',    iconBgDark: 'bg-blue-500/20',    iconLight: 'text-blue-600',    iconDark: 'text-blue-400',    barLight: 'bg-blue-500',    barDark: 'bg-blue-500/50' },
-  purple:  { shadow: 'hover:shadow-purple-500/20',  bgLight: 'bg-gradient-to-br from-white to-purple-50',  blob: 'bg-purple-500/10',  iconBgLight: 'bg-purple-100',  iconBgDark: 'bg-purple-500/20',  iconLight: 'text-purple-600',  iconDark: 'text-purple-400',  barLight: 'bg-purple-500',  barDark: 'bg-purple-500/50' },
-  red:     { shadow: 'hover:shadow-red-500/20',     bgLight: 'bg-gradient-to-br from-white to-red-50',     blob: 'bg-red-500/10',     iconBgLight: 'bg-red-100',     iconBgDark: 'bg-red-500/20',     iconLight: 'text-red-600',     iconDark: 'text-red-400',     barLight: 'bg-red-500',     barDark: 'bg-red-500/50' },
+const COLOR_MAP: Record<CardColor, { shadow: string; bgLight: string; blob: string; iconBgLight: string; iconBgDark: string; iconLight: string; iconDark: string; barLight: string; barDark: string; ring: string }> = {
+  orange:  { shadow: 'hover:shadow-orange-500/20',  bgLight: 'bg-gradient-to-br from-white to-orange-50',  blob: 'bg-orange-500/10',  iconBgLight: 'bg-orange-100',  iconBgDark: 'bg-orange-500/20',  iconLight: 'text-orange-600',  iconDark: 'text-orange-400',  barLight: 'bg-orange-500',  barDark: 'bg-orange-500/50',  ring: 'ring-orange-500' },
+  green:   { shadow: 'hover:shadow-emerald-500/20', bgLight: 'bg-gradient-to-br from-white to-emerald-50', blob: 'bg-emerald-500/10', iconBgLight: 'bg-emerald-100', iconBgDark: 'bg-emerald-500/20', iconLight: 'text-emerald-600', iconDark: 'text-emerald-400', barLight: 'bg-emerald-500', barDark: 'bg-emerald-500/50', ring: 'ring-emerald-500' },
+  blue:    { shadow: 'hover:shadow-blue-500/20',    bgLight: 'bg-gradient-to-br from-white to-blue-50',    blob: 'bg-blue-500/10',    iconBgLight: 'bg-blue-100',    iconBgDark: 'bg-blue-500/20',    iconLight: 'text-blue-600',    iconDark: 'text-blue-400',    barLight: 'bg-blue-500',    barDark: 'bg-blue-500/50',    ring: 'ring-blue-500' },
+  purple:  { shadow: 'hover:shadow-purple-500/20',  bgLight: 'bg-gradient-to-br from-white to-purple-50',  blob: 'bg-purple-500/10',  iconBgLight: 'bg-purple-100',  iconBgDark: 'bg-purple-500/20',  iconLight: 'text-purple-600',  iconDark: 'text-purple-400',  barLight: 'bg-purple-500',  barDark: 'bg-purple-500/50',  ring: 'ring-purple-500' },
+  red:     { shadow: 'hover:shadow-red-500/20',     bgLight: 'bg-gradient-to-br from-white to-red-50',     blob: 'bg-red-500/10',     iconBgLight: 'bg-red-100',     iconBgDark: 'bg-red-500/20',     iconLight: 'text-red-600',     iconDark: 'text-red-400',     barLight: 'bg-red-500',     barDark: 'bg-red-500/50',     ring: 'ring-red-500' },
 }
 
-export function DashboardCardComponent({ card, darkMode }: DashboardCardProps) {
+export function DashboardCardComponent({
+  card,
+  darkMode,
+  isGlobalLoading = false,
+  isThisCardLoading = false,
+  onNavigateStart,
+}: DashboardCardProps) {
   const c = COLOR_MAP[card.color] ?? COLOR_MAP.blue
-  const Icon  = CARD_ICONS[card.icon]
+  const Icon = CARD_ICONS[card.icon]
   const label = CARD_LABELS[card.icon]
 
   const bgCls = darkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900' : c.bgLight
+  const isDisabled = isGlobalLoading && !isThisCardLoading
+
+  const handleClick = () => {
+    if (isGlobalLoading) return
+    onNavigateStart?.(card.href)
+  }
 
   return (
-    <Link
-      href={card.href}
-      className={`group relative overflow-hidden rounded-3xl shadow-2xl transition-all duration-300 hover:scale-105 ${c.shadow} ${bgCls}`}
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={isDisabled}
+      className={`
+        group relative overflow-hidden rounded-3xl shadow-2xl transition-all duration-300 text-left w-full
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent
+        ${isDisabled ? 'pointer-events-none opacity-60 cursor-not-allowed scale-100' : 'hover:scale-105 cursor-pointer'}
+        ${!isDisabled ? c.shadow : ''}
+        ${bgCls}
+        ${isThisCardLoading ? `ring-2 ring-offset-2 ring-offset-transparent ${c.ring}` : ''}
+      `}
+      aria-busy={isThisCardLoading}
+      aria-disabled={isDisabled}
     >
+      {/* Overlay de carga en el card activo */}
+      {isThisCardLoading && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-3xl ${
+            darkMode ? 'bg-gray-900/80' : 'bg-white/85'
+          } backdrop-blur-sm transition-opacity duration-200`}
+        >
+          <Loader2
+            className={`w-10 h-10 animate-spin ${darkMode ? c.iconDark : c.iconLight}`}
+            aria-hidden
+          />
+          <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            Cargando…
+          </span>
+        </div>
+      )}
+
       <div className={`absolute top-0 right-0 w-40 h-40 rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-500 ${c.blob}`} />
       <div className="relative p-8 space-y-4">
         <div className={`inline-flex p-4 rounded-2xl ${darkMode ? c.iconBgDark : c.iconBgLight}`}>
@@ -61,6 +107,6 @@ export function DashboardCardComponent({ card, darkMode }: DashboardCardProps) {
         </span>
       </div>
       <div className={`absolute bottom-0 left-0 right-0 h-2 ${darkMode ? c.barDark : c.barLight}`} />
-    </Link>
+    </button>
   )
 }
