@@ -41,6 +41,8 @@ export interface CartItem {
   tipo: 'producto' | 'combo' // Identifica si es producto individual o combo
   customization?: CartItemCustomization // Para productos individuales
   comboItems?: ComboProductItem[] // Para combos: lista de productos componentes
+  /** Puntos bonus por unidad definidos por el admin en este producto */
+  puntos_extra?: number
 }
 
 interface CartState {
@@ -51,7 +53,7 @@ interface CartState {
   conFactura: boolean
 
   // Acciones
-  addItem: (producto: { id: string; nombre: string; descripcion?: string; precio: number; tiene_receta?: boolean }) => void
+  addItem: (producto: { id: string; nombre: string; descripcion?: string; precio: number; tiene_receta?: boolean; puntos_extra?: number }) => void
   addComboItem: (combo: { id: string; nombre: string; descripcion?: string; precio: number; comboItems: ComboProductItem[] }) => void
   removeItem: (itemId: string) => void
   updateQuantity: (itemId: string, cantidad: number) => void
@@ -65,6 +67,8 @@ interface CartState {
   // Computed
   getTotal: () => number
   getItemCount: () => number
+  /** Calcula puntos del carrito actual: automáticos (1 pto/100 Gs) + bonus por producto */
+  getTotalPuntos: () => { puntosAuto: number; puntosExtra: number; total: number; valorGs: number }
 }
 
 const calculateSubtotal = (precioBase: number, extraCostPerUnit: number | undefined, cantidad: number) => {
@@ -83,7 +87,6 @@ export const useCartStore = create<CartState>((set, get) => ({
     const existingItem = items.find(item => item.producto_id === producto.id && item.tipo === 'producto')
 
     if (existingItem) {
-      // Si ya existe, incrementar cantidad
       set({
         items: items.map(item =>
           item.producto_id === producto.id && item.tipo === 'producto'
@@ -96,7 +99,6 @@ export const useCartStore = create<CartState>((set, get) => ({
         )
       })
     } else {
-      // Si no existe, agregar nuevo producto individual
       set({
         items: [
           ...items,
@@ -109,7 +111,8 @@ export const useCartStore = create<CartState>((set, get) => ({
             cantidad: 1,
             subtotal: producto.precio,
             extraCostPerUnit: 0,
-            tipo: 'producto' as const
+            tipo: 'producto' as const,
+            puntos_extra: producto.puntos_extra ?? 0
           }
         ]
       })
@@ -243,6 +246,17 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   getItemCount: () => {
     return get().items.reduce((count, item) => count + item.cantidad, 0)
+  },
+
+  getTotalPuntos: () => {
+    const total = get().getTotal()
+    const puntosAuto = Math.floor(total / 100)
+    const puntosExtra = get().items.reduce(
+      (sum, item) => sum + ((item.puntos_extra ?? 0) * item.cantidad),
+      0
+    )
+    const totalPuntos = puntosAuto + puntosExtra
+    return { puntosAuto, puntosExtra, total: totalPuntos, valorGs: totalPuntos * 5 }
   }
 }))
 

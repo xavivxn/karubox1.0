@@ -19,6 +19,8 @@ export interface Producto {
   disponible: boolean
   tiene_receta: boolean
   combo_items?: ComboItemDB[]
+  /** Puntos bonus adicionales que el admin asignó a este producto (por unidad) */
+  puntos_extra?: number
 }
 
 export interface FeedbackDetail {

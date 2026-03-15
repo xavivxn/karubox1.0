@@ -26,7 +26,7 @@ export const posService = {
     const supabase = createClient()
     const { data, error } = await supabase
       .from('productos')
-      .select('id,nombre,descripcion,precio,categoria_id,disponible,tiene_receta')
+      .select('id,nombre,descripcion,precio,categoria_id,disponible,tiene_receta,puntos_extra')
       .eq('tenant_id', tenantId)
       .eq('disponible', true)
       .neq('is_deleted', true)

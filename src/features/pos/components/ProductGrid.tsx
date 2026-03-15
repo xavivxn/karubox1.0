@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus } from 'lucide-react'
+import { Plus, Star } from 'lucide-react'
 import { formatGuaranies } from '@/lib/utils/format'
 import type { Producto } from '../types/pos.types'
 
@@ -59,13 +59,19 @@ export default function ProductGrid({ products, onAddProduct, loading, darkMode 
             }`}
           >
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className={`text-sm font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                   {product.nombre}
                 </span>
                 {isCombo(product) && (
                   <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300">
                     COMBO
+                  </span>
+                )}
+                {(product.puntos_extra ?? 0) > 0 && (
+                  <span className="flex-shrink-0 inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300">
+                    <Star size={8} className="fill-current" />
+                    +{product.puntos_extra} pts
                   </span>
                 )}
               </div>
@@ -97,6 +103,12 @@ export default function ProductGrid({ products, onAddProduct, loading, darkMode 
             {isCombo(product) && (
               <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300">
                 COMBO
+              </span>
+            )}
+            {!isCombo(product) && (product.puntos_extra ?? 0) > 0 && (
+              <span className="absolute top-2 right-2 inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300">
+                <Star size={8} className="fill-current" />
+                +{product.puntos_extra} pts
               </span>
             )}
             <div className={`font-semibold text-sm mb-1 group-hover:text-orange-600 transition-colors ${

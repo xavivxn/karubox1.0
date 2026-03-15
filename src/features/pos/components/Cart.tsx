@@ -1,7 +1,7 @@
 'use client'
 
 import { useCartStore, type CartItem } from '@/store/cartStore'
-import { Trash2, Plus, Minus, ShoppingBag, Settings2 } from 'lucide-react'
+import { Trash2, Plus, Minus, ShoppingBag, Settings2, Star, Zap, Gift } from 'lucide-react'
 import { formatGuaranies } from '@/lib/utils/format'
 
 type OrderTypeValue = 'delivery' | 'local' | 'para_llevar'
@@ -53,7 +53,7 @@ export default function Cart({
   darkMode,
   onEditItem
 }: Props) {
-  const { items, cliente, tipo, conFactura, removeItem, updateQuantity, getTotal, setTipo, setConFactura } = useCartStore()
+  const { items, cliente, tipo, conFactura, removeItem, updateQuantity, getTotal, getTotalPuntos, setTipo, setConFactura } = useCartStore()
   const orderTypeInactiveClasses = darkMode
     ? 'bg-gray-700/60 text-gray-200 border-gray-600 hover:bg-gray-600'
     : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
@@ -63,6 +63,7 @@ export default function Cart({
   
   const total = getTotal()
   const itemCount = items.reduce((sum, item) => sum + item.cantidad, 0)
+  const puntos = getTotalPuntos()
 
   return (
     <div className={`rounded-2xl shadow-2xl flex flex-col h-full overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -273,6 +274,38 @@ export default function Cart({
           <div className={`flex justify-between items-center py-1 ${darkMode ? 'border-b border-gray-700' : 'border-b border-gray-200'}`}>
             <span className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Total:</span>
             <span className="text-xl font-bold text-orange-600">{formatGuaranies(total)}</span>
+          </div>
+
+          {/* Preview de puntos - siempre visible */}
+          <div className={`rounded-xl px-3 py-2 ${darkMode ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-yellow-50 border border-yellow-200'}`}>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Star size={13} className="text-yellow-500 fill-yellow-500 flex-shrink-0" />
+              <span className={`text-[11px] font-bold ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                Puntos este pedido
+              </span>
+              <span className={`ml-auto text-[11px] font-bold ${darkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>
+                {puntos.total} pts
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 flex-1">
+                <Zap size={10} className={darkMode ? 'text-blue-400' : 'text-blue-500'} />
+                <span className={`text-[10px] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Auto: <span className={`font-semibold ${darkMode ? 'text-blue-300' : 'text-blue-600'}`}>{puntos.puntosAuto}</span>
+                </span>
+              </div>
+              {puntos.puntosExtra > 0 && (
+                <div className="flex items-center gap-1 flex-1">
+                  <Gift size={10} className={darkMode ? 'text-purple-400' : 'text-purple-500'} />
+                  <span className={`text-[10px] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Bonus: <span className={`font-semibold ${darkMode ? 'text-purple-300' : 'text-purple-600'}`}>+{puntos.puntosExtra}</span>
+                  </span>
+                </div>
+              )}
+              <span className={`text-[10px] font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                ≈ {formatGuaranies(puntos.valorGs)}
+              </span>
+            </div>
           </div>
 
           {/* Tipo de pedido - compacto */}

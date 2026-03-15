@@ -103,7 +103,7 @@ export default function POSView() {
                     }))
                   })
                 } else {
-                  addItem(product)
+                  addItem({ ...product, puntos_extra: product.puntos_extra ?? 0 })
                 }
               }}
               loading={loading}

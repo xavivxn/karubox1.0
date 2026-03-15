@@ -7,7 +7,7 @@
 export const THEME_CONFIG = {
   LIGHT: {
     name: 'light',
-    background: 'bg-gradient-to-br from-orange-50 via-white to-orange-50',
+    background: 'bg-white',
     text: 'text-gray-900',
     card: 'bg-white',
     border: 'border-orange-100',

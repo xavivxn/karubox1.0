@@ -1,5 +1,7 @@
-import { ClientesView } from '@/features/clientes/components/ClientesView'
+import { requireRole } from '@/lib/auth/guard'
+import { ClientesPanelView } from '@/features/clientes/components/ClientesPanelView'
 
-export default function ClientesPage() {
-  return <ClientesView />
+export default async function ClientesPage() {
+  await requireRole(['admin'], '/home/admin/clientes')
+  return <ClientesPanelView />
 }

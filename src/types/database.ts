@@ -20,6 +20,8 @@ export interface Producto {
   disponible: boolean
   imagen_url?: string
   tiene_receta: boolean
+  /** Puntos bonus adicionales por unidad vendida (sobre la acumulación auto) */
+  puntos_extra: number
   is_deleted: boolean
   deleted_at?: string
   created_at: string

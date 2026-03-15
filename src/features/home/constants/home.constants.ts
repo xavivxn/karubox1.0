@@ -35,6 +35,13 @@ export const DASHBOARD_CARDS: DashboardCard[] = [
     href: ROUTES.PROTECTED.ADMIN,
     icon: 'admin',
     color: 'blue'
+  },
+  {
+    title: 'Clientes',
+    description: 'Gestioná clientes, puntos, campañas de fidelización y mensajes.',
+    href: ROUTES.PROTECTED.CLIENTES,
+    icon: 'clientes',
+    color: 'purple'
   }
 ]
 

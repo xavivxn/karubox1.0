@@ -325,6 +325,8 @@ export interface CreateProductoOwnerData {
   categoria_id?: string
   disponible: boolean
   imagen_url?: string
+  /** Puntos bonus adicionales por unidad vendida (0 = solo fórmula automática) */
+  puntos_extra?: number
   tipo: 'con_receta' | 'combo' | 'sin_receta'
   receta?: Array<{
     ingrediente_id: string
@@ -367,7 +369,7 @@ export async function listProductosOwner(tenantId: string) {
   const adminClient = createAdminClient()
   const { data, error } = await adminClient
     .from('productos')
-    .select('id, nombre, descripcion, precio, disponible, tiene_receta, imagen_url, categoria_id')
+    .select('id, nombre, descripcion, precio, disponible, tiene_receta, imagen_url, categoria_id, puntos_extra')
     .eq('tenant_id', tenantId)
     .neq('is_deleted', true)       // cubre is_deleted = false Y is_deleted = null
     .order('nombre', { ascending: true })
@@ -473,6 +475,7 @@ export async function createProductoOwner(tenantId: string, data: CreateProducto
       disponible: data.disponible,
       imagen_url: data.imagen_url?.trim() || null,
       tiene_receta: data.tipo === 'con_receta',
+      puntos_extra: data.puntos_extra ?? 0,
       is_deleted: false,
     })
     .select('id, nombre')
@@ -601,6 +604,7 @@ export async function updateProductoOwner(
     disponible: boolean
     imagen_url?: string | null
     categoria_id?: string | null
+    puntos_extra?: number | null
   }
 ) {
   const { error: authError } = await assertOwner()
@@ -619,6 +623,7 @@ export async function updateProductoOwner(
       disponible: data.disponible,
       imagen_url: data.imagen_url?.trim() || null,
       categoria_id: data.categoria_id || null,
+      puntos_extra: data.puntos_extra ?? 0,
     })
     .eq('id', productoId)
     .eq('tenant_id', tenantId)

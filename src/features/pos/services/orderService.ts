@@ -43,7 +43,9 @@ export const orderService = {
       throw new Error('El carrito está vacío')
     }
 
-    const puntosGenerados = calcularPuntos(total)
+    const puntosAuto = calcularPuntos(total)
+    const puntosBonus = items.reduce((sum, item) => sum + ((item.puntos_extra ?? 0) * item.cantidad), 0)
+    const puntosGenerados = puntosAuto + puntosBonus
 
     // Crear pedido
     const { data: pedido, error: errorPedido } = await supabase

@@ -42,6 +42,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
   const [categoriaId, setCategoriaId] = useState('')
   const [disponible, setDisponible] = useState(true)
   const [imagenUrl, setImagenUrl] = useState('')
+  const [puntosExtra, setPuntosExtra] = useState<number>(0)
 
   // Receta fields
   const [receta, setReceta] = useState<RecetaItem[]>([])
@@ -99,6 +100,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
       setCategoriaId('')
       setDisponible(true)
       setImagenUrl('')
+      setPuntosExtra(0)
       setReceta([])
       setComboItems([])
       setSelectedIngredienteSinRecetaId('')
@@ -180,6 +182,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
       categoria_id: categoriaId,
       disponible,
       imagen_url: imagenUrl,
+      puntos_extra: puntosExtra,
       tipo: tipoProducto,
       receta: tipoProducto === 'con_receta' ? receta : undefined,
       combo_items: tipoProducto === 'combo' ? comboItems : undefined,
@@ -496,11 +499,11 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
 
             <div className="border-t border-dashed border-gray-200 dark:border-gray-700" />
 
-            {/* ── Sección 4: Precio y Categoría ── */}
+            {/* ── Sección 4: Precio, Categoría y Puntos ── */}
             <section className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white shrink-0">4</span>
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Precio y categor&iacute;a</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Precio, categor&iacute;a y puntos</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -527,6 +530,39 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                     </select>
                   )}
                 </div>
+              </div>
+
+              {/* Puntos extra bonus por unidad */}
+              <div className="rounded-xl border border-yellow-200 dark:border-yellow-700/40 bg-yellow-50 dark:bg-yellow-900/10 p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-500 text-base">⭐</span>
+                  <label htmlFor="puntos_extra" className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">
+                    Puntos bonus por unidad vendida
+                  </label>
+                  <span className="text-xs text-yellow-600 dark:text-yellow-400 font-normal">(opcional)</span>
+                </div>
+                <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                  Además de la acumulación automática (1 pto / 100 Gs), podés asignar puntos extra para incentivar este producto.
+                </p>
+                <div className="flex rounded-xl border border-yellow-300 dark:border-yellow-700 bg-white dark:bg-gray-800 overflow-hidden focus-within:border-yellow-500 focus-within:ring-2 focus-within:ring-yellow-400/20 transition">
+                  <span className="flex items-center px-3.5 text-sm font-semibold text-yellow-600 border-r border-yellow-200 dark:border-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 select-none whitespace-nowrap">pts</span>
+                  <input
+                    id="puntos_extra"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={puntosExtra}
+                    onChange={(e) => setPuntosExtra(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                    disabled={isSaving}
+                    className="flex-1 bg-transparent px-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none disabled:opacity-50"
+                    placeholder="0"
+                  />
+                </div>
+                {puntosExtra > 0 && (
+                  <p className="text-xs font-medium text-yellow-700 dark:text-yellow-300">
+                    Este producto dará {puntosExtra} pts bonus + los puntos automáticos por precio (≈ {Math.floor((parseInt(precio.replace(/\./g,''),10)||0) / 100)} pts)
+                  </p>
+                )}
               </div>
             </section>
 

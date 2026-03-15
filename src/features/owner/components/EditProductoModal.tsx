@@ -13,6 +13,7 @@ interface Producto {
   disponible: boolean
   imagen_url?: string | null
   categoria_id?: string | null
+  puntos_extra?: number | null
 }
 
 interface EditProductoModalProps {
@@ -44,6 +45,7 @@ export function EditProductoModal({ open, onClose, tenantId, producto, onSaved }
   const [disponible, setDisponible] = useState(true)
   const [imagenUrl, setImagenUrl] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
+  const [puntosExtra, setPuntosExtra] = useState<number>(0)
 
   const [categorias, setCategorias] = useState<{ id: string; nombre: string }[]>([])
   const [loadingCategorias, setLoadingCategorias] = useState(false)
@@ -62,6 +64,7 @@ export function EditProductoModal({ open, onClose, tenantId, producto, onSaved }
     setDisponible(producto.disponible)
     setImagenUrl(producto.imagen_url ?? '')
     setCategoriaId(producto.categoria_id ?? '')
+    setPuntosExtra(producto.puntos_extra ?? 0)
     setErrorMessage(null)
     setSuccessMessage(null)
   }, [open, producto])
@@ -109,6 +112,7 @@ export function EditProductoModal({ open, onClose, tenantId, producto, onSaved }
       disponible,
       imagen_url: imagenUrl.trim() || null,
       categoria_id: categoriaId || null,
+      puntos_extra: puntosExtra,
     })
     setIsSaving(false)
 
@@ -238,6 +242,37 @@ export function EditProductoModal({ open, onClose, tenantId, producto, onSaved }
                   </option>
                 ))}
               </select>
+            )}
+          </div>
+
+          {/* Puntos extra bonus */}
+          <div className="rounded-xl border border-yellow-200 dark:border-yellow-700/40 bg-yellow-50 dark:bg-yellow-900/10 p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-yellow-500">⭐</span>
+              <label className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">
+                Puntos bonus por unidad
+              </label>
+              <span className="text-xs text-yellow-600 dark:text-yellow-400 font-normal">(opcional)</span>
+            </div>
+            <p className="text-xs text-yellow-700 dark:text-yellow-400">
+              Puntos adicionales sobre la fórmula automática (1 pto / 100 Gs).
+            </p>
+            <div className="flex rounded-xl border border-yellow-300 dark:border-yellow-700 bg-white dark:bg-gray-800 overflow-hidden focus-within:border-yellow-500 focus-within:ring-2 focus-within:ring-yellow-400/20 transition">
+              <span className="flex items-center px-3.5 text-sm font-semibold text-yellow-600 border-r border-yellow-200 dark:border-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 select-none">pts</span>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={puntosExtra}
+                onChange={(e) => setPuntosExtra(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                disabled={isSaving}
+                className="flex-1 bg-transparent px-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none disabled:opacity-50"
+              />
+            </div>
+            {puntosExtra > 0 && (
+              <p className="text-xs font-medium text-yellow-700 dark:text-yellow-300">
+                Bonus activo: +{puntosExtra} pts extra por unidad vendida
+              </p>
             )}
           </div>
 

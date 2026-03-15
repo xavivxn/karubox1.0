@@ -21,6 +21,7 @@ interface Producto {
   tiene_receta: boolean
   imagen_url?: string | null
   categoria_id?: string | null
+  puntos_extra?: number | null
 }
 
 interface Tenant {
