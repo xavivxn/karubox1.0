@@ -1,12 +1,5 @@
 import { ROUTES } from '@/config'
-
-export interface DashboardCard {
-  title: string
-  description: string
-  href: string
-  icon: 'pos' | 'admin' | 'pedidos'
-  color: 'orange' | 'blue' | 'green'
-}
+import type { DashboardCard } from '../types/home.types'
 
 export interface Feature {
   icon: string
