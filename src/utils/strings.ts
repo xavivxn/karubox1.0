@@ -1,7 +1,7 @@
 
 export const LOGIN_STRINGS = {
-  LOGIN_TITLE: 'LomiPos',
-  LOGIN_SUBTITLE: 'La solución para tu negocio.',
+  LOGIN_TITLE: 'KarúBox',
+  LOGIN_SUBTITLE: 'Karú rápido, caja fácil',
 } as const
 
 export const FEATURES = [
@@ -10,11 +10,11 @@ export const FEATURES = [
     title: 'Rápido y Eficiente',
     description: 'Tomá pedidos en segundos.'
   },
-  // {
-  //   icon: '⭐',
-  //   title: 'Puntos de Fidelidad',
-  //   description: 'Premiá a tus clientes frecuentes.'
-  // },
+  {
+    icon: '⭐',
+    title: 'Puntos de Fidelidad',
+    description: 'Premiá a tus clientes frecuentes.'
+  },
   {
     icon: '📊',
     title: 'Reportes Detallados',

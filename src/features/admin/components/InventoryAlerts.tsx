@@ -9,12 +9,12 @@ import type { InventoryRecord } from '../types/admin.types'
 
 interface InventoryAlertsProps {
   lowStockItems: InventoryRecord[]
-  onOpenInventoryDrawer: () => void
+  onOpenStockDrawer: () => void
 }
 
 export const InventoryAlerts = ({
   lowStockItems,
-  onOpenInventoryDrawer
+  onOpenStockDrawer
 }: InventoryAlertsProps) => {
   return (
     <div className="rounded-3xl border border-white/40 dark:border-gray-800 bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 shadow-xl shadow-black/30">
@@ -34,7 +34,7 @@ export const InventoryAlerts = ({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-semibold">
-                    {item.productos?.nombre ?? 'Insumo sin nombre'}
+                    {item.nombre ?? item.productos?.nombre ?? 'Insumo sin nombre'}
                   </p>
                   <p className="text-xs text-white/60">
                     {item.unidad} • mínimo {item.stock_minimo}
@@ -58,10 +58,11 @@ export const InventoryAlerts = ({
         )}
       </div>
       <button
-        onClick={onOpenInventoryDrawer}
+        type="button"
+        onClick={onOpenStockDrawer}
         className="mt-6 w-full rounded-2xl bg-white text-gray-900 font-semibold py-3 hover:bg-orange-50 transition"
       >
-        Registrar movimiento
+        Cargar stock
       </button>
     </div>
   )

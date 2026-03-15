@@ -95,17 +95,25 @@ export const fetchInventory = async (tenantId: string): Promise<InventoryRecord[
 
   const inventoryRawData = data ?? []
   const inventoryData: InventoryRecord[] = inventoryRawData.map((item) => {
-    // Supabase devuelve productos como un array en este caso
-    const productosArray = item.productos as unknown as Array<{ nombre?: string | null }> | null
-    const productosNombre = productosArray && productosArray.length > 0 ? productosArray[0].nombre : null
-    
+    // Supabase puede devolver producto como objeto (FK) o array; inventario tiene columna nombre propia
+    const rawProductos = item.productos as { nombre?: string | null } | Array<{ nombre?: string | null }> | null
+    const productoNombre =
+      rawProductos == null
+        ? null
+        : Array.isArray(rawProductos)
+          ? rawProductos[0]?.nombre ?? null
+          : rawProductos.nombre ?? null
+    const inventarioNombre = (item as { nombre?: string | null }).nombre ?? null
+    const displayNombre = productoNombre || inventarioNombre || null
+
     return {
       id: String(item.id),
       stock_actual: normalizeNumber(item.stock_actual),
       stock_minimo: normalizeNumber(item.stock_minimo),
       unidad: String(item.unidad),
       controlar_stock: Boolean(item.controlar_stock),
-      productos: productosNombre ? { nombre: productosNombre } : (item as any).nombre ? { nombre: (item as any).nombre } : null
+      nombre: displayNombre,
+      productos: displayNombre ? { nombre: displayNombre } : null
     }
   })
 

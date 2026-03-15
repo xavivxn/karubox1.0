@@ -9,7 +9,8 @@ import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { IngredienteModal } from './IngredienteModal'
-import { ProductModal } from './ProductModal'
+import { OwnerProductModal } from '@/features/owner/components/OwnerProductModal'
+import { ProductosListModal } from './ProductosListModal'
 import { useAdminDashboard } from '../hooks/useAdminDashboard'
 import { AdminHeader } from './AdminHeader'
 import { AdminLoading } from './AdminLoading'
@@ -23,11 +24,17 @@ import { TopClients } from './TopClients'
 import { TopProducts } from './TopProducts'
 import { IngredientConsumption } from './IngredientConsumption'
 import { InventoryGrid } from './InventoryGrid'
+import { InventoryDrawer } from './InventoryDrawer'
 
 export const AdminView = () => {
   const { tenant, usuario, darkMode } = useTenant()
   const [showIngredienteModal, setShowIngredienteModal] = useState(false)
-  const [showProductModal, setShowProductModal] = useState(false)
+  const [showOwnerProductModal, setShowOwnerProductModal] = useState(false)
+  const [showProductosListModal, setShowProductosListModal] = useState(false)
+  const [showStockDrawer, setShowStockDrawer] = useState(false)
+
+  // Admin puede crear productos a partir de materias primas (recetas, combos, sin receta)
+  const canManageProducts = usuario?.rol === 'admin'
 
   const {
     loading,
@@ -60,8 +67,13 @@ export const AdminView = () => {
     refetch()
   }
 
-  const handleProductSaved = () => {
-    setShowProductModal(false)
+  const handleOwnerProductSaved = () => {
+    setShowOwnerProductModal(false)
+    refetch()
+  }
+
+  const handleStockDrawerSaved = () => {
+    setShowStockDrawer(false)
     refetch()
   }
 
@@ -71,7 +83,10 @@ export const AdminView = () => {
       <AdminHeader
         tenantName={tenant.nombre}
         stats={stats}
-        onOpenInventoryDrawer={() => setShowIngredienteModal(true)}
+        onOpenIngredienteModal={() => setShowIngredienteModal(true)}
+        onOpenStockDrawer={() => setShowStockDrawer(true)}
+        onOpenProductosList={canManageProducts ? () => setShowProductosListModal(true) : undefined}
+        onOpenProductModal={canManageProducts ? () => setShowOwnerProductModal(true) : undefined}
       />
 
       {/* KPI Cards principales */}
@@ -79,6 +94,7 @@ export const AdminView = () => {
         stats={stats}
         totalInventoryItems={totalInventoryItems}
         lowStockCount={lowStockItems.length}
+        darkMode={darkMode}
       />
 
       {/* Resumen diario y balance mensual */}
@@ -95,7 +111,7 @@ export const AdminView = () => {
         <WeeklyTrend stats={stats} />
         <InventoryAlerts
           lowStockItems={lowStockItems}
-          onOpenInventoryDrawer={() => setShowIngredienteModal(true)}
+          onOpenStockDrawer={() => setShowStockDrawer(true)}
         />
       </section>
 
@@ -109,8 +125,9 @@ export const AdminView = () => {
       {/* Grid completo de inventario */}
       <InventoryGrid
         inventory={inventory}
-        onOpenInventoryDrawer={() => setShowIngredienteModal(true)}
-        onOpenProductModal={() => setShowProductModal(true)}
+        onOpenIngredienteModal={() => setShowIngredienteModal(true)}
+        onOpenStockDrawer={() => setShowStockDrawer(true)}
+        onOpenProductModal={canManageProducts ? () => setShowOwnerProductModal(true) : undefined}
       />
 
       {/* Modal para registrar nuevos ingredientes */}
@@ -121,12 +138,30 @@ export const AdminView = () => {
         onSaved={handleIngredienteSaved}
       />
 
-      {/* Modal para registrar nuevos productos */}
-      <ProductModal
-        open={showProductModal}
-        onClose={() => setShowProductModal(false)}
+      {/* Modal para ver listado de productos (editar, eliminar, enlace a nuevo) */}
+      <ProductosListModal
+        open={showProductosListModal}
+        onClose={() => setShowProductosListModal(false)}
         tenantId={tenant.id}
-        onSaved={handleProductSaved}
+        onOpenCreate={() => setShowOwnerProductModal(true)}
+        onRefresh={refetch}
+      />
+
+      {/* Modal para crear productos (recetas, combos, sin receta) — mismo que en gestión owner */}
+      <OwnerProductModal
+        open={showOwnerProductModal}
+        onClose={() => setShowOwnerProductModal(false)}
+        tenantId={tenant.id}
+        onSaved={handleOwnerProductSaved}
+      />
+
+      {/* Drawer para cargar stock de materias primas existentes */}
+      <InventoryDrawer
+        open={showStockDrawer}
+        onClose={() => setShowStockDrawer(false)}
+        tenantId={tenant.id}
+        usuarioId={usuario?.id ?? null}
+        onSaved={handleStockDrawerSaved}
       />
     </>
   )

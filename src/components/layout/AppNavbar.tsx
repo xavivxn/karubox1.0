@@ -4,6 +4,7 @@ import { ReactNode, Suspense, useState, useEffect, useRef } from 'react'
 import { LogOut, Menu, UserCircle2, Sun, Moon, BarChart3, ChevronDown } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { Breadcrumb } from './Breadcrumb'
+import { LOGIN_STRINGS } from '@/utils/strings'
 
 interface AppNavbarProps {
   pageTitle: string
@@ -42,10 +43,10 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-orange-500/30">
-              KM
+            🍔
             </div>
             <div className="flex-1">
-              <p className="text-xs uppercase tracking-[0.35em] text-orange-500 mb-1">KarúPOS+</p>
+              <p className="text-xs uppercase tracking-[0.35em] text-orange-500 mb-1">{LOGIN_STRINGS.LOGIN_TITLE}</p>
               <div className="flex items-center gap-2 text-sm flex-wrap">
                 <span className={`${darkMode ? 'font-semibold text-lg text-white' : 'font-semibold text-lg text-gray-900'}`}>{pageTitle}</span>
                 <span className="text-gray-500 dark:text-gray-400 text-lg">•</span>
