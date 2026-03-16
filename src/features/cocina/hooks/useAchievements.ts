@@ -6,6 +6,7 @@ import type { KitchenOrder, KitchenStats, KitchenStage } from '../utils/cocina.u
 import {
   type Achievement,
   type AchievementStore,
+  type NextTarget,
   ALL_ACHIEVEMENTS,
   DAILY_ACHIEVEMENTS,
   GLOBAL_ACHIEVEMENTS,
@@ -13,6 +14,7 @@ import {
   saveStore,
   ensureDailyReset,
   evaluateAchievements,
+  getNextTarget,
 } from '../utils/achievements'
 
 interface UseAchievementsParams {
@@ -25,6 +27,7 @@ interface UseAchievementsParams {
 export function useAchievements({ tenantId, stats, orders, streak }: UseAchievementsParams) {
   const [store, setStore] = useState<AchievementStore | null>(null)
   const [newlyUnlocked, setNewlyUnlocked] = useState<Achievement[]>([])
+  const [nextTarget, setNextTarget] = useState<NextTarget | null>(null)
   const prevStreak = useRef(0)
   const initialized = useRef(false)
 
@@ -120,14 +123,9 @@ export function useAchievements({ tenantId, stats, orders, streak }: UseAchievem
 
     const deliveryCount = orders.filter((o) => o.tipo === 'delivery').length
 
-    const { newlyUnlocked: fresh, updatedStore } = evaluateAchievements({
-      stats,
-      orders,
-      streak,
-      stageCounts,
-      deliveryCount,
-      store,
-    })
+    const ctx = { stats, orders, streak, stageCounts, deliveryCount, store }
+
+    const { newlyUnlocked: fresh, updatedStore } = evaluateAchievements(ctx)
 
     if (fresh.length > 0) {
       setNewlyUnlocked((prev) => [...prev, ...fresh])
@@ -135,6 +133,8 @@ export function useAchievements({ tenantId, stats, orders, streak }: UseAchievem
       saveStore(tenantId, updatedStore)
       playAchievementSound()
     }
+
+    setNextTarget(getNextTarget({ ...ctx, store: updatedStore }))
   }, [tenantId, store, stats, orders, streak])
 
   // Daily reset check (runs every minute)
@@ -194,5 +194,6 @@ export function useAchievements({ tenantId, stats, orders, streak }: UseAchievem
     isUnlocked,
     getUnlockTime,
     store,
+    nextTarget,
   }
 }

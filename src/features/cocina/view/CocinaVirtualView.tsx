@@ -8,6 +8,8 @@ import { STAGE_COLORS, STAGE_EMOJIS, STAGE_LABELS, type KitchenStage } from '../
 import KitchenCanvas from '../components/KitchenCanvas'
 import AchievementToastStack from '../components/AchievementToast'
 import AchievementsPanel from '../components/AchievementsPanel'
+import DiamondTrophyShowcase from '../components/DiamondTrophyShowcase'
+import type { Achievement } from '../utils/achievements'
 
 const STAGES: KitchenStage[] = ['nuevo', 'cocinando', 'empacando', 'entregado']
 
@@ -124,6 +126,12 @@ export default function CocinaVirtualView() {
 
   const [streak, setStreak] = useState(0)
   const [panelOpen, setPanelOpen] = useState(false)
+  const [showcaseAchievement, setShowcaseAchievement] = useState<Achievement | null>(null)
+
+  const handleDiamondClick = useCallback((achievement: Achievement) => {
+    setShowcaseAchievement(achievement)
+    setPanelOpen(false)
+  }, [])
 
   const handleStreakChange = useCallback((s: number) => {
     setStreak(s)
@@ -139,6 +147,7 @@ export default function CocinaVirtualView() {
     dailyTotal,
     totalUnlocked,
     totalAchievements,
+    nextTarget,
   } = useAchievements({
     tenantId: tenant?.id,
     stats,
@@ -245,6 +254,7 @@ export default function CocinaVirtualView() {
           newDeliveryIds={newDeliveryIds}
           onDeliveryAnimated={clearDelivery}
           onStreakChange={handleStreakChange}
+          nextTarget={nextTarget}
         />
 
         {orders.length === 0 && (
@@ -276,6 +286,14 @@ export default function CocinaVirtualView() {
         dailyTotal={dailyTotal}
         totalUnlocked={totalUnlocked}
         totalAchievements={totalAchievements}
+        onDiamondClick={handleDiamondClick}
+      />
+
+      {/* Diamond Trophy Showcase */}
+      <DiamondTrophyShowcase
+        achievement={showcaseAchievement}
+        tenantNombre={tenant?.nombre ?? 'Tu Local'}
+        onClose={() => setShowcaseAchievement(null)}
       />
     </div>
   )

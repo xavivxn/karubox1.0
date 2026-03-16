@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { type Achievement, TIER_COLORS, TIER_LABELS } from '../utils/achievements'
 
 interface AchievementToastProps {
@@ -9,30 +10,26 @@ interface AchievementToastProps {
 }
 
 function AchievementToastItem({ achievement, onDismiss }: AchievementToastProps) {
-  const [exiting, setExiting] = useState(false)
   const tierColor = TIER_COLORS[achievement.tier]
 
   useEffect(() => {
-    const exitTimer = setTimeout(() => setExiting(true), 3600)
-    const removeTimer = setTimeout(() => onDismiss(achievement.id), 4200)
-    return () => {
-      clearTimeout(exitTimer)
-      clearTimeout(removeTimer)
-    }
+    const removeTimer = setTimeout(() => onDismiss(achievement.id), 4500)
+    return () => clearTimeout(removeTimer)
   }, [achievement.id, onDismiss])
 
   return (
-    <div
-      className={`
-        relative overflow-hidden rounded-2xl shadow-2xl border-2 px-5 py-4
-        flex items-center gap-4 min-w-[320px] max-w-[400px]
-        bg-white backdrop-blur-sm
-        ${exiting ? 'animate-achievement-out' : 'animate-achievement-in'}
-      `}
+    <motion.div
+      layout
+      initial={{ x: 420, opacity: 0, rotate: 8, scale: 0.82 }}
+      animate={{ x: 0, opacity: 1, rotate: 0, scale: 1 }}
+      exit={{ x: 420, opacity: 0, scale: 0.88, transition: { duration: 0.22, ease: 'easeIn' } }}
+      transition={{ type: 'spring', bounce: 0.45, duration: 0.52 }}
+      className="relative overflow-hidden rounded-2xl shadow-2xl border-2 px-5 py-4 flex items-center gap-4 min-w-[320px] max-w-[400px] bg-white backdrop-blur-sm cursor-pointer"
       style={{
         borderColor: tierColor,
-        boxShadow: `0 0 20px ${tierColor}40, 0 4px 20px rgba(0,0,0,0.15)`,
+        boxShadow: `0 0 24px ${tierColor}50, 0 6px 24px rgba(0,0,0,0.15)`,
       }}
+      onClick={() => onDismiss(achievement.id)}
     >
       {/* Tier shimmer background */}
       <div
@@ -43,8 +40,11 @@ function AchievementToastItem({ achievement, onDismiss }: AchievementToastProps)
         }}
       />
 
-      {/* Medal icon */}
-      <div
+      {/* Medal icon — bounces in with extra spring */}
+      <motion.div
+        initial={{ scale: 0, rotate: -20 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', bounce: 0.7, duration: 0.6, delay: 0.12 }}
         className="relative z-[1] w-14 h-14 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 animate-tier-glow"
         style={{
           background: `linear-gradient(135deg, ${tierColor}30, ${tierColor}10)`,
@@ -52,10 +52,15 @@ function AchievementToastItem({ achievement, onDismiss }: AchievementToastProps)
         } as React.CSSProperties}
       >
         {achievement.emoji}
-      </div>
+      </motion.div>
 
-      {/* Content */}
-      <div className="relative z-[1] flex-1 min-w-0">
+      {/* Content slides in slightly after icon */}
+      <motion.div
+        initial={{ opacity: 0, x: 12 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.18, duration: 0.3 }}
+        className="relative z-[1] flex-1 min-w-0"
+      >
         <div className="flex items-center gap-2 mb-0.5">
           <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: tierColor }}>
             {TIER_LABELS[achievement.tier]}
@@ -70,16 +75,16 @@ function AchievementToastItem({ achievement, onDismiss }: AchievementToastProps)
         <p className="text-xs text-gray-500 truncate">
           {achievement.description}
         </p>
-      </div>
+      </motion.div>
 
       {/* Close button */}
       <button
-        onClick={() => onDismiss(achievement.id)}
+        onClick={(e) => { e.stopPropagation(); onDismiss(achievement.id) }}
         className="relative z-[1] text-gray-300 hover:text-gray-500 transition-colors text-lg"
       >
         ×
       </button>
-    </div>
+    </motion.div>
   )
 }
 
@@ -90,17 +95,17 @@ export default function AchievementToastStack({
   achievements: Achievement[]
   onDismiss: (id: string) => void
 }) {
-  if (achievements.length === 0) return null
-
   return (
     <div className="fixed top-4 right-4 z-50 flex flex-col gap-3 pointer-events-auto">
-      {achievements.slice(0, 3).map((ach) => (
-        <AchievementToastItem
-          key={ach.id}
-          achievement={ach}
-          onDismiss={onDismiss}
-        />
-      ))}
+      <AnimatePresence mode="popLayout">
+        {achievements.slice(0, 3).map((ach) => (
+          <AchievementToastItem
+            key={ach.id}
+            achievement={ach}
+            onDismiss={onDismiss}
+          />
+        ))}
+      </AnimatePresence>
     </div>
   )
 }

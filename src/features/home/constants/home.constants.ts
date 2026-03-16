@@ -37,8 +37,8 @@ export const DASHBOARD_CARDS: DashboardCard[] = [
     color: 'purple'
   },
   {
-    title: 'Cocina Virtual',
-    description: 'Visualizá el flujo de pedidos en tu cocina 3D en tiempo real.',
+    title: 'Cocina en Vivo',
+    description: 'Seguí cada pedido en tiempo real: recibido, cocinando, empacando y entregado.',
     href: ROUTES.PROTECTED.COCINA,
     icon: 'cocina',
     color: 'red'

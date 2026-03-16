@@ -43,7 +43,7 @@ export const TIER_COLORS: Record<AchievementTier, string> = {
   bronze: '#CD7F32',
   silver: '#C0C0C0',
   gold: '#FFD700',
-  diamond: '#B9F2FF',
+  diamond: '#a78bfa',
 }
 
 export const TIER_LABELS: Record<AchievementTier, string> = {
@@ -72,11 +72,35 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     type: 'daily',
   },
   {
+    id: 'primer-delivery',
+    name: 'Primer Delivery',
+    description: 'El primer pedido delivery del día',
+    tier: 'bronze',
+    emoji: '🛵',
+    type: 'daily',
+  },
+  {
+    id: 'calentando',
+    name: 'Calentando Motores',
+    description: '3 pedidos en el día',
+    tier: 'bronze',
+    emoji: '🔥',
+    type: 'daily',
+  },
+  {
     id: 'desayuno-listo',
     name: 'Desayuno Listo',
     description: '5 pedidos antes del mediodía',
     tier: 'bronze',
     emoji: '🌅',
+    type: 'daily',
+  },
+  {
+    id: 'en-ritmo',
+    name: 'En Ritmo',
+    description: '5 pedidos en el día',
+    tier: 'bronze',
+    emoji: '🎵',
     type: 'daily',
   },
   {
@@ -92,7 +116,31 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     name: 'Delivery King',
     description: '10 deliveries en el día',
     tier: 'silver',
-    emoji: '🛵',
+    emoji: '🦁',
+    type: 'daily',
+  },
+  {
+    id: 'media-maquina',
+    name: 'Media Máquina',
+    description: '15 pedidos en el día',
+    tier: 'silver',
+    emoji: '⚙️',
+    type: 'daily',
+  },
+  {
+    id: 'tesoro',
+    name: 'Tesoro',
+    description: 'Facturar 500.000 Gs en el día',
+    tier: 'silver',
+    emoji: '💰',
+    type: 'daily',
+  },
+  {
+    id: 'velocista',
+    name: 'Velocista',
+    description: '20 pedidos en el día',
+    tier: 'gold',
+    emoji: '⚡',
     type: 'daily',
   },
   {
@@ -117,6 +165,14 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     description: 'Facturar más de 1.000.000 Gs',
     tier: 'gold',
     emoji: '💵',
+    type: 'daily',
+  },
+  {
+    id: 'double-million',
+    name: 'Doble Millón',
+    description: 'Facturar más de 2.000.000 Gs',
+    tier: 'gold',
+    emoji: '💸',
     type: 'daily',
   },
   {
@@ -157,6 +213,14 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     description: 'Alcanzar un combo x10',
     tier: 'diamond',
     emoji: '👑',
+    type: 'daily',
+  },
+  {
+    id: 'tren-bala',
+    name: 'Tren Bala',
+    description: '30 pedidos en 3 horas',
+    tier: 'diamond',
+    emoji: '🚄',
     type: 'daily',
   },
 ]
@@ -329,12 +393,18 @@ type EvalFn = (ctx: AchievementEvalContext) => boolean
 
 const DAILY_EVAL: Record<string, EvalFn> = {
   'primer-pedido': (ctx) => ctx.stats.todayTotal >= 1,
+  'primer-delivery': (ctx) => ctx.deliveryCount >= 1,
+  'calentando': (ctx) => ctx.stats.todayTotal >= 3,
   'desayuno-listo': (ctx) => {
     const hour = new Date().getHours()
     return hour < 12 && ctx.stats.todayTotal >= 5
   },
+  'en-ritmo': (ctx) => ctx.stats.todayTotal >= 5,
   'manos-calientes': (ctx) => ctx.stats.todayTotal >= 10,
   'delivery-king': (ctx) => ctx.deliveryCount >= 10,
+  'media-maquina': (ctx) => ctx.stats.todayTotal >= 15,
+  'tesoro': (ctx) => ctx.stats.todayRevenue >= 500_000,
+  'velocista': (ctx) => ctx.stats.todayTotal >= 20,
   'la-maquina': (ctx) => ctx.stats.todayTotal >= 25,
   'hora-pico': (ctx) => {
     const now = new Date()
@@ -346,6 +416,7 @@ const DAILY_EVAL: Record<string, EvalFn> = {
     return recentOrders.length >= 10
   },
   'millonario': (ctx) => ctx.stats.todayRevenue >= 1_000_000,
+  'double-million': (ctx) => ctx.stats.todayRevenue >= 2_000_000,
   'imparable': (ctx) => ctx.stats.todayTotal >= 50,
   'multimillonario': (ctx) => ctx.stats.todayRevenue >= 5_000_000,
   'cocina-llena': (ctx) => {
@@ -354,6 +425,13 @@ const DAILY_EVAL: Record<string, EvalFn> = {
   },
   'combo-master': (ctx) => ctx.streak >= 5,
   'leyenda-del-dia': (ctx) => ctx.streak >= 10,
+  'tren-bala': (ctx) => {
+    const threeHoursAgo = Date.now() - 3 * 60 * 60 * 1000
+    const recentOrders = ctx.orders.filter(
+      (o) => new Date(o.created_at).getTime() >= threeHoursAgo
+    )
+    return recentOrders.length >= 30
+  },
 }
 
 const GLOBAL_EVAL: Record<string, EvalFn> = {
@@ -425,4 +503,71 @@ export function getGlobalProgress(
     default:
       return null
   }
+}
+
+/* ═══════════════ NEXT TARGET PROGRESS ═══════════════ */
+
+type ProgressFn = (ctx: AchievementEvalContext) => { current: number; target: number } | null
+
+const DAILY_PROGRESS: Record<string, ProgressFn> = {
+  'primer-pedido':   (ctx) => ({ current: Math.min(ctx.stats.todayTotal, 1), target: 1 }),
+  'primer-delivery': (ctx) => ({ current: Math.min(ctx.deliveryCount, 1), target: 1 }),
+  'calentando':      (ctx) => ({ current: Math.min(ctx.stats.todayTotal, 3), target: 3 }),
+  'desayuno-listo':  (ctx) => ({ current: Math.min(ctx.stats.todayTotal, 5), target: 5 }),
+  'en-ritmo':        (ctx) => ({ current: Math.min(ctx.stats.todayTotal, 5), target: 5 }),
+  'manos-calientes': (ctx) => ({ current: Math.min(ctx.stats.todayTotal, 10), target: 10 }),
+  'delivery-king':   (ctx) => ({ current: Math.min(ctx.deliveryCount, 10), target: 10 }),
+  'media-maquina':   (ctx) => ({ current: Math.min(ctx.stats.todayTotal, 15), target: 15 }),
+  'tesoro':          (ctx) => ({ current: Math.min(ctx.stats.todayRevenue, 500_000), target: 500_000 }),
+  'velocista':       (ctx) => ({ current: Math.min(ctx.stats.todayTotal, 20), target: 20 }),
+  'la-maquina':      (ctx) => ({ current: Math.min(ctx.stats.todayTotal, 25), target: 25 }),
+  'hora-pico': (ctx) => {
+    const oneHourAgo = Date.now() - 60 * 60 * 1000
+    const recent = ctx.orders.filter((o) => new Date(o.created_at).getTime() >= oneHourAgo)
+    return { current: Math.min(recent.length, 10), target: 10 }
+  },
+  'millonario':      (ctx) => ({ current: Math.min(ctx.stats.todayRevenue, 1_000_000), target: 1_000_000 }),
+  'double-million':  (ctx) => ({ current: Math.min(ctx.stats.todayRevenue, 2_000_000), target: 2_000_000 }),
+  'imparable':       (ctx) => ({ current: Math.min(ctx.stats.todayTotal, 50), target: 50 }),
+  'multimillonario': (ctx) => ({ current: Math.min(ctx.stats.todayRevenue, 5_000_000), target: 5_000_000 }),
+  'cocina-llena': (ctx) => {
+    const stages: KitchenStage[] = ['nuevo', 'cocinando', 'empacando', 'entregado']
+    return { current: stages.filter((s) => ctx.stageCounts[s] > 0).length, target: 4 }
+  },
+  'combo-master':    (ctx) => ({ current: Math.min(ctx.streak, 5), target: 5 }),
+  'leyenda-del-dia': (ctx) => ({ current: Math.min(ctx.streak, 10), target: 10 }),
+  'tren-bala': (ctx) => {
+    const threeHoursAgo = Date.now() - 3 * 60 * 60 * 1000
+    const recent = ctx.orders.filter((o) => new Date(o.created_at).getTime() >= threeHoursAgo)
+    return { current: Math.min(recent.length, 30), target: 30 }
+  },
+}
+
+export interface NextTarget {
+  achievement: Achievement
+  current: number
+  target: number
+  isRevenue: boolean
+}
+
+export function getNextTarget(ctx: AchievementEvalContext): NextTarget | null {
+  let best: NextTarget | null = null
+  let bestRatio = -1
+
+  for (const ach of DAILY_ACHIEVEMENTS) {
+    if (isDailyUnlocked(ctx.store, ach.id)) continue
+    const progressFn = DAILY_PROGRESS[ach.id]
+    if (!progressFn) continue
+    const progress = progressFn(ctx)
+    if (!progress) continue
+    const ratio = progress.current / progress.target
+    if (ratio >= 1) continue
+    if (ratio > bestRatio) {
+      bestRatio = ratio
+      const isRevenue = ['tesoro', 'millonario', 'double-million', 'multimillonario'].includes(ach.id)
+      best = { achievement: ach, current: progress.current, target: progress.target, isRevenue }
+    }
+  }
+
+  return best
 }
