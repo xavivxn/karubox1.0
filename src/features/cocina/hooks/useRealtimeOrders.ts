@@ -103,6 +103,12 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
 
     if (data) {
       const processed = processRawOrders(data)
+
+      // Marcar como ya explotadas todas las entregas existentes en el snapshot inicial
+      const initialDelivered = processed.filter((o) => o.stage === 'entregado')
+      explodedRef.current = new Set(initialDelivered.map((o) => o.id))
+      setNewDeliveryIds([])
+
       setOrders(processed)
       setStats(computeStats(processed))
     }

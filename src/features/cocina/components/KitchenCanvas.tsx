@@ -474,6 +474,7 @@ export default function KitchenCanvas({
 }) {
   const soundPlayed = useRef<Set<string>>(new Set())
   const prevOrderCount = useRef(orders.length)
+  const hasInitializedOrders = useRef(false)
   const prevSessionId = useRef<string | undefined>(sessionId ?? undefined)
   const [newOrderStages, setNewOrderStages] = useState<Set<KitchenStage>>(new Set())
   const [tickerEvents, setTickerEvents] = useState<TickerEvent[]>([])
@@ -483,9 +484,16 @@ export default function KitchenCanvas({
   const [record, setRecord] = useState<string | null>(null)
   const bestRevenueRef = useRef(0)
 
-  // Reiniciar racha solo al empezar un nuevo turno (Empezar el día), no al cerrar caja
   useEffect(() => {
-    if (sessionId && sessionId !== prevSessionId.current) {
+    // Caja cerrada o sin sesión: nunca debe haber combo activo
+    if (!sessionId) {
+      setStreak(0)
+      prevSessionId.current = undefined
+      return
+    }
+
+    // Reiniciar racha al empezar un nuevo turno (Empezar el día)
+    if (sessionId !== prevSessionId.current) {
       setStreak(0)
       prevSessionId.current = sessionId
     }
@@ -494,6 +502,14 @@ export default function KitchenCanvas({
   // Detect new orders → sound + streak + ticker
   useEffect(() => {
     const count = orders.length
+
+    // Primer snapshot: no considerar pedidos como nuevos ni disparar animaciones/sonidos
+    if (!hasInitializedOrders.current) {
+      prevOrderCount.current = count
+      hasInitializedOrders.current = true
+      return
+    }
+
     if (count > prevOrderCount.current) {
       const diff = count - prevOrderCount.current
       const newOrders = orders.slice(0, diff)
@@ -579,6 +595,13 @@ export default function KitchenCanvas({
     return () => clearInterval(interval)
   }, [streak])
 
+  // Si no hay pedidos activos, no tiene sentido mostrar combo
+  useEffect(() => {
+    if (orders.length === 0 || stats.activeCount === 0) {
+      setStreak(0)
+    }
+  }, [orders.length, stats.activeCount])
+
   // Report streak to parent
   useEffect(() => {
     onStreakChange?.(streak)
@@ -633,7 +656,7 @@ export default function KitchenCanvas({
               <span className="text-lg font-black text-gray-900 dark:text-gray-100">{pedidosHora}</span>
             </div>
           </div>
-          {streak >= 3 && (
+          {streak >= 3 && stats.activeCount > 0 && (
             <ComboBadge streak={streak} lastOrderTime={lastOrderTime.current} />
           )}
         </div>
