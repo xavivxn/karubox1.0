@@ -8,6 +8,8 @@ interface Props {
   products: Producto[]
   onAddProduct: (product: Producto) => void
   loading?: boolean
+  /** Mientras es true, no se puede agregar al carrito (ej. verificando estado de caja) */
+  verificandoCaja?: boolean
   darkMode?: boolean
 }
 
@@ -15,7 +17,8 @@ function isCombo(product: Producto): boolean {
   return Boolean(product.combo_items && product.combo_items.length > 0)
 }
 
-export default function ProductGrid({ products, onAddProduct, loading, darkMode }: Props) {
+export default function ProductGrid({ products, onAddProduct, loading, verificandoCaja, darkMode }: Props) {
+  const canAdd = !verificandoCaja
   if (loading) {
     return (
       <div className={`rounded-2xl shadow-lg p-4 sm:p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -44,6 +47,11 @@ export default function ProductGrid({ products, onAddProduct, loading, darkMode 
     <div className={`rounded-2xl shadow-lg p-3 sm:p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
       <h2 className={`text-lg sm:text-2xl font-bold mb-3 sm:mb-6 px-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
         Productos <span className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>({products.length})</span>
+        {verificandoCaja && (
+          <span className={`ml-2 text-xs font-normal ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+            Verificando caja…
+          </span>
+        )}
       </h2>
 
       {/* Mobile: lista compacta de filas */}
@@ -51,11 +59,15 @@ export default function ProductGrid({ products, onAddProduct, loading, darkMode 
         {products.map((product) => (
           <button
             key={product.id}
-            onClick={() => onAddProduct(product)}
+            onClick={() => canAdd && onAddProduct(product)}
+            disabled={!canAdd}
+            title={!canAdd ? 'Verificando estado de caja...' : undefined}
             className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-left transition-colors active:scale-[0.98] ${
-              darkMode
-                ? 'bg-gray-700/50 active:bg-gray-600'
-                : 'bg-gray-50 active:bg-orange-50'
+              !canAdd
+                ? 'opacity-70 cursor-not-allowed'
+                : darkMode
+                  ? 'bg-gray-700/50 active:bg-gray-600'
+                  : 'bg-gray-50 active:bg-orange-50'
             }`}
           >
             <div className="flex-1 min-w-0">
@@ -93,11 +105,17 @@ export default function ProductGrid({ products, onAddProduct, loading, darkMode 
         {products.map((product) => (
           <button
             key={product.id}
-            onClick={() => onAddProduct(product)}
-            className={`group relative p-4 rounded-xl border hover:border-orange-400 hover:shadow-lg transition-all duration-200 text-left overflow-hidden ${
-              darkMode
-                ? 'bg-gray-700/60 border-gray-600 hover:bg-gray-700'
-                : 'bg-white border-gray-200 hover:bg-orange-50/40'
+            onClick={() => canAdd && onAddProduct(product)}
+            disabled={!canAdd}
+            title={!canAdd ? 'Verificando estado de caja...' : undefined}
+            className={`group relative p-4 rounded-xl border transition-all duration-200 text-left overflow-hidden ${
+              !canAdd
+                ? 'opacity-70 cursor-not-allowed border-gray-400/50'
+                : `hover:border-orange-400 hover:shadow-lg ${
+                    darkMode
+                      ? 'bg-gray-700/60 border-gray-600 hover:bg-gray-700'
+                      : 'bg-white border-gray-200 hover:bg-orange-50/40'
+                  }`
             }`}
           >
             {isCombo(product) && (

@@ -31,7 +31,7 @@ export default function POSView() {
 
   const { usuario, tenant, loading: tenantLoading, darkMode, isAdmin } = useTenant()
   const { items, addItem, addComboItem } = useCartStore()
-  const { sesionAbierta } = useEstadoCaja(tenant?.id ?? null)
+  const { sesionAbierta, loading: loadingCaja } = useEstadoCaja(tenant?.id ?? null)
   const { categorias, productos, loading, feedback: dataFeedback } = usePOSData()
   const { handleConfirmOrder, isProcessing } = useOrderConfirmation()
 
@@ -43,6 +43,7 @@ export default function POSView() {
     : productos
 
   const onConfirmOrder = async () => {
+    if (loadingCaja) return
     if (!sesionAbierta) {
       setShowCajaCerradaModal(true)
       return
@@ -54,6 +55,7 @@ export default function POSView() {
   }
 
   const onAddProduct = (product: Producto) => {
+    if (loadingCaja) return
     if (items.length === 0 && !sesionAbierta) {
       setShowCajaCerradaModal(true)
       return
@@ -159,6 +161,7 @@ export default function POSView() {
               products={filteredProducts}
               onAddProduct={onAddProduct}
               loading={loading}
+              verificandoCaja={loadingCaja}
               darkMode={darkMode}
             />
           </div>
