@@ -3,12 +3,15 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { useTenant } from '@/contexts/TenantContext'
 import { useEstadoCaja } from '@/features/caja/hooks/useEstadoCaja'
+import { getSesionesPasadasAction } from '@/app/actions/caja'
+import type { SesionCaja } from '@/features/caja/types/caja.types'
 import { useRealtimeOrders } from '../hooks/useRealtimeOrders'
 import { useAchievements } from '../hooks/useAchievements'
 import { STAGE_COLORS, STAGE_EMOJIS, STAGE_LABELS, type KitchenStage } from '../utils/cocina.utils'
 import KitchenCanvas from '../components/KitchenCanvas'
 import AchievementToastStack from '../components/AchievementToast'
 import AchievementsPanel from '../components/AchievementsPanel'
+import DiamondTrophyShowcase from '../components/DiamondTrophyShowcase'
 
 const STAGES: KitchenStage[] = ['nuevo', 'cocinando', 'empacando', 'entregado']
 
@@ -130,6 +133,20 @@ export default function CocinaVirtualView() {
 
   const [streak, setStreak] = useState(0)
   const [panelOpen, setPanelOpen] = useState(false)
+  const [showcaseAchievement, setShowcaseAchievement] = useState<import('../utils/achievements').Achievement | null>(null)
+  const [sesiones, setSesiones] = useState<SesionCaja[]>([])
+
+  useEffect(() => {
+    if (!tenant?.id) return
+    getSesionesPasadasAction(tenant.id, 60).then(res => {
+      if (res.success) setSesiones(res.data)
+    })
+  }, [tenant?.id])
+
+  const handleDiamondClick = useCallback((achievement: import('../utils/achievements').Achievement) => {
+    setShowcaseAchievement(achievement)
+    setPanelOpen(false)
+  }, [])
 
   const handleStreakChange = useCallback((s: number) => {
     setStreak(s)
@@ -147,6 +164,7 @@ export default function CocinaVirtualView() {
     totalAchievements,
   } = useAchievements({
     tenantId: tenant?.id,
+    sessionId: sesionAbierta?.id,
     stats,
     orders,
     streak,
@@ -272,7 +290,21 @@ export default function CocinaVirtualView() {
         dailyTotal={dailyTotal}
         totalUnlocked={totalUnlocked}
         totalAchievements={totalAchievements}
+        sesiones={sesiones}
+        onDiamondClick={(a) => {
+          setShowcaseAchievement(a)
+          setPanelOpen(false)
+        }}
       />
+
+      {/* Diamond Trophy Showcase (full-screen trophy view) */}
+      {showcaseAchievement && (
+        <DiamondTrophyShowcase
+          achievement={showcaseAchievement}
+          onClose={() => setShowcaseAchievement(null)}
+          tenantNombre={tenant?.nombre ?? 'Karúbox'}
+        />
+      )}
     </div>
   )
 }

@@ -13,33 +13,36 @@ import {
   loadStore,
   saveStore,
   ensureDailyReset,
+  ensureSessionReset,
   evaluateAchievements,
   getNextTarget,
 } from '../utils/achievements'
 
 interface UseAchievementsParams {
   tenantId: string | undefined
+  /** Id de la sesión de caja abierta; al cambiar (nuevo turno), se reinician los logros del día */
+  sessionId?: string
   stats: KitchenStats
   orders: KitchenOrder[]
   streak: number
 }
 
-export function useAchievements({ tenantId, stats, orders, streak }: UseAchievementsParams) {
+export function useAchievements({ tenantId, sessionId, stats, orders, streak }: UseAchievementsParams) {
   const [store, setStore] = useState<AchievementStore | null>(null)
   const [newlyUnlocked, setNewlyUnlocked] = useState<Achievement[]>([])
   const [nextTarget, setNextTarget] = useState<NextTarget | null>(null)
   const prevStreak = useRef(0)
   const initialized = useRef(false)
-
-  // Load store on mount
+  // Carga y sincronización por tenant y sesión: al cambiar turno (sessionId) se reinician logros del día
   useEffect(() => {
     if (!tenantId) return
     const loaded = loadStore(tenantId)
-    const { store: resetStore } = ensureDailyReset(loaded)
+    const { store: afterSession } = ensureSessionReset(loaded, sessionId)
+    const { store: resetStore } = ensureDailyReset(afterSession)
     setStore(resetStore)
     saveStore(tenantId, resetStore)
     initialized.current = true
-  }, [tenantId])
+  }, [tenantId, sessionId])
 
   // Track combo milestones for lifetime stats
   useEffect(() => {
@@ -137,7 +140,7 @@ export function useAchievements({ tenantId, stats, orders, streak }: UseAchievem
     setNextTarget(getNextTarget({ ...ctx, store: updatedStore }))
   }, [tenantId, store, stats, orders, streak])
 
-  // Daily reset check (runs every minute)
+  // Daily reset check (medianoche, runs every minute)
   useEffect(() => {
     if (!tenantId || !store) return
     const interval = setInterval(() => {

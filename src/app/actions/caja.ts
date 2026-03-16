@@ -158,6 +158,33 @@ export async function cerrarCajaAction(
 }
 
 /**
+ * Devuelve el historial de sesiones de caja (cerradas + abierta si existe),
+ * ordenadas de más reciente a más antigua. Útil para el historial de logros.
+ */
+export async function getSesionesPasadasAction(
+  tenantId: string | null,
+  limit = 60
+): Promise<CajaActionResult<SesionCaja[]>> {
+  if (!tenantId) return { success: false, error: 'Tenant inválido.' }
+
+  const supabase = await createClient()
+  try {
+    const { data, error } = await supabase
+      .from('sesiones_caja')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('apertura_at', { ascending: false })
+      .limit(limit)
+
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: (data ?? []) as SesionCaja[] }
+  } catch (e) {
+    console.error('getSesionesPasadasAction:', e)
+    return { success: false, error: 'Error al consultar historial.' }
+  }
+}
+
+/**
  * Devuelve los totales del turno actual (para el modal de cierre).
  * Solo si hay sesión abierta.
  */

@@ -23,10 +23,21 @@ export interface AchievementEvalContext {
   store: AchievementStore
 }
 
+/** Registro de logros desbloqueados en un turno pasado */
+export interface SessionRecord {
+  achievementIds: string[]
+  date: string          // YYYY-MM-DD (fecha de apertura)
+  aperturaAt: string    // ISO timestamp de apertura
+}
+
 export interface AchievementStore {
   unlocked: Record<string, number>
   dailyDate: string
+  /** Id de la sesión de caja actual; al cambiar (nuevo turno), se reinician los logros del día */
+  dailySessionId: string
   dailyUnlocked: string[]
+  /** Historial de logros por sesión de caja (hasta 60 entradas) */
+  sessionHistory: Record<string, SessionRecord>
   lifetimeStats: {
     totalDaysActive: number
     bestDailyRevenue: number
@@ -312,7 +323,9 @@ function defaultStore(): AchievementStore {
   return {
     unlocked: {},
     dailyDate: '',
+    dailySessionId: '',
     dailyUnlocked: [],
+    sessionHistory: {},
     lifetimeStats: {
       totalDaysActive: 0,
       bestDailyRevenue: 0,
@@ -334,7 +347,9 @@ export function loadStore(tenantId: string): AchievementStore {
     return {
       unlocked: parsed.unlocked ?? def.unlocked,
       dailyDate: parsed.dailyDate ?? def.dailyDate,
+      dailySessionId: (parsed as AchievementStore).dailySessionId ?? def.dailySessionId,
       dailyUnlocked: parsed.dailyUnlocked ?? def.dailyUnlocked,
+      sessionHistory: (parsed as AchievementStore).sessionHistory ?? def.sessionHistory,
       lifetimeStats: { ...def.lifetimeStats, ...parsed.lifetimeStats },
     }
   } catch {
@@ -380,6 +395,60 @@ export function ensureDailyReset(store: AchievementStore): {
 }
 
 /**
+ * Reinicia los logros del día cuando cambia la sesión de caja (nuevo turno).
+ * - Guarda los logros del turno anterior en sessionHistory antes de limpiarlos.
+ * - Si no hay sessionId, limpia dailySessionId para que al abrir la próxima caja se fuerce el reset.
+ */
+export function ensureSessionReset(
+  store: AchievementStore,
+  sessionId: string | undefined,
+  /** Timestamp ISO de apertura de la nueva sesión (para el historial) */
+  aperturaAt?: string
+): { store: AchievementStore; didReset: boolean } {
+  if (!sessionId) {
+    if (store.dailySessionId === '') return { store, didReset: false }
+    // Guardar sesión anterior en historial antes de limpiar
+    const history = archiveCurrentSession(store)
+    return { store: { ...store, dailySessionId: '', sessionHistory: history }, didReset: true }
+  }
+  if (store.dailySessionId === sessionId) return { store, didReset: false }
+
+  // Guardar sesión anterior en historial
+  const history = archiveCurrentSession(store)
+
+  // Limitar historial a 60 entradas (las más recientes)
+  const trimmedHistory = trimHistory(history)
+
+  const newStore: AchievementStore = {
+    ...store,
+    dailySessionId: sessionId,
+    dailyUnlocked: [],
+    sessionHistory: trimmedHistory,
+  }
+  return { store: newStore, didReset: true }
+}
+
+function archiveCurrentSession(store: AchievementStore): Record<string, SessionRecord> {
+  const history = { ...store.sessionHistory }
+  if (store.dailySessionId && store.dailyUnlocked.length > 0) {
+    history[store.dailySessionId] = {
+      achievementIds: [...store.dailyUnlocked],
+      date: store.dailyDate || todayStr(),
+      aperturaAt: new Date().toISOString(),
+    }
+  }
+  return history
+}
+
+function trimHistory(history: Record<string, SessionRecord>, max = 60): Record<string, SessionRecord> {
+  const entries = Object.entries(history)
+  if (entries.length <= max) return history
+  // Ordenar por fecha descendente y quedarse con las max más recientes
+  const sorted = entries.sort(([, a], [, b]) => b.aperturaAt.localeCompare(a.aperturaAt))
+  return Object.fromEntries(sorted.slice(0, max))
+}
+
+/**
  * Reinicia solo los datos del día de Cocina 3D (logros diarios).
  * Se llama al confirmar cierre de caja. No toca logros globales ni lifetimeStats.
  */
@@ -390,6 +459,7 @@ export function resetCocinaDailyData(tenantId: string): void {
     const newStore: AchievementStore = {
       ...store,
       dailyDate: todayStr(),
+      dailySessionId: '',
       dailyUnlocked: [],
     }
     saveStore(tenantId, newStore)
