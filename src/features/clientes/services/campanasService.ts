@@ -42,12 +42,15 @@ const DEFAULT_CONFIG = (tenantId: string): CampanaConfig => ({
   tenant_id: tenantId,
   auto_15_dias: false,
   auto_30_dias: false,
+  auto_cumpleanos: false,
   template_wa_15dias: DEFAULT_TEMPLATES.wa_15dias,
   template_wa_30dias: DEFAULT_TEMPLATES.wa_30dias,
   template_wa_personalizado: DEFAULT_TEMPLATES.wa_personalizado,
+  template_wa_cumpleanos: DEFAULT_TEMPLATES.wa_cumpleanos,
   puntos_regalo_15dias: 0,
   puntos_regalo_30dias: 0,
   puntos_regalo_personalizado: 0,
+  puntos_regalo_cumpleanos: 0,
 })
 
 export async function getCampanaConfig(tenantId: string): Promise<CampanaConfig> {
@@ -144,4 +147,5 @@ export const TIPO_LABELS: Record<TipoCampana, string> = {
   inactivos_15: 'Inactivos +15 días',
   inactivos_30: 'Inactivos +30 días',
   personalizado: 'Mensaje personalizado',
+  cumpleanos: 'Cumpleaños de hoy',
 }

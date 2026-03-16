@@ -86,6 +86,17 @@ export const ClienteFormFields = ({ formData, onChange }: ClienteFormFieldsProps
         />
       </div>
 
+      {/* Fecha de nacimiento */}
+      <div>
+        <label className={labelClass}>Fecha de nacimiento (opcional)</label>
+        <input
+          type="date"
+          value={formData.fecha_nacimiento}
+          onChange={(e) => handleChange('fecha_nacimiento', e.target.value)}
+          className={inputClass}
+        />
+      </div>
+
       {/* Email */}
       <div>
         <label className={labelClass}>Email (opcional)</label>

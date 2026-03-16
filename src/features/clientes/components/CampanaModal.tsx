@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react'
 import { X, Send, Gift, Users, MessageSquare, Info, Loader2, Lightbulb } from 'lucide-react'
 import type { ClienteConVisita, TipoCampana, CampanaConfig } from '../types/clientes.types'
+import { DEFAULT_TEMPLATES } from '../types/clientes.types'
 import { TIPO_LABELS } from '../services/campanasService'
 
 interface CampanaModalProps {
@@ -25,24 +26,28 @@ const TIPO_DESCRIPCION: Record<TipoCampana, string> = {
   inactivos_15: 'clientes que no vienen hace 15 días o más',
   inactivos_30: 'clientes que no vienen hace 30 días o más',
   personalizado: 'todos los clientes registrados',
+  cumpleanos: 'clientes que cumplen años hoy',
 }
 
 const TIPO_ICON: Record<TipoCampana, string> = {
   inactivos_15: '⏰',
   inactivos_30: '😴',
   personalizado: '📣',
+  cumpleanos: '🎂',
 }
 
 const CONFIG_TEMPLATE_KEY: Record<TipoCampana, keyof CampanaConfig> = {
   inactivos_15: 'template_wa_15dias',
   inactivos_30: 'template_wa_30dias',
   personalizado: 'template_wa_personalizado',
+  cumpleanos: 'template_wa_cumpleanos',
 }
 
 const CONFIG_PUNTOS_KEY: Record<TipoCampana, keyof CampanaConfig> = {
   inactivos_15: 'puntos_regalo_15dias',
   inactivos_30: 'puntos_regalo_30dias',
   personalizado: 'puntos_regalo_personalizado',
+  cumpleanos: 'puntos_regalo_cumpleanos',
 }
 
 // Placeholders amigables en el texto; se convierten a {{variable}} al enviar
@@ -88,9 +93,10 @@ export const CampanaModal = ({
     if (!isOpen || !campanaConfig) return
     const templateKey = CONFIG_TEMPLATE_KEY[tipo]
     const puntosKey = CONFIG_PUNTOS_KEY[tipo]
-    const raw = (campanaConfig[templateKey] as string) || ''
+    let raw = (campanaConfig[templateKey] as string) || ''
+    if (tipo === 'cumpleanos' && !raw.trim()) raw = DEFAULT_TEMPLATES.wa_cumpleanos
     setMensaje(mensajeAAmigable(raw))
-    setPuntosRegalo((campanaConfig[puntosKey] as number) || 0)
+    setPuntosRegalo((campanaConfig[puntosKey] as number) ?? 0)
   }, [isOpen, tipo, campanaConfig])
 
   if (!isOpen) return null
@@ -111,7 +117,9 @@ export const CampanaModal = ({
   const mensajeEjemplo =
     tipo === 'personalizado'
       ? `Hola [Nombre del cliente], desde [Nombre del negocio] te saludamos. Te regalamos [Puntos de regalo] puntos. ¡Gracias por ser parte!`
-      : `Hola [Nombre del cliente], hace [Días sin visitar] días que no te vemos en [Nombre del negocio]. Te regalamos [Puntos de regalo] puntos para que vuelvas. ¡Te esperamos!`
+      : tipo === 'cumpleanos'
+        ? `¡Feliz cumpleaños, [Nombre del cliente]! Desde [Nombre del negocio] te regalamos [Puntos de regalo] puntos. ¡Que lo disfrutes!`
+        : `Hola [Nombre del cliente], hace [Días sin visitar] días que no te vemos en [Nombre del negocio]. Te regalamos [Puntos de regalo] puntos para que vuelvas. ¡Te esperamos!`
 
   const handleConfirm = async () => {
     if (destinatarios.length === 0) {

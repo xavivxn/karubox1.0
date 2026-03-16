@@ -12,6 +12,7 @@ export type ClienteLocal = Cliente & {
   tenant_id?: string
   created_at?: string
   ci?: string
+  fecha_nacimiento?: string | null
 }
 
 /**
@@ -25,6 +26,7 @@ export interface ClienteFormData {
   telefono: string
   email: string
   direccion: string
+  fecha_nacimiento: string
 }
 
 /**
@@ -37,7 +39,8 @@ export const INITIAL_FORM_DATA: ClienteFormData = {
   pasaporte: '',
   telefono: '',
   email: '',
-  direccion: ''
+  direccion: '',
+  fecha_nacimiento: ''
 }
 
 /**
@@ -75,6 +78,7 @@ export type ClienteConVisita = ClienteLocal & {
   total_pedidos: number
   total_gastado: number
   dias_sin_visita: number | null
+  fecha_nacimiento?: string | null
 }
 
 /**
@@ -85,7 +89,7 @@ export type SegmentoCliente = 'activo' | 'en_riesgo' | 'inactivo' | 'sin_visita'
 /**
  * Tipo de campaña de fidelización
  */
-export type TipoCampana = 'inactivos_15' | 'inactivos_30' | 'personalizado'
+export type TipoCampana = 'inactivos_15' | 'inactivos_30' | 'personalizado' | 'cumpleanos'
 
 /**
  * Configuración de campañas por tenant
@@ -95,12 +99,15 @@ export interface CampanaConfig {
   tenant_id: string
   auto_15_dias: boolean
   auto_30_dias: boolean
+  auto_cumpleanos?: boolean
   template_wa_15dias: string
   template_wa_30dias: string
   template_wa_personalizado: string
+  template_wa_cumpleanos?: string
   puntos_regalo_15dias: number
   puntos_regalo_30dias: number
   puntos_regalo_personalizado: number
+  puntos_regalo_cumpleanos?: number
 }
 
 /**
@@ -150,4 +157,12 @@ Te esperamos 🧡`,
 Tu saldo actual: *{{puntos}} puntos*.
 
 — {{nombre_lomiteria}}`,
+
+  wa_cumpleanos: `¡Feliz cumpleaños, {{nombre_cliente}}! 🎂
+
+Desde {{nombre_lomiteria}} te deseamos un día increíble. Como regalo, te acreditamos *{{puntos_regalo}} puntos* para que los uses cuando quieras.
+
+Tu saldo actual: *{{puntos}} puntos*.
+
+¡Que lo disfrutes! 🧡`,
 }

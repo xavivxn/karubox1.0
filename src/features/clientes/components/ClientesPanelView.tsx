@@ -26,6 +26,7 @@ export const ClientesPanelView = () => {
     segments,
     campanaConfig,
     savingConfig,
+    clientesCumpleHoy,
     searchTerm,
     setSearchTerm,
     showCampana,
@@ -100,7 +101,7 @@ export const ClientesPanelView = () => {
           </h2>
 
           {/* Botones de campaña */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <CampanaButton
               label="Inactivos +15 días"
               count={segments.enRiesgo.length + segments.inactivos.length}
@@ -125,6 +126,14 @@ export const ClientesPanelView = () => {
               countCls="bg-blue-100 dark:bg-blue-800/60 text-blue-700 dark:text-blue-300"
               onClick={() => handleAbrirCampana('personalizado')}
             />
+            <CampanaButton
+              label="Cumpleaños de hoy"
+              count={clientesCumpleHoy}
+              emoji="🎂"
+              colorCls="border-pink-300 dark:border-pink-600 hover:bg-pink-50 dark:hover:bg-pink-900/30 text-pink-800 dark:text-pink-200"
+              countCls="bg-pink-100 dark:bg-pink-800/60 text-pink-700 dark:text-pink-300"
+              onClick={() => handleAbrirCampana('cumpleanos')}
+            />
           </div>
 
           {/* Switches de automatización */}
@@ -146,6 +155,13 @@ export const ClientesPanelView = () => {
                 enabled={campanaConfig?.auto_30_dias ?? false}
                 loading={savingConfig}
                 onChange={(v) => handleToggleSwitch('auto_30_dias', v)}
+              />
+              <AutoSwitch
+                label="Mensaje automático de cumpleaños"
+                description="Envía felicitación el día del cumpleaños del cliente"
+                enabled={campanaConfig?.auto_cumpleanos ?? false}
+                loading={savingConfig}
+                onChange={(v) => handleToggleSwitch('auto_cumpleanos', v)}
               />
             </div>
             <p className="mt-3 text-xs text-gray-400 dark:text-gray-500 flex items-start gap-1.5">

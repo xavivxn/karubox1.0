@@ -54,6 +54,7 @@ export const crearCliente = async (
     telefono: datosLimpios.telefono,
     email: datosLimpios.email,
     direccion: datosLimpios.direccion,
+    fecha_nacimiento: datosLimpios.fecha_nacimiento,
     puntos_totales: 0
   } as NuevoCliente)
 }
@@ -75,5 +76,6 @@ export const actualizarCliente = async (
     telefono: datosLimpios.telefono,
     email: datosLimpios.email,
     direccion: datosLimpios.direccion,
+    fecha_nacimiento: datosLimpios.fecha_nacimiento,
   } as Partial<Cliente>)
 }

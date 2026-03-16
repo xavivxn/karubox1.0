@@ -338,7 +338,7 @@ function StageColumn({
     <div
       className={`
         relative flex flex-col rounded-2xl bg-gradient-to-b ${STAGE_BG[stage]}
-        border overflow-hidden min-h-[300px]
+        border overflow-hidden min-h-[300px] min-w-0
         ${isCooking && orders.length > 0 ? 'animate-fire-shimmer border-gray-100/80 dark:border-gray-600' : 'border-gray-100/80 dark:border-gray-600'}
         ${isDelivered && hasNewDelivery ? 'animate-gold-pulse' : ''}
         ${hasNewOrder ? 'animate-shake' : ''}
@@ -621,7 +621,7 @@ export default function KitchenCanvas({
     groups[stage].some((o) => newDeliveryIds.includes(o.id))
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full w-full flex flex-col min-w-0">
       {/* ─── Top Bar: Money counter + Combo + Rate ─── */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80 flex-wrap gap-2">
         <MoneyCounter value={stats.todayRevenue} label="Facturado hoy" icon="💰" />
@@ -640,14 +640,14 @@ export default function KitchenCanvas({
       </div>
 
       {/* ─── Contenido: kanban + ticker ─── */}
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 min-w-0 w-full flex flex-col">
         {record && (
           <div className="px-4 pt-2 flex-shrink-0">
             <RecordBanner text={record} />
           </div>
         )}
 
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 p-3 overflow-hidden min-h-0">
+        <div className="flex-1 w-full min-w-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 lg:[grid-template-columns:repeat(4,minmax(0,1fr))] gap-3 p-3 overflow-x-auto overflow-y-hidden min-h-0">
           {KITCHEN_STAGES.map((stage) => (
             <StageColumn
               key={stage}

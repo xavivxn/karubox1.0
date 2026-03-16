@@ -46,7 +46,8 @@ export interface UseClientesPanelReturn {
   handleRegistrarCampana: (mensaje: string, puntosRegalo: number) => Promise<void>
 
   // Switches de automatización
-  handleToggleSwitch: (campo: 'auto_15_dias' | 'auto_30_dias', valor: boolean) => Promise<void>
+  handleToggleSwitch: (campo: 'auto_15_dias' | 'auto_30_dias' | 'auto_cumpleanos', valor: boolean) => Promise<void>
+  clientesCumpleHoy: number
   handleGuardarTemplate: (campo: keyof CampanaConfig, valor: string | number) => Promise<void>
 
   // Drawer de detalle
@@ -150,12 +151,40 @@ export const useClientesPanel = (tenantId: string | undefined): UseClientesPanel
     return { total: clientes.length, activos, enRiesgo, inactivos }
   }, [clientes])
 
+  // ── Clientes que cumplen años hoy ─────────
+  const clientesCumpleHoy = useMemo(() => {
+    const today = new Date()
+    const m = today.getMonth()
+    const d = today.getDate()
+    return filteredClientes.filter((c) => {
+      const fn = c.fecha_nacimiento
+      if (!fn || typeof fn !== 'string') return false
+      const [y, mo, day] = fn.split('-').map(Number)
+      if (isNaN(mo) || isNaN(day)) return false
+      return mo === m + 1 && day === d
+    }).length
+  }, [filteredClientes])
+
+  const clientesCumpleHoyList = useMemo(() => {
+    const today = new Date()
+    const m = today.getMonth()
+    const d = today.getDate()
+    return filteredClientes.filter((c) => {
+      const fn = c.fecha_nacimiento
+      if (!fn || typeof fn !== 'string') return false
+      const [y, mo, day] = fn.split('-').map(Number)
+      if (isNaN(mo) || isNaN(day)) return false
+      return mo === m + 1 && day === d
+    })
+  }, [filteredClientes])
+
   // ── Destinatarios para campaña actual ─────
   const destinatarios = useMemo(() => {
     if (tipoCampana === 'inactivos_15') return [...segments.enRiesgo, ...segments.inactivos]
     if (tipoCampana === 'inactivos_30') return segments.inactivos
+    if (tipoCampana === 'cumpleanos') return clientesCumpleHoyList
     return clientes
-  }, [tipoCampana, segments, clientes])
+  }, [tipoCampana, segments, clientes, clientesCumpleHoyList])
 
   // ── Campaña ───────────────────────────────
   const handleAbrirCampana = (tipo: TipoCampana) => {
@@ -183,7 +212,7 @@ export const useClientesPanel = (tenantId: string | undefined): UseClientesPanel
 
   // ── Switches / config ─────────────────────
   const handleToggleSwitch = async (
-    campo: 'auto_15_dias' | 'auto_30_dias',
+    campo: 'auto_15_dias' | 'auto_30_dias' | 'auto_cumpleanos',
     valor: boolean
   ) => {
     if (!tenantId || !campanaConfig) return
@@ -254,6 +283,7 @@ export const useClientesPanel = (tenantId: string | undefined): UseClientesPanel
       telefono: cliente.telefono ?? '',
       email: cliente.email ?? '',
       direccion: cliente.direccion ?? '',
+      fecha_nacimiento: cliente.fecha_nacimiento ?? '',
     })
     setShowModal(true)
   }
@@ -309,6 +339,7 @@ export const useClientesPanel = (tenantId: string | undefined): UseClientesPanel
     handleRegistrarCampana,
     handleToggleSwitch,
     handleGuardarTemplate,
+    clientesCumpleHoy,
     drawerCliente,
     handleAbrirDrawer,
     handleCerrarDrawer,

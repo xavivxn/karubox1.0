@@ -29,6 +29,7 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
   const [pasaporte, setPasaporte] = useState('')
   const [email, setEmail] = useState('')
   const [direccion, setDireccion] = useState('')
+  const [fechaNacimiento, setFechaNacimiento] = useState('')
   const [searching, setSearching] = useState(false)
   const [clienteEncontrado, setClienteEncontrado] = useState<Cliente | null>(null)
   const [sugerencias, setSugerencias] = useState<Cliente[]>([])
@@ -61,7 +62,7 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
 
   const estaEditando = editingClienteId !== null
 
-  const autocompletarDesdeCliente = useCallback((data: Cliente & { ruc?: string; pasaporte?: string }) => {
+  const autocompletarDesdeCliente = useCallback((data: Cliente & { ruc?: string; pasaporte?: string; fecha_nacimiento?: string | null }) => {
     setNombre(data.nombre || '')
     setTelefono(data.telefono || '')
     setCi(data.ci || '')
@@ -69,6 +70,7 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
     setEmail(data.email || '')
     setDireccion(data.direccion || '')
     setPasaporte(data.pasaporte || '')
+    setFechaNacimiento(data.fecha_nacimiento ?? '')
     setClienteEncontrado(data as Cliente)
     setSugerencias([])
     setModoCrear(false)
@@ -219,6 +221,7 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
           pasaporte: pasaporte.trim() || null,
           email: email.trim() || null,
           direccion: direccion.trim() || null,
+          fecha_nacimiento: fechaNacimiento.trim() || null,
           nombre: nombre.trim(),
           puntos_totales: 0
         })
@@ -280,6 +283,7 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
           pasaporte: pasaporte.trim() || null,
           email: email.trim() || null,
           direccion: direccion.trim() || null,
+          fecha_nacimiento: fechaNacimiento.trim() || null,
         })
         .eq('id', editingClienteId)
         .eq('tenant_id', tenant.id)
@@ -306,6 +310,7 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
     setPasaporte('')
     setEmail('')
     setDireccion('')
+    setFechaNacimiento('')
     setClienteEncontrado(null)
     setSugerencias([])
     setClienteEnEdicion(null)
@@ -396,6 +401,20 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
                     disabled={searching}
                   />
                 </div>
+              </div>
+
+              {/* Fecha de nacimiento (opcional) */}
+              <div>
+                <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                  Fecha de nacimiento <span className={darkMode ? 'text-gray-400 font-normal' : 'text-gray-500 font-normal'}>(opcional)</span>
+                </label>
+                <input
+                  type="date"
+                  value={fechaNacimiento}
+                  onChange={(e) => setFechaNacimiento(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all text-base ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-blue-400/30' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'}`}
+                  disabled={searching}
+                />
               </div>
 
               {/* Lista de sugerencias en tiempo real */}

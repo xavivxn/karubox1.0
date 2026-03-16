@@ -197,7 +197,7 @@ export default function CocinaVirtualView() {
   }, [stats.todayRevenue])
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100vh-160px)] text-gray-900 dark:text-gray-100">
+    <div className="flex flex-col gap-4 h-[calc(100vh-160px)] text-gray-900 dark:text-gray-100 px-4">
       {/* Stats bar */}
       <div className="flex items-start gap-3">
         <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-3">

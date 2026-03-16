@@ -56,5 +56,6 @@ export const limpiarFormData = (formData: ClienteFormData) => {
     telefono: formData.telefono.trim() || null,
     email: formData.email.trim() || null,
     direccion: formData.direccion.trim() || null,
+    fecha_nacimiento: formData.fecha_nacimiento?.trim() || null,
   }
 }
