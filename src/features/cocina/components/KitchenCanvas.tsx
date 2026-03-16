@@ -13,6 +13,7 @@ import {
   playComboSound,
   type KitchenOrder,
   type KitchenStage,
+  type KitchenStats,
 } from '../utils/cocina.utils'
 
 /* ═══════════════ CONSTANTS ═══════════════ */
@@ -505,7 +506,7 @@ export default function KitchenCanvas({
   stageOverrides,
 }: {
   orders: KitchenOrder[]
-  stats: { todayRevenue: number; todayTotal: number; deliveredCount: number }
+  stats: KitchenStats
   newDeliveryIds: string[]
   onDeliveryAnimated: (id: string) => void
   onStreakChange?: (streak: number) => void
