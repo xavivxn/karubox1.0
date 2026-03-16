@@ -18,18 +18,41 @@ export function DashboardCards({ darkMode }: DashboardCardsProps) {
     router.push(href)
   }, [router])
 
+  const topRow = DASHBOARD_CARDS.slice(0, 3)
+  const bottomRow = DASHBOARD_CARDS.slice(3)
+
   return (
-    <section className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {DASHBOARD_CARDS.map((card) => (
-        <DashboardCardComponent
-          key={card.title}
-          card={card}
-          darkMode={darkMode}
-          isGlobalLoading={loadingHref !== null}
-          isThisCardLoading={loadingHref === card.href}
-          onNavigateStart={handleCardNavigate}
-        />
-      ))}
+    <section className="max-w-6xl mx-auto space-y-8">
+      {/* First row: up to 3 cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {topRow.map((card) => (
+          <DashboardCardComponent
+            key={card.title}
+            card={card}
+            darkMode={darkMode}
+            isGlobalLoading={loadingHref !== null}
+            isThisCardLoading={loadingHref === card.href}
+            onNavigateStart={handleCardNavigate}
+          />
+        ))}
+      </div>
+
+      {/* Second row: remaining cards centered */}
+      {bottomRow.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-8">
+          {bottomRow.map((card) => (
+            <div key={card.title} className="w-full md:flex-1 md:min-w-[280px] md:max-w-[362px]">
+              <DashboardCardComponent
+                card={card}
+                darkMode={darkMode}
+                isGlobalLoading={loadingHref !== null}
+                isThisCardLoading={loadingHref === card.href}
+                onNavigateStart={handleCardNavigate}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   )
 }

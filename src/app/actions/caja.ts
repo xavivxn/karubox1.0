@@ -184,6 +184,105 @@ export async function getSesionesPasadasAction(
   }
 }
 
+/* ─── Historial de turnos: estadísticas detalladas ─── */
+
+export interface SessionStats {
+  cajeros: { nombre: string; cantidad: number }[]
+  clientesNuevos: number
+  tipoBreakdown: { tipo: string; count: number; total: number }[]
+  anulados: number
+}
+
+/**
+ * Devuelve estadísticas detalladas de un turno cerrado (o en curso).
+ * Incluye: quiénes atendieron, clientes nuevos, desglose por tipo, pedidos anulados.
+ */
+export async function getHistorialSesionStatsAction(
+  tenantId: string | null,
+  apertura_at: string,
+  cierre_at: string | null
+): Promise<CajaActionResult<SessionStats>> {
+  if (!tenantId) return { success: false, error: 'Tenant inválido.' }
+
+  const supabase = await createClient()
+  const hasta = cierre_at ?? new Date().toISOString()
+
+  try {
+    const [pedidosRes, clientesRes, anuladosRes] = await Promise.all([
+      // All FACT orders in the session window with user name + tipo + total
+      supabase
+        .from('pedidos')
+        .select('usuario_id, tipo, total, usuarios:usuario_id(nombre)')
+        .eq('tenant_id', tenantId)
+        .eq('estado_pedido', 'FACT')
+        .gte('created_at', apertura_at)
+        .lte('created_at', hasta),
+
+      // New clients registered during the session
+      supabase
+        .from('clientes')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .gte('created_at', apertura_at)
+        .lte('created_at', hasta),
+
+      // Cancelled orders during the session
+      supabase
+        .from('pedidos')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('estado_pedido', 'ANUL')
+        .gte('created_at', apertura_at)
+        .lte('created_at', hasta),
+    ])
+
+    // Build cajeros breakdown
+    const cajeroMap = new Map<string, { nombre: string; cantidad: number }>()
+    for (const row of pedidosRes.data ?? []) {
+      const uid = (row.usuario_id as string) ?? 'desconocido'
+      const nombre =
+        (row.usuarios as { nombre: string | null } | null)?.nombre ?? 'Sin nombre'
+      const prev = cajeroMap.get(uid)
+      if (prev) {
+        prev.cantidad += 1
+      } else {
+        cajeroMap.set(uid, { nombre, cantidad: 1 })
+      }
+    }
+    const cajeros = [...cajeroMap.values()].sort((a, b) => b.cantidad - a.cantidad)
+
+    // Build tipo breakdown
+    const tipoMap = new Map<string, { count: number; total: number }>()
+    for (const row of pedidosRes.data ?? []) {
+      const tipo = (row.tipo as string) ?? 'local'
+      const prev = tipoMap.get(tipo)
+      const amount = Number(row.total) || 0
+      if (prev) {
+        prev.count += 1
+        prev.total += amount
+      } else {
+        tipoMap.set(tipo, { count: 1, total: amount })
+      }
+    }
+    const tipoBreakdown = [...tipoMap.entries()]
+      .map(([tipo, v]) => ({ tipo, ...v }))
+      .sort((a, b) => b.count - a.count)
+
+    return {
+      success: true,
+      data: {
+        cajeros,
+        clientesNuevos: clientesRes.count ?? 0,
+        tipoBreakdown,
+        anulados: anuladosRes.count ?? 0,
+      },
+    }
+  } catch (e) {
+    console.error('getHistorialSesionStatsAction:', e)
+    return { success: false, error: 'Error al obtener estadísticas del turno.' }
+  }
+}
+
 /**
  * Devuelve los totales del turno actual (para el modal de cierre).
  * Solo si hay sesión abierta.

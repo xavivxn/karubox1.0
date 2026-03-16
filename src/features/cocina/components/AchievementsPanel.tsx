@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTenant } from '@/contexts/TenantContext'
 import type { SesionCaja } from '@/features/caja/types/caja.types'
+import { getHistorialSesionStatsAction, type SessionStats } from '@/app/actions/caja'
 import {
   type Achievement,
   type AchievementStore,
@@ -210,16 +211,78 @@ function formatHour(iso: string): string {
   return new Date(iso).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })
 }
 
+const TIPO_LABELS: Record<string, string> = {
+  local: 'Local',
+  delivery: 'Delivery',
+  para_llevar: 'Para llevar',
+}
+const TIPO_ICONS: Record<string, string> = {
+  local: '🪑',
+  delivery: '🛵',
+  para_llevar: '🛍️',
+}
+
+function formatGs(n: number) {
+  return 'Gs. ' + Math.round(n).toLocaleString('es-PY')
+}
+
+function StatMini({
+  label,
+  value,
+  icon,
+  darkMode,
+  highlight,
+}: {
+  label: string
+  value: string
+  icon: string
+  darkMode: boolean
+  highlight?: 'green' | 'red'
+}) {
+  return (
+    <div className={`flex flex-col gap-0.5 rounded-xl px-3 py-2 ${
+      darkMode ? 'bg-gray-600/60' : 'bg-white border border-gray-100'
+    }`}>
+      <span className={`text-[10px] font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
+        {icon} {label}
+      </span>
+      <span className={`text-sm font-black tabular-nums ${
+        highlight === 'green'
+          ? 'text-green-500'
+          : highlight === 'red'
+            ? 'text-red-500'
+            : darkMode ? 'text-white' : 'text-gray-900'
+      }`}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function HistorialCardSkeleton({ darkMode }: { darkMode: boolean }) {
+  return (
+    <div className={`space-y-3 pt-4 ${darkMode ? 'text-gray-500' : 'text-gray-300'}`}>
+      {[1, 2, 3].map(i => (
+        <div key={i} className={`h-12 rounded-xl animate-pulse ${darkMode ? 'bg-gray-600/50' : 'bg-gray-100'}`} />
+      ))}
+    </div>
+  )
+}
+
 function HistorialCard({
   sesion,
   achievementIds,
   darkMode,
+  tenantId,
 }: {
   sesion: SesionCaja
   achievementIds: string[]
   darkMode: boolean
+  tenantId: string | undefined
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [stats, setStats] = useState<SessionStats | null>(null)
+  const [loadingStats, setLoadingStats] = useState(false)
 
   const unlocked = useMemo(() => {
     const map = new Map(ALL_ACHIEVEMENTS.map(a => [a.id, a]))
@@ -233,14 +296,34 @@ function HistorialCard({
   const globalCount = unlocked.filter(a => a.type === 'global').length
   const isOpen = !sesion.cierre_at
 
+  const ticketPromedio =
+    sesion.cantidad_pedidos > 0
+      ? sesion.total_ventas / sesion.cantidad_pedidos
+      : 0
+
+  const handleExpand = useCallback(async () => {
+    const next = !expanded
+    setExpanded(next)
+    if (next && !stats && !loadingStats && tenantId) {
+      setLoadingStats(true)
+      const res = await getHistorialSesionStatsAction(
+        tenantId,
+        sesion.apertura_at,
+        sesion.cierre_at
+      )
+      if (res.success) setStats(res.data)
+      setLoadingStats(false)
+    }
+  }, [expanded, stats, loadingStats, tenantId, sesion.apertura_at, sesion.cierre_at])
+
   return (
     <div className={`rounded-2xl border overflow-hidden transition-all ${
       darkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
     } ${isOpen ? 'ring-2 ring-amber-400/60' : ''}`}>
-      {/* Header row */}
+      {/* ── Header row ── */}
       <button
         className="w-full text-left p-4 flex items-center gap-3"
-        onClick={() => setExpanded(e => !e)}
+        onClick={handleExpand}
       >
         {/* Icon */}
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${
@@ -293,45 +376,163 @@ function HistorialCard({
         </div>
       </button>
 
-      {/* Expanded: achievement emojis */}
+      {/* ── Expanded body ── */}
       {expanded && (
-        <div className={`px-4 pb-4 border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-          {unlocked.length === 0 ? (
-            <p className={`text-xs pt-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              Sin logros desbloqueados en este turno.
+        <div className={`border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+
+          {/* ─ Financial summary ─ */}
+          <div className="px-4 pt-4 pb-3">
+            <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
+              Resumen financiero
             </p>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 pt-3 pb-2">
-                {dailyCount > 0 && (
-                  <span className={`text-[10px] font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    📅 {dailyCount} del turno
-                  </span>
-                )}
-                {globalCount > 0 && (
-                  <span className={`text-[10px] font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    🌟 {globalCount} globales
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {unlocked.map(ach => {
-                  const color = TIER_COLORS[ach.tier]
-                  return (
-                    <div
-                      key={ach.id}
-                      title={`${ach.name}: ${ach.description}`}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs font-semibold"
-                      style={{ borderColor: `${color}40`, background: `${color}12`, color }}
-                    >
-                      <span className="text-sm">{ach.emoji}</span>
-                      <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>{ach.name}</span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <StatMini icon="💰" label="Ventas" value={formatGs(sesion.total_ventas ?? 0)} darkMode={darkMode} />
+              <StatMini icon="🔧" label="Costo est." value={formatGs(sesion.total_costo_estimado ?? 0)} darkMode={darkMode} />
+              <StatMini icon="👷" label="Empleados" value={formatGs(sesion.monto_pagado_empleados ?? 0)} darkMode={darkMode} />
+              <StatMini
+                icon="📈"
+                label="Ganancia"
+                value={formatGs(sesion.ganancia_neta ?? 0)}
+                darkMode={darkMode}
+                highlight={(sesion.ganancia_neta ?? 0) >= 0 ? 'green' : 'red'}
+              />
+              <StatMini
+                icon="🎯"
+                label="Ticket prom."
+                value={sesion.cantidad_pedidos > 0 ? formatGs(ticketPromedio) : '—'}
+                darkMode={darkMode}
+              />
+            </div>
+          </div>
+
+          {/* ─ Dynamic stats (lazy fetched) ─ */}
+          <div className="px-4 pb-4 space-y-4">
+            {loadingStats && <HistorialCardSkeleton darkMode={darkMode} />}
+
+            {stats && (
+              <>
+                {/* Quiénes atendieron */}
+                {stats.cajeros.length > 0 && (
+                  <div>
+                    <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
+                      👤 Quiénes atendieron
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {stats.cajeros.map((c, i) => (
+                        <div
+                          key={i}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold ${
+                            darkMode
+                              ? 'bg-blue-900/30 border border-blue-700/40 text-blue-300'
+                              : 'bg-blue-50 border border-blue-100 text-blue-700'
+                          }`}
+                        >
+                          <span>🧑‍💼</span>
+                          <span>{c.nombre}</span>
+                          <span className={`ml-0.5 font-bold ${darkMode ? 'text-blue-400' : 'text-blue-500'}`}>
+                            · {c.cantidad}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  )
-                })}
-              </div>
-            </>
-          )}
+                  </div>
+                )}
+
+                {/* Clientes nuevos + anulados */}
+                <div className="flex flex-wrap gap-2">
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold ${
+                    darkMode ? 'bg-green-900/30 border border-green-700/40 text-green-300' : 'bg-green-50 border border-green-100 text-green-700'
+                  }`}>
+                    <span>🧑</span>
+                    <span>Clientes nuevos:</span>
+                    <span className="font-black">{stats.clientesNuevos}</span>
+                  </div>
+                  {stats.anulados > 0 && (
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold ${
+                      darkMode ? 'bg-red-900/30 border border-red-700/40 text-red-300' : 'bg-red-50 border border-red-100 text-red-600'
+                    }`}>
+                      <span>❌</span>
+                      <span>Pedidos anulados:</span>
+                      <span className="font-black">{stats.anulados}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tipo breakdown */}
+                {stats.tipoBreakdown.length > 0 && (
+                  <div>
+                    <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
+                      📦 Tipos de pedido
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {stats.tipoBreakdown.map(({ tipo, count, total }) => (
+                        <div
+                          key={tipo}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold ${
+                            darkMode
+                              ? 'bg-gray-600/60 border border-gray-500/40 text-gray-200'
+                              : 'bg-white border border-gray-200 text-gray-700'
+                          }`}
+                        >
+                          <span>{TIPO_ICONS[tipo] ?? '📋'}</span>
+                          <span>{TIPO_LABELS[tipo] ?? tipo}</span>
+                          <span className={`font-black ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            · {count}
+                          </span>
+                          <span className={`${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
+                            {formatGs(total)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Achievements */}
+            <div>
+              {unlocked.length === 0 ? (
+                <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Sin logros desbloqueados en este turno.
+                </p>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className={`text-[10px] font-bold uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
+                      🏅 {unlocked.length} logros del turno
+                    </p>
+                    {dailyCount > 0 && (
+                      <span className={`text-[10px] font-semibold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        · {dailyCount} del turno
+                      </span>
+                    )}
+                    {globalCount > 0 && (
+                      <span className={`text-[10px] font-semibold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        · {globalCount} globales
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {unlocked.map(ach => {
+                      const color = TIER_COLORS[ach.tier]
+                      return (
+                        <div
+                          key={ach.id}
+                          title={`${ach.name}: ${ach.description}`}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs font-semibold"
+                          style={{ borderColor: `${color}40`, background: `${color}12`, color }}
+                        >
+                          <span className="text-sm">{ach.emoji}</span>
+                          <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>{ach.name}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -369,7 +570,7 @@ export default function AchievementsPanel({
   onDiamondClick,
   sesiones = [],
 }: AchievementsPanelProps) {
-  const { darkMode } = useTenant()
+  const { darkMode, tenant } = useTenant()
   const [tab, setTab] = useState<'medallas' | 'historial'>('medallas')
 
   if (!open) return null
@@ -513,6 +714,7 @@ export default function AchievementsPanel({
                     sesion={sesion}
                     achievementIds={sessionHistory[sesion.id]?.achievementIds ?? []}
                     darkMode={darkMode}
+                    tenantId={tenant?.id}
                   />
                 ))
               )}
