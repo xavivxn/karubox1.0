@@ -1,79 +1,92 @@
 /**
  * Genera un PDF con el reporte de clientes (tabla).
- * Header: logo del sistema (o emoji 🍔 si PDF_LOGO_URL es null) + título + nombre del negocio.
- * Footer: "ARDENTIUM Software Technologies" + número de página.
+ * Misma plantilla que el reporte de cierre de caja: barra naranja, colores y footer.
  */
 
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { ClienteLocal } from '../types/clientes.types'
 import { formatearFecha } from './clientes.utils'
-import { PDF_LOGO_URL, PDF_FOOTER_TEXT } from './pdf.constants'
+import { PDF_FOOTER_TEXT } from './pdf.constants'
 
-const LOGO_PLACEHOLDER = '🍔'
-const HEADER_TITLE = 'REPORTE DE CLIENTES'
-const MARGIN = 14
-const HEADER_HEIGHT = 22
-const FOOTER_HEIGHT = 14
-const PAGE_HEIGHT = 297 // A4
+const MARGIN = 1 // Sin márgenes en los 4 sentidos
+const TABLE_MARGIN = 0
+const HEADER_HEIGHT = 28
+const PAGE_HEIGHT = 297
 const PAGE_WIDTH = 210
+const TABLE_WIDTH = PAGE_WIDTH // 210 mm, tabla a todo el ancho
+
+// Colores (mismos que cierre de caja)
+const ORANGE_HEADER = [234, 88, 12] as [number, number, number]
+const GRAY_LIGHT = [248, 250, 252] as [number, number, number]
+const GRAY_BORDER = [226, 232, 240] as [number, number, number]
+const GRAY_TEXT = [71, 85, 105] as [number, number, number]
+const GRAY_MUTED = [148, 163, 184] as [number, number, number]
 
 export interface OpcionesPdfClientes {
   tenantNombre?: string
 }
 
-/**
- * Dibuja header y footer en cada página del PDF.
- */
-function addHeaderFooter(
-  doc: jsPDF,
-  pageNumber: number,
-  totalPages: number,
-  tenantNombre?: string
-) {
+function formatFechaReporte() {
+  return new Date().toLocaleString('es-PY', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  })
+}
+
+function addHeader(doc: jsPDF, tenantNombre?: string, fechaReporte?: string) {
+  const pageWidth = doc.internal.pageSize.getWidth()
+
+  doc.setFillColor(...ORANGE_HEADER)
+  doc.rect(0, 0, pageWidth, HEADER_HEIGHT, 'F')
+
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(16)
+  doc.setFont('helvetica', 'bold')
+  doc.text('REPORTE DE CLIENTES', 0, 14)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(255, 255, 255)
+  if (fechaReporte) doc.text(`Fecha: ${fechaReporte}`, 0, 21)
+
+  if (tenantNombre) {
+    doc.setFontSize(10)
+    doc.text(tenantNombre, pageWidth, 14, { align: 'right' })
+    doc.setFontSize(8)
+    doc.text('Lomitería', pageWidth, 21, { align: 'right' })
+  }
+
+  doc.setDrawColor(...GRAY_BORDER)
+  doc.setLineWidth(0.3)
+  doc.line(0, HEADER_HEIGHT, pageWidth, HEADER_HEIGHT)
+}
+
+function addFooter(doc: jsPDF, pageNumber?: number, totalPages?: number) {
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
 
-  // Header
-  doc.setFontSize(10)
-  doc.setTextColor(80, 80, 80)
+  doc.setDrawColor(...GRAY_BORDER)
+  doc.setLineWidth(0.2)
+  doc.line(0, pageHeight - 18, pageWidth, pageHeight - 18)
 
-  if (PDF_LOGO_URL) {
-    try {
-      doc.addImage(PDF_LOGO_URL, 'PNG', MARGIN, 8, 14, 14)
-      doc.text(HEADER_TITLE, MARGIN + 18, 15)
-    } catch {
-      doc.text(LOGO_PLACEHOLDER, MARGIN, 15)
-      doc.text(HEADER_TITLE, MARGIN + 12, 15)
-    }
-  } else {
-    doc.text(LOGO_PLACEHOLDER, MARGIN, 15)
-    doc.text(HEADER_TITLE, MARGIN + 12, 15)
-  }
-
-  if (tenantNombre) {
-    doc.setFontSize(9)
-    doc.text(tenantNombre, pageWidth - MARGIN, 15, { align: 'right' })
-  }
-
-  doc.setDrawColor(200, 200, 200)
-  doc.line(MARGIN, HEADER_HEIGHT, pageWidth - MARGIN, HEADER_HEIGHT)
-
-  // Footer
   doc.setFontSize(8)
-  doc.setTextColor(100, 100, 100)
+  doc.setTextColor(...GRAY_MUTED)
+  doc.text(PDF_FOOTER_TEXT, pageWidth / 2, pageHeight - 12, { align: 'center' })
   doc.text(
-    PDF_FOOTER_TEXT,
-    pageWidth / 2,
+    `Generado: ${formatFechaReporte()}`,
+    totalPages && totalPages > 1 ? 0 : pageWidth / 2,
     pageHeight - 8,
-    { align: 'center' }
+    totalPages && totalPages > 1 ? { align: 'left' } : { align: 'center' }
   )
-  doc.text(
-    `Página ${pageNumber} de ${totalPages}`,
-    pageWidth - MARGIN,
-    pageHeight - 8,
-    { align: 'right' }
-  )
+  if (totalPages != null && totalPages > 1 && pageNumber != null) {
+    doc.text(
+      `Página ${pageNumber} de ${totalPages}`,
+      pageWidth,
+      pageHeight - 8,
+      { align: 'right' }
+    )
+  }
 }
 
 /**
@@ -86,12 +99,18 @@ export function generarPdfClientes(
   const { tenantNombre } = opciones
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
+  const fechaReporteStr = formatFechaReporte()
+  addHeader(doc, tenantNombre, fechaReporteStr)
+
+  /** Quita saltos de línea en celdas para que no se rompan en varias líneas */
+  const limpia = (s: string | null | undefined) => String(s ?? '').replace(/\r?\n/g, ' ').trim() || '-'
+
   const headers = ['Nombre', 'CI', 'Teléfono', 'Email', 'Puntos', 'Registrado']
   const rows = clientes.map((c) => [
-    c.nombre ?? '',
-    c.ci ?? '-',
-    c.telefono ?? '-',
-    c.email ?? '-',
+    limpia(c.nombre),
+    limpia(c.ci),
+    limpia(c.telefono),
+    limpia(c.email),
     String(c.puntos_totales ?? 0),
     c.created_at ? formatearFecha(c.created_at) : '-',
   ])
@@ -99,17 +118,43 @@ export function generarPdfClientes(
   autoTable(doc, {
     head: [headers],
     body: rows,
-    startY: HEADER_HEIGHT + 6,
-    margin: { left: MARGIN, right: MARGIN },
-    styles: { fontSize: 9 },
-    headStyles: { fillColor: [66, 66, 66], textColor: 255 },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
+    startY: HEADER_HEIGHT,
+    margin: { left: 0, right: 0, top: 0, bottom: 0 },
+    tableWidth: TABLE_WIDTH,
+    theme: 'plain',
+    styles: {
+      fontSize: 9,
+      textColor: GRAY_TEXT,
+      cellPadding: { top: 5, right: 6, bottom: 5, left: 6 },
+      overflow: 'linebreak',
+      halign: 'left',
+    },
+    headStyles: {
+      fillColor: ORANGE_HEADER,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 9,
+      cellPadding: { top: 6, right: 6, bottom: 6, left: 6 },
+      halign: 'left',
+    },
+    columnStyles: {
+      // Anchos que suman TABLE_WIDTH (210 mm), sin márgenes
+      0: { cellWidth: 56 },  // Nombre
+      1: { cellWidth: 26 },  // CI
+      2: { cellWidth: 28 },  // Teléfono
+      3: { cellWidth: 56 },  // Email
+      4: { cellWidth: 22, minCellWidth: 22 },  // Puntos
+      5: { cellWidth: 22, minCellWidth: 22 },  // Registrado
+    },
+    alternateRowStyles: {
+      fillColor: GRAY_LIGHT,
+    },
   })
 
   const totalPages = doc.getNumberOfPages()
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p)
-    addHeaderFooter(doc, p, totalPages, tenantNombre)
+    addFooter(doc, p, totalPages)
   }
 
   const fecha = new Date().toISOString().slice(0, 10)
