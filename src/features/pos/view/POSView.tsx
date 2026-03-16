@@ -101,7 +101,7 @@ export default function POSView() {
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <Link
-            href={ROUTES.PROTECTED.PEDIDOS}
+            href={`${ROUTES.PROTECTED.PEDIDOS}?from=${ROUTES.PEDIDOS_FROM.POS}`}
             onClick={() => setNavigatingTo(ROUTES.PROTECTED.PEDIDOS)}
             title="Historial de pedidos"
             className={`inline-flex items-center justify-center rounded-lg border p-2 sm:rounded-xl sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-medium transition min-h-[40px] min-w-[40px] sm:min-h-0 sm:min-w-0 ${

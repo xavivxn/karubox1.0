@@ -18,7 +18,7 @@ export const DASHBOARD_CARDS: DashboardCard[] = [
   {
     title: 'Historial de pedidos',
     description: 'Consultá pedidos por fecha y estado. Solo administradores pueden anular.',
-    href: ROUTES.PROTECTED.PEDIDOS,
+    href: `${ROUTES.PROTECTED.PEDIDOS}?from=${ROUTES.PEDIDOS_FROM.HOME}`,
     icon: 'pedidos',
     color: 'green'
   },

@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getSesionAbierta, getSesionCerradaMasReciente, calcularTotalesTurno } from '@/features/caja/services/cajaService'
-import type { SesionCaja } from '@/features/caja/types/caja.types'
+import type { GastoExtra, SesionCaja } from '@/features/caja/types/caja.types'
 
 export type CajaActionResult<T = void> = { success: true; data: T } | { success: false; error: string }
 
@@ -93,12 +93,13 @@ export async function abrirCajaAction(tenantId: string | null): Promise<CajaActi
 }
 
 /**
- * Cerrar caja: actualiza la sesión con cierre_at, totales y monto pagado a empleados.
- * Solo admin.
+ * Cerrar caja: actualiza la sesión con cierre_at, totales, monto pagado a empleados y gastos extra.
+ * Solo admin. Gastos extra se restan de la ganancia neta.
  */
 export async function cerrarCajaAction(
   sesionId: string,
-  montoPagadoEmpleados: number
+  montoPagadoEmpleados: number,
+  gastosExtra: GastoExtra[] = []
 ): Promise<CajaActionResult<SesionCaja>> {
   const supabase = await createClient()
   const {
@@ -132,8 +133,10 @@ export async function cerrarCajaAction(
   const aperturaAt = (sesion as { apertura_at: string }).apertura_at
   const totales = await calcularTotalesTurno(supabase, tenantId, aperturaAt)
   const monto = Number(montoPagadoEmpleados) || 0
+  const gastos = Array.isArray(gastosExtra) ? gastosExtra.filter((g) => g && Number(g.monto) > 0) : []
+  const totalGastosExtra = gastos.reduce((sum, g) => sum + Number(g.monto), 0)
   const gananciaNeta =
-    totales.total_ventas - totales.total_costo_estimado - monto
+    totales.total_ventas - totales.total_costo_estimado - monto - totalGastosExtra
 
   const { data: actualizada, error } = await supabase
     .from('sesiones_caja')
@@ -144,7 +147,8 @@ export async function cerrarCajaAction(
       total_costo_estimado: totales.total_costo_estimado,
       monto_pagado_empleados: monto,
       ganancia_neta: gananciaNeta,
-      cantidad_pedidos: totales.cantidad_pedidos
+      cantidad_pedidos: totales.cantidad_pedidos,
+      gastos_extra: gastos.map((g) => ({ descripcion: g.descripcion || '', monto: Number(g.monto) }))
     })
     .eq('id', sesionId)
     .select()

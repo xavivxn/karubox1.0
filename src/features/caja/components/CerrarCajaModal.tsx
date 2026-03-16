@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Loader2, Wallet, CheckCircle2, FileDown } from 'lucide-react'
+import { X, Loader2, Wallet, CheckCircle2, FileDown, Plus, Trash2 } from 'lucide-react'
 import { formatGuaranies, formatNumber } from '@/lib/utils/format'
 import { getTotalesTurnoAction, cerrarCajaAction } from '@/app/actions/caja'
 import { generarPdfCierreCaja } from '../utils/generarPdfCierreCaja'
-import type { SesionCaja } from '../types/caja.types'
+import type { GastoExtra, SesionCaja } from '../types/caja.types'
 
 interface CerrarCajaModalProps {
   open: boolean
@@ -34,6 +34,8 @@ export function CerrarCajaModal({
   } | null>(null)
   const [loadingTotales, setLoadingTotales] = useState(false)
   const [montoPagado, setMontoPagado] = useState<string>('0')
+  const [gastosExtraEnabled, setGastosExtraEnabled] = useState(false)
+  const [gastosExtra, setGastosExtra] = useState<{ descripcion: string; monto: string }[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   /** Cuando está seteada, mostramos la vista de cierre exitoso con opción de descargar PDF */
@@ -47,6 +49,8 @@ export function CerrarCajaModal({
     if (!sesion?.apertura_at) return
     setError(null)
     setMontoPagado('0')
+    setGastosExtraEnabled(false)
+    setGastosExtra([])
     setLoadingTotales(true)
     getTotalesTurnoAction(tenantId, sesion.apertura_at).then((result) => {
       setLoadingTotales(false)
@@ -56,14 +60,48 @@ export function CerrarCajaModal({
   }, [open, tenantId, sesion?.apertura_at])
 
   const montoNum = parseFloat(String(montoPagado).replace(/\D/g, '')) || 0
+  const gastosExtraSum = gastosExtra.reduce(
+    (sum, g) => sum + (parseFloat(String(g.monto).replace(/\D/g, '')) || 0),
+    0
+  )
   const gananciaNeta = totales
-    ? totales.total_ventas - totales.total_costo_estimado - montoNum
+    ? totales.total_ventas - totales.total_costo_estimado - montoNum - gastosExtraSum
     : 0
+
+  const handleAddGastoExtra = () => {
+    if (!gastosExtraEnabled) {
+      setGastosExtraEnabled(true)
+      setGastosExtra([{ descripcion: '', monto: '' }])
+    } else {
+      setGastosExtra((prev) => [...prev, { descripcion: '', monto: '' }])
+    }
+  }
+
+  const handleRemoveGastoExtra = (index: number) => {
+    setGastosExtra((prev) => {
+      const next = prev.filter((_, i) => i !== index)
+      if (next.length === 0) setGastosExtraEnabled(false)
+      return next
+    })
+  }
+
+  const handleGastoChange = (index: number, field: 'descripcion' | 'monto', value: string) => {
+    setGastosExtra((prev) =>
+      prev.map((g, i) => (i === index ? { ...g, [field]: value } : g))
+    )
+  }
 
   const handleConfirmar = async () => {
     setIsSaving(true)
     setError(null)
-    const result = await cerrarCajaAction(sesion.id, montoNum)
+    const gastos: GastoExtra[] = gastosExtra
+      .filter((g) => (g.descripcion || '').trim() || (parseFloat(String(g.monto).replace(/\D/g, '')) || 0) > 0)
+      .map((g) => ({
+        descripcion: (g.descripcion || '').trim() || 'Gasto extra',
+        monto: parseFloat(String(g.monto).replace(/\D/g, '')) || 0
+      }))
+      .filter((g) => g.monto > 0)
+    const result = await cerrarCajaAction(sesion.id, montoNum, gastos)
     setIsSaving(false)
     if (result.success) {
       setSesionCerrada(result.data)
@@ -155,6 +193,19 @@ export function CerrarCajaModal({
                 </p>
               </div>
             </div>
+            {sesionCerrada.gastos_extra && sesionCerrada.gastos_extra.length > 0 && (
+              <div className={`rounded-xl border ${border} p-3 space-y-2`}>
+                <p className={`text-xs uppercase ${textMuted}`}>Gastos extra</p>
+                <ul className="space-y-1 text-sm">
+                  {sesionCerrada.gastos_extra.map((g, i) => (
+                    <li key={i} className="flex justify-between gap-2">
+                      <span className={text}>{g.descripcion || 'Gasto extra'}</span>
+                      <span className={`font-medium ${text}`}>{formatGuaranies(g.monto)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <p className={`text-sm ${textMuted}`}>
               {sesionCerrada.cantidad_pedidos} pedido{sesionCerrada.cantidad_pedidos !== 1 ? 's' : ''} en el turno
             </p>
@@ -263,6 +314,73 @@ export function CerrarCajaModal({
                   )}
                 </div>
 
+                {/* Gastos extra (opcional): deshabilitado por defecto, se habilita con "+" */}
+                <div className={`rounded-xl border ${border} overflow-hidden ${!gastosExtraEnabled ? 'opacity-75' : ''}`}>
+                  <div
+                    className={`flex items-center justify-between px-3 py-2.5 ${darkMode ? 'bg-gray-800/50' : 'bg-gray-50'}`}
+                  >
+                    <span className={`text-sm font-medium ${textMuted}`}>
+                      Gastos extra (opcional)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleAddGastoExtra}
+                      className={`flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition ${darkMode ? 'text-orange-400 hover:bg-orange-900/40' : 'text-orange-600 hover:bg-orange-100'}`}
+                      aria-label="Agregar gasto extra"
+                    >
+                      <Plus className="h-4 w-4" />
+                      {gastosExtraEnabled ? 'Otro' : 'Agregar'}
+                    </button>
+                  </div>
+                  {gastosExtraEnabled && gastosExtra.length > 0 && (
+                    <div className="space-y-2 p-3 border-t border-gray-200 dark:border-gray-600">
+                      {gastosExtra.map((g, index) => (
+                        <div
+                          key={index}
+                          className={`flex flex-col sm:flex-row gap-2 rounded-lg border ${border} p-2.5 ${darkMode ? 'bg-gray-800/30' : 'bg-white'}`}
+                        >
+                          <input
+                            type="text"
+                            value={g.descripcion}
+                            onChange={(e) => handleGastoChange(index, 'descripcion', e.target.value)}
+                            placeholder="Descripción del gasto"
+                            disabled={isSaving}
+                            className={`flex-1 min-w-0 rounded-lg border ${darkMode ? 'border-gray-600 bg-gray-800 text-white placeholder:text-gray-500' : 'border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400'} px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500/20 disabled:opacity-50`}
+                          />
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className={`flex items-center gap-1.5 rounded-lg border ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-gray-50'} px-2 py-2 min-w-[100px] focus-within:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500/20`}>
+                              <span className={`text-xs ${textMuted}`}>Gs.</span>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={g.monto === '' ? '' : formatNumber(g.monto)}
+                                onChange={(e) => handleGastoChange(index, 'monto', e.target.value.replace(/\D/g, ''))}
+                                placeholder="0"
+                                disabled={isSaving}
+                                className={`w-full min-w-0 border-0 bg-transparent py-0.5 text-sm ${darkMode ? 'text-white placeholder:text-gray-500' : 'text-gray-900 placeholder:text-gray-400'} focus:outline-none focus:ring-0 disabled:opacity-50`}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveGastoExtra(index)}
+                              disabled={isSaving}
+                              className={`p-2 rounded-lg transition ${textMuted} hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50`}
+                              aria-label="Quitar gasto"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {gastosExtraSum > 0 && (
+                        <p className={`text-xs ${textMuted}`}>
+                          Total gastos extra: {formatGuaranies(gastosExtraSum)} (se restan de la ganancia neta)
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
               <div className={`rounded-xl border-2 ${darkMode ? 'border-emerald-800 bg-emerald-950/30' : 'border-emerald-200 bg-emerald-50'} p-4`}>
                 <p className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-400">
                   Ganancia neta
@@ -271,7 +389,7 @@ export function CerrarCajaModal({
                   {formatGuaranies(gananciaNeta)}
                 </p>
                 <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-1">
-                  Ventas − costo estimado − pagado a empleados
+                  Ventas − costo − pagado empleados{gastosExtraSum > 0 ? ' − gastos extra' : ''}
                 </p>
               </div>
             </>

@@ -67,11 +67,11 @@ export const SegmentCards = ({ segments, loading }: SegmentCardsProps) => {
   ]
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 min-w-0">
       {cards.map((card) => (
         <div
           key={card.label}
-          className={`rounded-xl border ${card.border} ${card.bg} p-4 flex items-center gap-3 sm:gap-4 transition-colors`}
+          className={`rounded-xl border ${card.border} ${card.bg} p-4 flex items-center gap-3 sm:gap-4 transition-colors min-w-0 overflow-hidden`}
         >
           <div className={`p-2.5 sm:p-3 rounded-lg ${card.iconBg} flex-shrink-0`}>
             {card.icon}

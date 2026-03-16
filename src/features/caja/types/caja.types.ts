@@ -2,6 +2,11 @@
  * Tipos para el módulo de cierre de caja
  */
 
+export interface GastoExtra {
+  descripcion: string
+  monto: number
+}
+
 export interface SesionCaja {
   id: string
   tenant_id: string
@@ -14,6 +19,7 @@ export interface SesionCaja {
   monto_pagado_empleados: number
   ganancia_neta: number
   cantidad_pedidos: number
+  gastos_extra?: GastoExtra[]
   created_at: string
   updated_at: string
 }
@@ -29,4 +35,5 @@ export interface TotalesTurno {
 export interface CerrarCajaPayload {
   sesion_id: string
   monto_pagado_empleados: number
+  gastos_extra?: GastoExtra[]
 }

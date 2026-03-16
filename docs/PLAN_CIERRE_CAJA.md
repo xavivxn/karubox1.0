@@ -57,7 +57,8 @@ Se propone una tabla **por tenant** que represente cada “día operativo” (ap
 | total_ventas        | NUMERIC     | Suma de `total` de pedidos del turno (confirmados/facturados) |
 | total_costo_estimado | NUMERIC   | Costo estimado del día (opcional, puede calcularse al cerrar) |
 | monto_pagado_empleados | NUMERIC  | Monto ingresado al cerrar (sueldos/adelantos/etc.) |
-| ganancia_neta       | NUMERIC    | total_ventas - total_costo_estimado - monto_pagado_empleados |
+| gastos_extra        | JSONB     | Array opcional de { descripcion, monto }; se restan de ganancia_neta (migración 13) |
+| ganancia_neta       | NUMERIC    | total_ventas - total_costo_estimado - monto_pagado_empleados - sum(gastos_extra) |
 | cantidad_pedidos    | INT        | Nº de pedidos del turno |
 | created_at / updated_at | TIMESTAMPTZ | Auditoría |
 
@@ -248,7 +249,7 @@ Sugerencia de implementación:
 
 - Solo el rol **admin** puede hacer “Empezar el día” y “Cerrar caja”; el cajero no ve esos botones ni puede ejecutar las acciones.
 - Al “Empezar el día” se habilita el uso de POS y Cocina 3D para ese tenant.
-- Al “Cerrar caja” se pide el monto pagado a empleados y se calcula ganancia neta (ventas - costo estimado - monto empleados); se persiste el cierre y se “cierra” la caja.
+- Al “Cerrar caja” se pide el monto pagado a empleados y se calcula ganancia neta (ventas - costo - monto empleados - gastos extra). Opcionalmente se pueden agregar gastos extra (descripción + monto); todo se persiste y se incluye en el reporte PDF.
 - Con caja cerrada, POS y Cocina muestran una pantalla de bloqueo clara (sin opción de abrir caja para el cajero).
 - La UI de botones, modal e indicadores funciona correctamente en **light mode** y **dark mode** y es clara e intuitiva para el admin.
 
