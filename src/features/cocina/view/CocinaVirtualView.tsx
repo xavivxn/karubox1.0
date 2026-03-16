@@ -126,10 +126,14 @@ export default function CocinaVirtualView() {
   const { sesionAbierta, ultimaSesionCerrada, loading: loadingCaja } = useEstadoCaja(tenant?.id ?? null)
   const { orders, stats, newDeliveryIds, clearDelivery } = useRealtimeOrders({
     tenantId: tenant?.id,
+    // Mientras se carga el estado de caja, no mostramos pedidos para evitar parpadeos.
+    // Una vez resuelto, filtramos estrictamente por el turno correspondiente.
     desde: loadingCaja
-      ? undefined
+      ? null
       : sesionAbierta?.apertura_at ?? ultimaSesionCerrada?.apertura_at ?? null,
-    hasta: sesionAbierta ? null : ultimaSesionCerrada?.cierre_at ?? undefined,
+    hasta: loadingCaja
+      ? undefined
+      : sesionAbierta ? null : ultimaSesionCerrada?.cierre_at ?? undefined,
   })
 
   const [streak, setStreak] = useState(0)

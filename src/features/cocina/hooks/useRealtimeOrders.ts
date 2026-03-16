@@ -35,6 +35,7 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
   })
   const [newDeliveryIds, setNewDeliveryIds] = useState<string[]>([])
   const explodedRef = useRef<Set<string>>(new Set())
+  const ordersRef = useRef<KitchenOrder[]>([])
 
   const processRawOrders = useCallback(
     (raw: RawPedido[]): KitchenOrder[] =>
@@ -70,6 +71,7 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
   const fetchOrders = useCallback(async () => {
     if (!tenantId) return
     if (desde === null && hasta === undefined) {
+      ordersRef.current = []
       setOrders([])
       setStats({
         todayTotal: 0,
@@ -107,38 +109,43 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
       // Marcar como ya explotadas todas las entregas existentes en el snapshot inicial
       const initialDelivered = processed.filter((o) => o.stage === 'entregado')
       explodedRef.current = new Set(initialDelivered.map((o) => o.id))
+      ordersRef.current = processed
       setNewDeliveryIds([])
-
       setOrders(processed)
       setStats(computeStats(processed))
     }
   }, [tenantId, desde, hasta, processRawOrders, computeStats])
+
+  // Mantener ref en sync con orders para el intervalo (evitar setState dentro de setState)
+  useEffect(() => {
+    ordersRef.current = orders
+  }, [orders])
 
   // Initial fetch
   useEffect(() => {
     fetchOrders()
   }, [fetchOrders])
 
-  // Refresh stages each 5 s & detect new deliveries
+  // Refresh stages each 5 s & detect new deliveries (sin setState dentro del updater de setOrders)
   useEffect(() => {
     const interval = setInterval(() => {
-      setOrders((prev) => {
-        const updated = prev.map((o) => {
-          const { stage, elapsed, progress } = getOrderStage(o.created_at)
-          return { ...o, stage, elapsed, progress }
-        })
-
-        const fresh = updated.filter(
-          (o) => o.stage === 'entregado' && !explodedRef.current.has(o.id)
-        )
-        if (fresh.length > 0) {
-          fresh.forEach((o) => explodedRef.current.add(o.id))
-          setNewDeliveryIds((p) => [...p, ...fresh.map((o) => o.id)])
-        }
-
-        setStats(computeStats(updated))
-        return updated
+      const prev = ordersRef.current
+      const updated = prev.map((o) => {
+        const { stage, elapsed, progress } = getOrderStage(o.created_at)
+        return { ...o, stage, elapsed, progress }
       })
+
+      const fresh = updated.filter(
+        (o) => o.stage === 'entregado' && !explodedRef.current.has(o.id)
+      )
+      if (fresh.length > 0) {
+        fresh.forEach((o) => explodedRef.current.add(o.id))
+        setNewDeliveryIds((p) => [...p, ...fresh.map((o) => o.id)])
+      }
+
+      ordersRef.current = updated
+      setOrders(updated)
+      setStats(computeStats(updated))
     }, 5_000)
 
     return () => clearInterval(interval)

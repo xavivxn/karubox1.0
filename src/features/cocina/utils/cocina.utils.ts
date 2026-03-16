@@ -22,8 +22,11 @@ export interface KitchenStats {
 const STAGE_MS = {
   cocinando: 30_000,
   empacando: 8 * 60_000,
-  entregado: 12 * 60_000,
+  entregado: 10 * 60_000, // empacando = 2 min (de 8 min a 10 min desde creación)
 }
+
+/** Tiempo desde creación del pedido hasta que pasa a etapa "entregado" (ms). Usado para detectar entregas recientes. */
+export const STAGE_MS_ENTREGADO = 10 * 60_000
 
 export function getOrderStage(createdAt: string): {
   stage: KitchenStage

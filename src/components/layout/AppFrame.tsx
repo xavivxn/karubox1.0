@@ -27,8 +27,8 @@ const PAGE_MAP: Array<{ test: (pathname: string) => boolean; info: PageInfo }> =
   {
     test: (path) => path.startsWith('/home/admin/cocina'),
     info: {
-      title: 'Cocina Virtual',
-      subtitle: 'Tu cocina en 3D — Visualizá el flujo de pedidos en tiempo real.',
+      title: 'Cocina 3D',
+      subtitle: 'Visualizá el flujo de pedidos en tu cocina 3D en tiempo real.',
       fullWidth: true
     }
   },

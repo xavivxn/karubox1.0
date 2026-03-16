@@ -6,6 +6,7 @@ import {
   STAGE_COLORS,
   STAGE_LABELS,
   STAGE_EMOJIS,
+  STAGE_MS_ENTREGADO,
   getOrderColor,
   playCoinSound,
   playNewOrderSound,
@@ -35,6 +36,9 @@ const STAGE_BG: Record<KitchenStage, string> = {
   empacando: 'from-green-50 to-green-100/50 dark:from-gray-800 dark:to-gray-800/90',
   entregado: 'from-yellow-50 to-amber-100/50 dark:from-gray-800 dark:to-gray-800/90',
 }
+
+// Ventana (ms) desde que el pedido pasó a "entregado" para considerar la entrega reciente (sonido + ticker).
+const RECENT_DELIVERY_WINDOW_MS = 60_000
 
 const EMPTY_MESSAGES: Record<KitchenStage, string> = {
   nuevo: 'Esperando el próximo pedido... 🎯',
@@ -406,13 +410,24 @@ function StageColumn({
   )
 }
 
-/* ═══════════════ ACTIVITY TICKER ═══════════════ */
+/* ═══════════════ ACTIVITY TICKER (Upgrade Dopamina) ═══════════════ */
+
+const HIGH_SCORE_GS = 200_000
+
+function tickerEmojiByTotal(total: number, isDelivery: boolean): string {
+  if (isDelivery) return total >= HIGH_SCORE_GS ? '🪙' : '💰'
+  if (total >= HIGH_SCORE_GS) return '🪙'
+  if (total >= 50_000) return '💰'
+  return '💵'
+}
 
 interface TickerEvent {
   id: string
   text: string
   emoji: string
   ts: number
+  total?: number
+  isDelivery?: boolean
 }
 
 function ActivityTicker({ events }: { events: TickerEvent[] }) {
@@ -426,13 +441,40 @@ function ActivityTicker({ events }: { events: TickerEvent[] }) {
         className="flex gap-8 whitespace-nowrap animate-ticker"
         style={{ '--ticker-duration': `${Math.max(events.length * 5, 15)}s` } as React.CSSProperties}
       >
-        {doubled.map((ev, i) => (
-          <span key={`${ev.id}-${i}`} className="text-xs font-medium text-gray-300 flex items-center gap-1.5">
-            <span>{ev.emoji}</span>
-            <span>{ev.text}</span>
-            <span className="text-gray-600">•</span>
-          </span>
-        ))}
+        {doubled.map((ev, i) => {
+          const isHighScore = ev.total != null && ev.total >= HIGH_SCORE_GS
+          const amountText =
+            ev.total != null
+              ? ev.isDelivery
+                ? `+${formatGs(ev.total)}`
+                : formatGs(ev.total)
+              : null
+          const labelText =
+            ev.total != null && amountText != null ? ev.text.replace(amountText, '').trim() : null
+
+          return (
+            <span
+              key={`${ev.id}-${i}`}
+              className={`
+                inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border
+                ${isHighScore ? 'border-amber-400/70 bg-amber-500/10 shadow-[0_0_12px_rgba(251,191,36,0.25)]' : 'border-transparent'}
+              `}
+            >
+              <span className="text-sm" title={isHighScore ? 'High score' : undefined}>
+                {ev.emoji}
+              </span>
+              {amountText != null && labelText != null ? (
+                <>
+                  <span className="text-xs font-medium text-gray-400">{labelText}</span>
+                  <span className="text-xs font-bold text-emerald-300 tabular-nums">{amountText}</span>
+                </>
+              ) : (
+                <span className="text-xs font-medium text-gray-300">{ev.text}</span>
+              )}
+              <span className="text-gray-600">•</span>
+            </span>
+          )
+        })}
       </div>
     </div>
   )
@@ -537,8 +579,10 @@ export default function KitchenCanvas({
         const newEvents: TickerEvent[] = newOrders.map((o) => ({
           id: `new-${o.id}`,
           text: `Pedido #${o.numero_pedido} recibido — ${formatGs(o.total)}`,
-          emoji: '📋',
+          emoji: tickerEmojiByTotal(o.total, false),
           ts: Date.now(),
+          total: o.total,
+          isDelivery: false,
         }))
         return [...newEvents, ...prev].slice(0, 20)
       })
@@ -546,30 +590,41 @@ export default function KitchenCanvas({
     prevOrderCount.current = count
   }, [orders])
 
-  // Detect deliveries → sound + ticker
+  // Detect deliveries → sound + ticker; limpiar newDeliveryIds siempre para no dejar confetti/estilo persistente
   useEffect(() => {
     newDeliveryIds.forEach((id) => {
       if (!soundPlayed.current.has(id)) {
         soundPlayed.current.add(id)
-        playCoinSound()
 
         const order = orders.find((o) => o.id === id)
         if (order) {
-          setTickerEvents((prev) => [
-            {
-              id: `del-${id}`,
-              text: `#${order.numero_pedido} entregado — +${formatGs(order.total)}`,
-              emoji: '✅',
-              ts: Date.now(),
-            },
-            ...prev,
-          ].slice(0, 20))
+          // "Reciente" = tiempo en etapa entregado <= ventana (no elapsed desde creación)
+          const timeInEntregado = order.elapsed - STAGE_MS_ENTREGADO
+          const isRecentDelivery =
+            order.stage === 'entregado' && timeInEntregado <= RECENT_DELIVERY_WINDOW_MS
+
+          if (isRecentDelivery) {
+            playCoinSound()
+            setTickerEvents((prev) => [
+              {
+                id: `del-${id}`,
+                text: `#${order.numero_pedido} entregado — +${formatGs(order.total)}`,
+                emoji: tickerEmojiByTotal(order.total, true),
+                ts: Date.now(),
+                total: order.total,
+                isDelivery: true,
+              },
+              ...prev,
+            ].slice(0, 20))
+          }
         }
+        // Siempre notificar para quitar id de newDeliveryIds y evitar confetti/estilo en entregas viejas
+        onDeliveryAnimated(id)
       }
     })
-  }, [newDeliveryIds, orders])
+  }, [newDeliveryIds, orders, onDeliveryAnimated])
 
-  // Record breaker detection
+  // Record breaker: solo mostrar banner cuando se supera un récord anterior (bestRevenueRef > 0) para no mostrar al abrir
   useEffect(() => {
     if (stats.todayRevenue > prevRevenueRef.current) {
       if (stats.todayRevenue > bestRevenueRef.current && bestRevenueRef.current > 0) {
