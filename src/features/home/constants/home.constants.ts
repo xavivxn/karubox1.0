@@ -32,14 +32,14 @@ export const DASHBOARD_CARDS: DashboardCard[] = [
   {
     title: 'Clientes',
     description: 'Gestioná clientes, puntos, campañas de fidelización y mensajes.',
-    href: ROUTES.PROTECTED.CLIENTES,
+    href: `${ROUTES.PROTECTED.CLIENTES}?from=${ROUTES.CLIENTES_FROM.HOME}`,
     icon: 'clientes',
     color: 'purple'
   },
   {
-    title: 'Cocina en Vivo',
-    description: 'Seguí cada pedido en tiempo real: recibido, cocinando, empacando y entregado.',
-    href: ROUTES.PROTECTED.COCINA,
+    title: 'Cocina Virtual',
+    description: 'Visualizá el flujo de pedidos en tu cocina 3D en tiempo real.',
+    href: `${ROUTES.PROTECTED.COCINA}?from=${ROUTES.COCINA_FROM.HOME}`,
     icon: 'cocina',
     color: 'red'
   }

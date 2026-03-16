@@ -6,10 +6,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { ClienteLocal, ClienteFormData } from '../types/clientes.types'
 import { INITIAL_FORM_DATA } from '../types/clientes.types'
-import { validarFormulario } from '../utils/clientes.utils'
+import { validarFormulario, normalizarParaBusqueda } from '../utils/clientes.utils'
 import {
   loadClientes,
-  searchClientes,
   crearCliente,
   actualizarCliente
 } from '../services/clientesService'
@@ -68,14 +67,31 @@ export const useClientes = (tenantId: string | undefined): UseClientesReturn => 
     fetchClientes()
   }, [fetchClientes])
 
-  // Buscar clientes
+  // Buscar clientes (filtro en memoria para ignorar tildes)
   const handleSearch = async () => {
     if (!tenantId) return
 
     try {
       setLoading(true)
-      const data = await searchClientes(searchTerm, tenantId)
-      setClientes(data)
+      const todos = await loadClientes(tenantId)
+      if (!searchTerm.trim()) {
+        setClientes(todos)
+        return
+      }
+      const termino = normalizarParaBusqueda(searchTerm)
+      const filtrados = todos.filter((c) => {
+        const nombre = normalizarParaBusqueda(c.nombre ?? '')
+        const telefono = normalizarParaBusqueda(c.telefono ?? '')
+        const email = normalizarParaBusqueda(c.email ?? '')
+        const ci = normalizarParaBusqueda(c.ci ?? '')
+        return (
+          nombre.includes(termino) ||
+          telefono.includes(termino) ||
+          email.includes(termino) ||
+          ci.includes(termino)
+        )
+      })
+      setClientes(filtrados)
     } catch (error) {
       console.error('Error buscando clientes:', error)
       alert('Error al buscar clientes')

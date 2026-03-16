@@ -22,6 +22,18 @@ export const ROUTES = {
     // REPORTES: '/home/dashboard/reportes',
   },
 
+  /** Query param para breadcrumb de Cocina 3D: 'home' = desde Inicio, 'admin' = desde Administración */
+  COCINA_FROM: {
+    HOME: 'home',
+    ADMIN: 'admin',
+  } as const,
+
+  /** Query param para breadcrumb de Clientes: 'home' = desde Inicio, 'admin' = desde Administración */
+  CLIENTES_FROM: {
+    HOME: 'home',
+    ADMIN: 'admin',
+  } as const,
+
   // Rutas de API (futuro)
   API: {
     AUTH: '/api/auth',

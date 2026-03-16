@@ -15,11 +15,10 @@ export function LoginFields({
 }: LoginFieldsProps) {
   return (
     <>
-      {/* Email */}
-      <div>
+      <div className="animate-login-field-1">
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-gray-700 mb-2"
+          className="block text-sm font-medium text-gray-700 mb-1.5"
         >
           Correo electrónico
         </label>
@@ -30,17 +29,16 @@ export function LoginFields({
           onChange={(e) => onEmailChange(e.target.value)}
           required
           autoComplete="email"
-          className="w-full px-4 py-3 border border-orange-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none transition text-gray-900 placeholder:text-gray-400"
+          className="w-full px-4 py-3 rounded-xl border border-orange-200 bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400"
           placeholder="tu@email.com"
           disabled={disabled}
         />
       </div>
 
-      {/* Password */}
-      <div>
+      <div className="animate-login-field-2">
         <label
           htmlFor="password"
-          className="block text-sm font-medium text-gray-700 mb-2"
+          className="block text-sm font-medium text-gray-700 mb-1.5"
         >
           Contraseña
         </label>
@@ -51,7 +49,7 @@ export function LoginFields({
           onChange={(e) => onPasswordChange(e.target.value)}
           required
           autoComplete="current-password"
-          className="w-full px-4 py-3 border border-orange-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none transition text-gray-900 placeholder:text-gray-400"
+          className="w-full px-4 py-3 rounded-xl border border-orange-200 bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400"
           placeholder="••••••••"
           disabled={disabled}
         />

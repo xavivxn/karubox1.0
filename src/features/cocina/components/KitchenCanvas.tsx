@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react'
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import {
   KITCHEN_STAGES,
   STAGE_COLORS,
@@ -14,8 +13,6 @@ import {
   type KitchenOrder,
   type KitchenStage,
 } from '../utils/cocina.utils'
-import type { NextTarget } from '../utils/achievements'
-import OrderDetailModal from './OrderDetailModal'
 
 /* ═══════════════ CONSTANTS ═══════════════ */
 
@@ -33,10 +30,10 @@ const WORKER_EMOJIS: Record<KitchenStage, string[]> = {
 }
 
 const STAGE_BG: Record<KitchenStage, string> = {
-  nuevo: 'from-orange-50 to-orange-100/50',
-  cocinando: 'from-red-50 to-red-100/50',
-  empacando: 'from-green-50 to-green-100/50',
-  entregado: 'from-yellow-50 to-amber-100/50',
+  nuevo: 'from-orange-50 to-orange-100/50 dark:from-gray-800 dark:to-gray-800/90',
+  cocinando: 'from-red-50 to-red-100/50 dark:from-gray-800 dark:to-gray-800/90',
+  empacando: 'from-green-50 to-green-100/50 dark:from-gray-800 dark:to-gray-800/90',
+  entregado: 'from-yellow-50 to-amber-100/50 dark:from-gray-800 dark:to-gray-800/90',
 }
 
 const EMPTY_MESSAGES: Record<KitchenStage, string> = {
@@ -49,7 +46,6 @@ const EMPTY_MESSAGES: Record<KitchenStage, string> = {
 const CONFETTI_COLORS = ['#FFD700', '#FF6B35', '#4CAF50', '#4A90D9', '#FF3E3E', '#9B59B6', '#FF69B4']
 
 const COMBO_THRESHOLDS = [
-  { min: 2, label: 'COMBO x2!', emoji: '✨' },
   { min: 3, label: 'COMBO x3!', emoji: '⚡' },
   { min: 5, label: 'RACHA x5!', emoji: '🔥' },
   { min: 8, label: 'IMPARABLE x8!', emoji: '💥' },
@@ -113,18 +109,12 @@ function MoneyCounter({ value, label, icon }: { value: number; label: string; ic
     <div className="flex items-center gap-2">
       <span className="text-xl">{icon}</span>
       <div className="flex flex-col">
-        <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{label}</span>
-        <motion.div
-          key={value}
-          initial={{ scale: 1.08 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', bounce: 0.4, duration: 0.38 }}
-          className="text-lg font-black text-gray-900 tabular-nums leading-tight"
-        >
+        <span className="text-[10px] text-gray-400 dark:text-gray-400 font-semibold uppercase tracking-wider">{label}</span>
+        <span className="text-lg font-black text-gray-900 dark:text-gray-100 tabular-nums leading-tight">
           {formatted.split('').map((ch, i) => (
             <RollingDigit key={`${i}-${ch}`} digit={ch} delay={i} />
           ))}
-        </motion.div>
+        </span>
       </div>
     </div>
   )
@@ -142,12 +132,8 @@ function ComboBadge({ streak, lastOrderTime }: { streak: number; lastOrderTime: 
   const isGold = streak >= 5
 
   return (
-    <div className="flex items-center gap-2">
-      <motion.div
-        key={`${streak}-${threshold.min}`}
-        initial={{ scale: 0.75, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', bounce: 0.65, duration: 0.42 }}
+    <div className="flex items-center gap-2 animate-combo-pop">
+      <div
         className={`
           px-3 py-1.5 rounded-full font-black text-sm flex items-center gap-1.5 shadow-lg
           ${isGold ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-white' : 'bg-gradient-to-r from-orange-500 to-red-500 text-white'}
@@ -155,8 +141,8 @@ function ComboBadge({ streak, lastOrderTime }: { streak: number; lastOrderTime: 
       >
         <span className="text-base">{threshold.emoji}</span>
         <span>{threshold.label}</span>
-      </motion.div>
-      <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+      </div>
+      <div className="w-20 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-1000 ease-linear"
           style={{
@@ -171,38 +157,7 @@ function ComboBadge({ streak, lastOrderTime }: { streak: number; lastOrderTime: 
   )
 }
 
-/* ═══════════════ NEXT TARGET PROGRESS BAR ═══════════════ */
-
-function NextTargetBar({ target }: { target: NextTarget }) {
-  const ratio = target.current / target.target
-  const formatValue = (v: number) =>
-    target.isRevenue ? `Gs. ${Math.round(v / 1000)}k` : String(v)
-
-  return (
-    <div className="flex items-center gap-2 text-[11px] text-gray-400">
-      <span className="font-semibold text-gray-500 truncate max-w-[110px]">
-        {target.achievement.emoji} {target.achievement.name}
-      </span>
-      <span className="text-gray-300 text-[10px]">
-        {formatValue(target.current)}/{formatValue(target.target)}
-      </span>
-      <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
-        <motion.div
-          className="h-full rounded-full"
-          style={{
-            background: 'linear-gradient(90deg, #F59E0B, #FBBF24)',
-            originX: 0,
-          }}
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: ratio }}
-          transition={{ type: 'spring', damping: 22, stiffness: 90 }}
-        />
-      </div>
-    </div>
-  )
-}
-
-/* ═══════════════ CONFETTI BURST ═══════════════ */
+/* ═══════════════ CONFETTI BURST (enhanced) ═══════════════ */
 
 function ConfettiBurst({ onDone, intensity }: { onDone: () => void; intensity?: number }) {
   const count = intensity ?? (20 + Math.floor(Math.random() * 20))
@@ -283,34 +238,28 @@ function EmberParticles() {
   )
 }
 
-/* ═══════════════ ORDER CARD ═══════════════ */
+/* ═══════════════ ORDER CARD (on steroids) ═══════════════ */
 
-function OrderCard({ order, onClick }: { order: KitchenOrder; onClick: (o: KitchenOrder) => void }) {
+function OrderCard({ order, isNew }: { order: KitchenOrder; isNew: boolean }) {
   const typeColor = getOrderColor(order.tipo)
   const typeLabel = ORDER_TYPE_LABELS[order.tipo] ?? order.tipo
   const isDone = order.stage === 'entregado'
   const isCooking = order.stage === 'cocinando'
 
   return (
-    <motion.div
-      layout
-      layoutId={`order-${order.id}`}
-      initial={{ opacity: 0, y: -14, scale: 0.9 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.85, y: 10 }}
-      transition={{ type: 'spring', bounce: 0.35, duration: 0.42 }}
-      onClick={() => onClick(order)}
+    <div
       className={`
-        relative bg-white rounded-xl shadow-sm border p-3 cursor-pointer
-        ${isDone ? 'opacity-75 scale-[0.97] border-yellow-200' : 'border-gray-100'}
+        relative bg-white dark:bg-gray-700/90 rounded-xl shadow-sm border p-3
+        ${isNew ? 'animate-slam-in' : 'animate-fade-in-up'}
+        ${isDone ? 'opacity-75 scale-[0.97] border-yellow-200 dark:border-amber-700/50' : 'border-gray-100 dark:border-gray-600'}
         ${isCooking ? 'animate-fire-shimmer' : ''}
-        hover:shadow-md hover:border-gray-200 active:scale-[0.98] transition-all duration-150
+        hover:shadow-md dark:hover:shadow-black/20 transition-all duration-200
       `}
     >
       {isCooking && <EmberParticles />}
 
       <div className="flex items-center justify-between mb-1.5 relative z-[1]">
-        <span className="text-sm font-extrabold text-gray-800">#{order.numero_pedido}</span>
+        <span className="text-sm font-extrabold text-gray-800 dark:text-gray-100">#{order.numero_pedido}</span>
         <span
           className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
           style={{ backgroundColor: typeColor }}
@@ -320,12 +269,12 @@ function OrderCard({ order, onClick }: { order: KitchenOrder; onClick: (o: Kitch
       </div>
 
       <div className="flex items-center justify-between mb-1.5 relative z-[1]">
-        <span className="text-xs font-bold text-green-600">{formatGs(order.total)}</span>
+        <span className="text-xs font-bold text-green-600 dark:text-green-400">{formatGs(order.total)}</span>
       </div>
 
       {!isDone && (
         <>
-          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1 relative z-[1]">
+          <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-600 rounded-full overflow-hidden mb-1 relative z-[1]">
             <div
               className="h-full rounded-full transition-all duration-1000 ease-linear"
               style={{
@@ -335,10 +284,10 @@ function OrderCard({ order, onClick }: { order: KitchenOrder; onClick: (o: Kitch
             />
           </div>
           <div className="flex items-center justify-between relative z-[1]">
-            <span className="text-[11px] text-gray-400 font-medium">
+            <span className="text-[11px] text-gray-400 dark:text-gray-400 font-medium">
               {formatElapsed(order.elapsed)}
             </span>
-            <span className="text-[10px] text-gray-300">
+            <span className="text-[10px] text-gray-300 dark:text-gray-500">
               {Math.round(order.progress * 100)}%
             </span>
           </div>
@@ -346,16 +295,16 @@ function OrderCard({ order, onClick }: { order: KitchenOrder; onClick: (o: Kitch
       )}
 
       {isDone && (
-        <div className="text-[11px] text-green-600 font-semibold flex items-center gap-1 relative z-[1]">
+        <div className="text-[11px] text-green-600 dark:text-green-400 font-semibold flex items-center gap-1 relative z-[1]">
           <span>✅ Listo</span>
-          <span className="text-green-500">~{formatElapsed(order.elapsed)}</span>
+          <span className="text-green-500 dark:text-green-400/90">~{formatElapsed(order.elapsed)}</span>
         </div>
       )}
-    </motion.div>
+    </div>
   )
 }
 
-/* ═══════════════ STAGE COLUMN ═══════════════ */
+/* ═══════════════ STAGE COLUMN (enhanced) ═══════════════ */
 
 function StageColumn({
   stage,
@@ -363,14 +312,12 @@ function StageColumn({
   hasNewDelivery,
   hasNewOrder,
   onConfettiDone,
-  onOrderClick,
 }: {
   stage: KitchenStage
   orders: KitchenOrder[]
   hasNewDelivery: boolean
   hasNewOrder: boolean
   onConfettiDone: () => void
-  onOrderClick: (o: KitchenOrder) => void
 }) {
   const isCooking = stage === 'cocinando'
   const isDelivered = stage === 'entregado'
@@ -380,7 +327,7 @@ function StageColumn({
       className={`
         relative flex flex-col rounded-2xl bg-gradient-to-b ${STAGE_BG[stage]}
         border overflow-hidden min-h-[300px]
-        ${isCooking && orders.length > 0 ? 'animate-fire-shimmer' : 'border-gray-100/80'}
+        ${isCooking && orders.length > 0 ? 'animate-fire-shimmer border-gray-100/80 dark:border-gray-600' : 'border-gray-100/80 dark:border-gray-600'}
         ${isDelivered && hasNewDelivery ? 'animate-gold-pulse' : ''}
         ${hasNewOrder ? 'animate-shake' : ''}
       `}
@@ -389,45 +336,39 @@ function StageColumn({
 
       {/* Header */}
       <div
-        className="px-4 py-3 flex items-center justify-between border-b"
+        className="px-4 py-3 flex items-center justify-between border-b dark:border-gray-600"
         style={{ borderColor: `${STAGE_COLORS[stage]}25` }}
       >
         <div className="flex items-center gap-2">
           <span className={`text-xl ${isCooking ? 'animate-pulse-fire' : ''}`}>
             {STAGE_EMOJIS[stage]}
           </span>
-          <span className="text-sm font-bold text-gray-700">{STAGE_LABELS[stage]}</span>
+          <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{STAGE_LABELS[stage]}</span>
         </div>
-        <motion.span
-          key={orders.length}
-          initial={{ scale: 1.55 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', bounce: 0.6, duration: 0.32 }}
-          className="text-xs font-extrabold px-2.5 py-1 rounded-full text-white min-w-[28px] text-center inline-block"
+        <span
+          className="text-xs font-extrabold px-2.5 py-1 rounded-full text-white min-w-[28px] text-center"
           style={{ backgroundColor: STAGE_COLORS[stage] }}
         >
           {orders.length}
-        </motion.span>
+        </span>
       </div>
 
       {/* Orders */}
       <div className="flex-1 p-2.5 space-y-2 overflow-y-auto custom-scrollbar">
         {orders.length === 0 && (
           <div className="flex-1 flex items-center justify-center py-8">
-            <span className="text-sm text-gray-300 italic text-center px-2">
+            <span className="text-sm text-gray-500 dark:text-gray-300 italic text-center px-2">
               {EMPTY_MESSAGES[stage]}
             </span>
           </div>
         )}
-        <AnimatePresence mode="popLayout">
-          {orders.map((order) => (
-            <OrderCard key={order.id} order={order} onClick={onOrderClick} />
-          ))}
-        </AnimatePresence>
+        {orders.map((order, i) => (
+          <OrderCard key={order.id} order={order} isNew={i === 0 && hasNewOrder} />
+        ))}
       </div>
 
       {/* Workers footer */}
-      <div className="px-3 py-2 border-t border-gray-100/60 flex items-center gap-1">
+      <div className="px-3 py-2 border-t border-gray-100/60 dark:border-gray-600 flex items-center gap-1">
         {WORKER_EMOJIS[stage].map((emoji, j) => (
           <span
             key={j}
@@ -437,9 +378,9 @@ function StageColumn({
             {emoji}
           </span>
         ))}
-        <span className="text-[10px] text-gray-400 ml-auto font-medium">
+        <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto font-medium">
           {stage === 'nuevo' && 'Recepción'}
-          {stage === 'cocinando' && 'Parrilla'}
+          {stage === 'cocinando' && 'Cocina'}
           {stage === 'empacando' && 'Empaque'}
           {stage === 'entregado' && 'Despacho'}
         </span>
@@ -500,17 +441,19 @@ export default function KitchenCanvas({
   newDeliveryIds,
   onDeliveryAnimated,
   onStreakChange,
-  nextTarget,
+  sessionId,
 }: {
   orders: KitchenOrder[]
   stats: { todayRevenue: number; todayTotal: number; deliveredCount: number }
   newDeliveryIds: string[]
   onDeliveryAnimated: (id: string) => void
   onStreakChange?: (streak: number) => void
-  nextTarget?: NextTarget | null
+  /** Id del turno de caja; al cambiar (nuevo turno = Empezar el día), se reinicia la racha. */
+  sessionId?: string | null
 }) {
   const soundPlayed = useRef<Set<string>>(new Set())
   const prevOrderCount = useRef(orders.length)
+  const prevSessionId = useRef<string | undefined>(sessionId ?? undefined)
   const [newOrderStages, setNewOrderStages] = useState<Set<KitchenStage>>(new Set())
   const [tickerEvents, setTickerEvents] = useState<TickerEvent[]>([])
   const [streak, setStreak] = useState(0)
@@ -518,15 +461,14 @@ export default function KitchenCanvas({
   const prevRevenueRef = useRef(stats.todayRevenue)
   const [record, setRecord] = useState<string | null>(null)
   const bestRevenueRef = useRef(0)
-  const [selectedOrder, setSelectedOrder] = useState<KitchenOrder | null>(null)
 
-  const handleOrderClick = useCallback((order: KitchenOrder) => {
-    setSelectedOrder(order)
-  }, [])
-
-  const handleModalClose = useCallback(() => {
-    setSelectedOrder(null)
-  }, [])
+  // Reiniciar racha solo al empezar un nuevo turno (Empezar el día), no al cerrar caja
+  useEffect(() => {
+    if (sessionId && sessionId !== prevSessionId.current) {
+      setStreak(0)
+      prevSessionId.current = sessionId
+    }
+  }, [sessionId])
 
   // Detect new orders → sound + streak + ticker
   useEffect(() => {
@@ -657,57 +599,31 @@ export default function KitchenCanvas({
   return (
     <div className="h-full flex flex-col">
       {/* ─── Top Bar: Money counter + Combo + Rate ─── */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex-wrap gap-2">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80 flex-wrap gap-2">
         <MoneyCounter value={stats.todayRevenue} label="Facturado hoy" icon="💰" />
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-xl">⚡</span>
             <div className="flex flex-col">
-              <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Pedidos/hora</span>
-              <span className="text-lg font-black text-gray-900">{pedidosHora}</span>
+              <span className="text-[10px] text-gray-400 dark:text-gray-400 font-semibold uppercase tracking-wider">Pedidos/hora</span>
+              <span className="text-lg font-black text-gray-900 dark:text-gray-100">{pedidosHora}</span>
             </div>
           </div>
-          <AnimatePresence mode="popLayout">
-            {streak >= 2 && (
-              <motion.div
-                key="combo"
-                initial={{ opacity: 0, scale: 0.7 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.7 }}
-                transition={{ type: 'spring', bounce: 0.5, duration: 0.36 }}
-              >
-                <ComboBadge streak={streak} lastOrderTime={lastOrderTime.current} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {streak >= 3 && (
+            <ComboBadge streak={streak} lastOrderTime={lastOrderTime.current} />
+          )}
         </div>
       </div>
 
-      {/* ─── Next Target Progress ─── */}
-      <AnimatePresence>
-        {nextTarget && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.28 }}
-            className="px-4 py-1.5 bg-amber-50/60 border-b border-amber-100/80 overflow-hidden"
-          >
-            <NextTargetBar target={nextTarget} />
-          </motion.div>
+      {/* ─── Contenido: kanban + ticker ─── */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        {record && (
+          <div className="px-4 pt-2 flex-shrink-0">
+            <RecordBanner text={record} />
+          </div>
         )}
-      </AnimatePresence>
 
-      {/* ─── Record Banner ─── */}
-      {record && (
-        <div className="px-4 pt-2">
-          <RecordBanner text={record} />
-        </div>
-      )}
-
-      {/* ─── Kanban Columns ─── */}
-      <LayoutGroup>
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 p-3 overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 p-3 overflow-hidden min-h-0">
           {KITCHEN_STAGES.map((stage) => (
             <StageColumn
               key={stage}
@@ -716,19 +632,14 @@ export default function KitchenCanvas({
               hasNewDelivery={hasNewDeliveryInStage(stage)}
               hasNewOrder={newOrderStages.has(stage)}
               onConfettiDone={() => handleConfettiDone(stage)}
-              onOrderClick={handleOrderClick}
             />
           ))}
         </div>
-      </LayoutGroup>
 
-      {/* ─── Activity Ticker ─── */}
-      <div className="px-3 pb-3">
-        <ActivityTicker events={tickerEvents} />
+        <div className="px-3 pb-3 flex-shrink-0">
+          <ActivityTicker events={tickerEvents} />
+        </div>
       </div>
-
-      {/* ─── Order Detail Modal ─── */}
-      <OrderDetailModal order={selectedOrder} onClose={handleModalClose} />
     </div>
   )
 }

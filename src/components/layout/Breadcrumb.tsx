@@ -75,30 +75,71 @@ export function Breadcrumb() {
       })
     }
 
-    if (pathname.startsWith('/home/admin')) {
-      items.push({
-        label: 'Administración',
-        path: '/home/admin',
-        icon: <LayoutDashboard className="w-4 h-4" />,
-      })
+    if (pathname.startsWith('/home/admin/cocina')) {
+      const fromCocina = searchParams.get('from')
+      if (fromCocina === ROUTES.COCINA_FROM.HOME) {
+        items.push({
+          label: 'Cocina 3D',
+          path: `${ROUTES.PROTECTED.COCINA}?from=${ROUTES.COCINA_FROM.HOME}`,
+          icon: <ChefHat className="w-4 h-4" />,
+        })
+      } else {
+        items.push({
+          label: 'Administración',
+          path: ROUTES.PROTECTED.ADMIN,
+          icon: <LayoutDashboard className="w-4 h-4" />,
+        })
+        items.push({
+          label: 'Cocina 3D',
+          path: `${ROUTES.PROTECTED.COCINA}?from=${ROUTES.COCINA_FROM.ADMIN}`,
+          icon: <ChefHat className="w-4 h-4" />,
+        })
+      }
+    } else if (pathname.startsWith('/home/admin')) {
+      const fromClientes = searchParams.get('from')
 
       if (pathname === '/home/admin/clientes') {
+        // Clientes: desde Home (Inicio → Clientes) o desde Admin / sin param (Inicio → Administración → Clientes)
+        if (fromClientes === ROUTES.CLIENTES_FROM.HOME) {
+          items.push({
+            label: 'Clientes',
+            path: `${ROUTES.PROTECTED.CLIENTES}?from=${ROUTES.CLIENTES_FROM.HOME}`,
+            icon: <Users className="w-4 h-4" />,
+          })
+        } else {
+          items.push({
+            label: 'Administración',
+            path: ROUTES.PROTECTED.ADMIN,
+            icon: <LayoutDashboard className="w-4 h-4" />,
+          })
+          items.push({
+            label: 'Clientes',
+            path: `${ROUTES.PROTECTED.CLIENTES}?from=${ROUTES.CLIENTES_FROM.ADMIN}`,
+            icon: <Users className="w-4 h-4" />,
+          })
+        }
+      } else {
         items.push({
-          label: 'Clientes',
-          path: '/home/admin/clientes',
-          icon: <Users className="w-4 h-4" />,
+          label: 'Administración',
+          path: '/home/admin',
+          icon: <LayoutDashboard className="w-4 h-4" />,
         })
       }
     } else if (pathname.startsWith('/home/pos')) {
       items.push({
         label: 'Punto de Venta',
-        path: '/home/pos',
+        path: ROUTES.PROTECTED.POS,
         icon: <ShoppingCart className="w-4 h-4" />,
       })
     } else if (pathname.startsWith('/home/pedidos')) {
       items.push({
+        label: 'Punto de Venta',
+        path: ROUTES.PROTECTED.POS,
+        icon: <ShoppingCart className="w-4 h-4" />,
+      })
+      items.push({
         label: 'Historial de pedidos',
-        path: '/home/pedidos',
+        path: ROUTES.PROTECTED.PEDIDOS,
         icon: <FileText className="w-4 h-4" />,
       })
     } else if (pathname.startsWith('/home/kds')) {

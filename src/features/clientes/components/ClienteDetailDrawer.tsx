@@ -35,10 +35,10 @@ interface ClienteDetailDrawerProps {
 }
 
 const TIPO_TRANSACCION: Record<string, { label: string; color: string; sign: string }> = {
-  ganado:    { label: 'Ganado',  color: 'text-green-600',  sign: '+' },
-  canjeado:  { label: 'Canje',   color: 'text-red-500',    sign: '-' },
-  ajuste:    { label: 'Ajuste',  color: 'text-blue-600',   sign: '+' },
-  expiracion:{ label: 'Venció',  color: 'text-gray-400',   sign: '-' },
+  ganado:    { label: 'Ganado',  color: 'text-green-600 dark:text-green-400',  sign: '+' },
+  canjeado:  { label: 'Canje',   color: 'text-red-500 dark:text-red-400',    sign: '-' },
+  ajuste:    { label: 'Ajuste',  color: 'text-blue-600 dark:text-blue-400',   sign: '+' },
+  expiracion:{ label: 'Venció',  color: 'text-gray-400 dark:text-gray-500',   sign: '-' },
 }
 
 export const ClienteDetailDrawer = ({
@@ -112,19 +112,19 @@ export const ClienteDetailDrawer = ({
   }
 
   const diasLabel = (dias: number | null) => {
-    if (dias === null) return { text: 'Sin visitas', color: 'text-gray-400' }
-    if (dias === 0) return { text: 'Hoy', color: 'text-green-600' }
-    if (dias === 1) return { text: 'Ayer', color: 'text-green-600' }
-    if (dias < 15) return { text: `Hace ${dias} días`, color: 'text-green-600' }
-    if (dias < 30) return { text: `Hace ${dias} días`, color: 'text-amber-600' }
-    return { text: `Hace ${dias} días`, color: 'text-red-600' }
+    if (dias === null) return { text: 'Sin visitas', color: 'text-gray-400 dark:text-gray-500' }
+    if (dias === 0) return { text: 'Hoy', color: 'text-green-600 dark:text-green-400' }
+    if (dias === 1) return { text: 'Ayer', color: 'text-green-600 dark:text-green-400' }
+    if (dias < 15) return { text: `Hace ${dias} días`, color: 'text-green-600 dark:text-green-400' }
+    if (dias < 30) return { text: `Hace ${dias} días`, color: 'text-amber-600 dark:text-amber-400' }
+    return { text: `Hace ${dias} días`, color: 'text-red-600 dark:text-red-400' }
   }
 
   return (
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/40 dark:bg-black/60 z-40 transition-opacity duration-300 ${
           isOpen && cliente ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
@@ -132,21 +132,21 @@ export const ClienteDetailDrawer = ({
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ${
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white dark:bg-gray-900 shadow-2xl dark:shadow-black/40 z-50 flex flex-col transition-transform duration-300 border-l border-gray-200 dark:border-gray-700 ${
           isOpen && cliente ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         {!cliente ? null : (
           <>
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-white">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-orange-50 to-white dark:from-gray-800 dark:to-gray-900">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">{cliente.nombre}</h2>
-                <p className="text-sm text-gray-500">Cliente desde {formatearFecha(cliente.created_at!)}</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{cliente.nombre}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Cliente desde {formatearFecha(cliente.created_at!)}</p>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
@@ -155,8 +155,8 @@ export const ClienteDetailDrawer = ({
             {/* Content */}
             <div className="flex-1 overflow-y-auto">
               {/* Datos de contacto */}
-              <section className="px-6 py-5 border-b border-gray-100">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+              <section className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
                   Datos de contacto
                 </h3>
                 <div className="space-y-2.5">
@@ -172,19 +172,19 @@ export const ClienteDetailDrawer = ({
               </section>
 
               {/* Métricas */}
-              <section className="px-6 py-5 border-b border-gray-100">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+              <section className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
                   Actividad y puntos
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   <MetricCard
-                    icon={<Star size={16} className="text-yellow-500" />}
+                    icon={<Star size={16} className="text-yellow-500 dark:text-yellow-400" />}
                     label="Puntos actuales"
                     value={`⭐ ${cliente.puntos_totales.toLocaleString()}`}
                     big
                   />
                   <MetricCard
-                    icon={<CalendarDays size={16} className="text-blue-500" />}
+                    icon={<CalendarDays size={16} className="text-blue-500 dark:text-blue-400" />}
                     label="Última visita"
                     value={
                       cliente.ultima_visita
@@ -193,12 +193,12 @@ export const ClienteDetailDrawer = ({
                     }
                   />
                   <MetricCard
-                    icon={<ShoppingBag size={16} className="text-purple-500" />}
+                    icon={<ShoppingBag size={16} className="text-purple-500 dark:text-purple-400" />}
                     label="Total pedidos"
                     value={`${cliente.total_pedidos}`}
                   />
                   <MetricCard
-                    icon={<Banknote size={16} className="text-green-600" />}
+                    icon={<Banknote size={16} className="text-green-600 dark:text-green-400" />}
                     label="Total gastado"
                     value={formatGuaranies(cliente.total_gastado)}
                   />
@@ -216,15 +216,15 @@ export const ClienteDetailDrawer = ({
               </section>
 
               {/* Regalar puntos */}
-              <section className="px-6 py-5 border-b border-gray-100">
+              <section className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                     Regalar puntos
                   </h3>
                   {!mostrarRegalo && (
                     <button
                       onClick={() => setMostrarRegalo(true)}
-                      className="flex items-center gap-1.5 text-sm text-orange-600 hover:text-orange-700 font-semibold"
+                      className="flex items-center gap-1.5 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-semibold"
                     >
                       <Gift size={15} />
                       Regalar
@@ -233,9 +233,9 @@ export const ClienteDetailDrawer = ({
                 </div>
 
                 {mostrarRegalo && (
-                  <div className="bg-orange-50 rounded-xl p-4 space-y-3">
+                  <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 space-y-3 border border-orange-100 dark:border-orange-800/50">
                     <div>
-                      <label className="text-xs font-semibold text-gray-600 mb-1 block">
+                      <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 block">
                         Puntos a regalar
                       </label>
                       <input
@@ -244,12 +244,12 @@ export const ClienteDetailDrawer = ({
                         value={puntosInput}
                         onChange={(e) => setPuntosInput(e.target.value)}
                         placeholder="Ej: 50"
-                        className="w-full border border-orange-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        className="w-full border border-orange-200 dark:border-orange-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:focus:ring-orange-500"
                         disabled={regalando}
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-gray-600 mb-1 block">
+                      <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 block">
                         Motivo (opcional)
                       </label>
                       <input
@@ -257,7 +257,7 @@ export const ClienteDetailDrawer = ({
                         value={motivoInput}
                         onChange={(e) => setMotivoInput(e.target.value)}
                         placeholder="Ej: Cumpleaños, bienvenida..."
-                        className="w-full border border-orange-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        className="w-full border border-orange-200 dark:border-orange-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:focus:ring-orange-500"
                         disabled={regalando}
                       />
                     </div>
@@ -265,14 +265,14 @@ export const ClienteDetailDrawer = ({
                       <button
                         onClick={() => setMostrarRegalo(false)}
                         disabled={regalando}
-                        className="flex-1 px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors"
+                        className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                       >
                         Cancelar
                       </button>
                       <button
                         onClick={handleRegalar}
                         disabled={regalando || !puntosInput}
-                        className="flex-1 px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        className="flex-1 px-3 py-2 bg-orange-500 dark:bg-orange-600 text-white rounded-lg text-sm font-bold hover:bg-orange-600 dark:hover:bg-orange-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                       >
                         {regalando ? (
                           <Loader2 size={15} className="animate-spin" />
@@ -288,15 +288,15 @@ export const ClienteDetailDrawer = ({
 
               {/* Historial de puntos */}
               <section className="px-6 py-5">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
                   Últimas transacciones de puntos
                 </h3>
                 {loadingHistorial ? (
                   <div className="flex items-center justify-center py-6">
-                    <Loader2 size={20} className="animate-spin text-gray-400" />
+                    <Loader2 size={20} className="animate-spin text-gray-400 dark:text-gray-500" />
                   </div>
                 ) : historial.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-4">
+                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
                     Sin transacciones registradas
                   </p>
                 ) : (
@@ -307,13 +307,13 @@ export const ClienteDetailDrawer = ({
                       return (
                         <div
                           key={t.id}
-                          className="flex items-start justify-between py-2.5 border-b border-gray-50 last:border-0"
+                          className="flex items-start justify-between py-2.5 border-b border-gray-50 dark:border-gray-700 last:border-0"
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-gray-700 truncate">
+                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">
                               {t.descripcion || meta.label}
                             </p>
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-gray-400 dark:text-gray-500">
                               {new Date(t.created_at).toLocaleDateString('es-PY', {
                                 day: '2-digit', month: '2-digit', year: '2-digit',
                               })}
@@ -322,7 +322,7 @@ export const ClienteDetailDrawer = ({
                           </div>
                           <span
                             className={`ml-3 text-sm font-bold flex-shrink-0 ${
-                              positivo ? 'text-green-600' : 'text-red-500'
+                              positivo ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'
                             }`}
                           >
                             {positivo ? '+' : ''}{t.puntos.toLocaleString()}
@@ -336,10 +336,10 @@ export const ClienteDetailDrawer = ({
             </div>
 
             {/* Footer actions */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <button
                 onClick={() => { onEdit(cliente); onClose() }}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
               >
                 <Edit2 size={16} />
                 Editar cliente
@@ -367,9 +367,9 @@ function InfoRow({
   if (!value) return null
   return (
     <div className="flex items-start gap-2.5 text-sm">
-      <span className="text-gray-400 mt-0.5 flex-shrink-0">{icon}</span>
-      <span className="text-gray-500 font-medium min-w-[70px] flex-shrink-0">{label}:</span>
-      <span className="text-gray-800 break-all">{value}</span>
+      <span className="text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0">{icon}</span>
+      <span className="text-gray-500 dark:text-gray-400 font-medium min-w-[70px] flex-shrink-0">{label}:</span>
+      <span className="text-gray-800 dark:text-gray-200 break-all">{value}</span>
     </div>
   )
 }
@@ -386,11 +386,11 @@ function MetricCard({
   big?: boolean
 }) {
   return (
-    <div className="bg-gray-50 rounded-xl p-3 flex items-start gap-2">
+    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 flex items-start gap-2 border border-transparent dark:border-gray-700">
       <span className="mt-0.5">{icon}</span>
       <div>
-        <p className="text-xs text-gray-500">{label}</p>
-        <p className={`font-bold text-gray-800 ${big ? 'text-base' : 'text-sm'} break-all`}>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+        <p className={`font-bold text-gray-800 dark:text-gray-100 ${big ? 'text-base' : 'text-sm'} break-all`}>
           {value}
         </p>
       </div>

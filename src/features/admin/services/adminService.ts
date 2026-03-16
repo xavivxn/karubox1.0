@@ -140,11 +140,12 @@ export const fetchOrderItems = async (tenantId: string): Promise<any[]> => {
 }
 
 /**
- * Procesa los pedidos para calcular estadísticas del día
+ * Procesa los pedidos para calcular estadísticas del día (o del turno si se pasa desde).
+ * @param desde - Si se pasa (ej. apertura_at de la sesión), los totales son desde esa fecha/hora.
  */
-export const processDailyStats = (pedidos: PedidoRecord[]) => {
-  const todayStart = getTodayStart()
-  const todayOrders = pedidos.filter((pedido) => new Date(pedido.created_at) >= todayStart)
+export const processDailyStats = (pedidos: PedidoRecord[], desde?: string | null) => {
+  const inicio = desde ? new Date(desde) : getTodayStart()
+  const todayOrders = pedidos.filter((pedido) => new Date(pedido.created_at) >= inicio)
   
   const todayRevenue = todayOrders.reduce(
     (acc, pedido) => acc + normalizeNumber(pedido.total),
@@ -251,15 +252,16 @@ export const processTopProducts = (items: any[]): ProductRanking[] => {
 }
 
 /**
- * Procesa los items para calcular métricas adicionales
+ * Procesa los items para calcular métricas adicionales.
+ * @param desde - Si se pasa (ej. apertura_at del turno), el costo "del día" es desde esa fecha/hora.
  */
-export const processItemsMetrics = (items: any[], pedidos: PedidoRecord[]) => {
-  const todayStart = getTodayStart()
+export const processItemsMetrics = (items: any[], pedidos: PedidoRecord[], desde?: string | null) => {
+  const inicio = desde ? new Date(desde) : getTodayStart()
   
   const todayItems = items.filter((item) => {
     const createdAt = item.pedidos?.created_at
     if (!createdAt) return false
-    return new Date(createdAt) >= todayStart
+    return new Date(createdAt) >= inicio
   })
 
   const totalItemsCount = items.reduce((sum, item) => sum + (item.cantidad ?? 0), 0)
@@ -299,11 +301,17 @@ export const fetchIngredientUsage = async (
   return await getIngredientEstimationFromItems(tenantId, todayItems)
 }
 
+export interface FetchDashboardOptions {
+  /** Si se pasa (ej. apertura_at del turno), Ingresos/Costo/Ganancia "del día" se calculan desde esa fecha/hora. */
+  desde?: string | null
+}
+
 /**
  * Función principal que obtiene y procesa todos los datos del dashboard
  */
 export const fetchDashboardData = async (
-  tenantId: string
+  tenantId: string,
+  options?: FetchDashboardOptions
 ): Promise<{
   stats: DashboardStats
   topClients: ClientRanking[]
@@ -311,7 +319,8 @@ export const fetchDashboardData = async (
   inventory: InventoryRecord[]
   ingredientsUsage: IngredientUsage[]
 }> => {
-  console.log('🔄 fetchDashboardData - tenantId:', tenantId)
+  const desde = options?.desde ?? null
+  console.log('🔄 fetchDashboardData - tenantId:', tenantId, desde ? `desde ${desde}` : 'día calendario')
   
   // Fetch paralelo de todos los datos
   try {
@@ -332,14 +341,14 @@ export const fetchDashboardData = async (
       items: items.length
     })
 
-    // Procesar estadísticas
+    // Procesar estadísticas (desde = apertura del turno si caja abierta)
     console.log('🧮 Procesando estadísticas...')
-    const dailyStats = processDailyStats(pedidos)
+    const dailyStats = processDailyStats(pedidos, desde)
     const monthlyStats = processMonthlyStats(pedidos)
     const weeklyTrend = processWeeklyTrend(pedidos)
     const channelSplit = processChannelSplit(pedidos)
     const topProducts = processTopProducts(items)
-    const itemsMetrics = processItemsMetrics(items, pedidos)
+    const itemsMetrics = processItemsMetrics(items, pedidos, desde)
     const ingredientsUsage = await fetchIngredientUsage(tenantId, itemsMetrics.todayItems)
 
     // Calcular ganancias

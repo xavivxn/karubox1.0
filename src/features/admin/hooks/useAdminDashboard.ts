@@ -26,10 +26,19 @@ interface UseAdminDashboardReturn {
   refetch: () => Promise<void>
 }
 
+export interface UseAdminDashboardOptions {
+  /** Si se pasa (ej. apertura_at del turno), Ingresos/Costo/Ganancia se calculan desde esa fecha/hora. */
+  desde?: string | null
+}
+
 /**
  * Hook principal para gestionar los datos del dashboard de administración
  */
-export const useAdminDashboard = (tenantId: string | null): UseAdminDashboardReturn => {
+export const useAdminDashboard = (
+  tenantId: string | null,
+  options?: UseAdminDashboardOptions
+): UseAdminDashboardReturn => {
+  const desde = options?.desde ?? null
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
     todayOrders: 0,
@@ -63,12 +72,12 @@ export const useAdminDashboard = (tenantId: string | null): UseAdminDashboardRet
       return
     }
     
-    console.log('🔍 Iniciando carga de dashboard para tenant:', tenantId)
+    console.log('🔍 Iniciando carga de dashboard para tenant:', tenantId, desde ? `desde ${desde}` : '')
     setLoading(true)
 
     try {
       console.log('📡 Llamando fetchDashboardData...')
-      const data = await fetchDashboardData(tenantId)
+      const data = await fetchDashboardData(tenantId, { desde })
       
       console.log('✅ Datos recibidos:', {
         stats: data.stats ? '✓' : '✗',
@@ -94,7 +103,7 @@ export const useAdminDashboard = (tenantId: string | null): UseAdminDashboardRet
     } finally {
       setLoading(false)
     }
-  }, [tenantId])
+  }, [tenantId, desde])
 
   useEffect(() => {
     fetchDashboard()

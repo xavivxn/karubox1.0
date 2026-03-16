@@ -379,6 +379,25 @@ export function ensureDailyReset(store: AchievementStore): {
   return { store: newStore, didReset: isNewDay }
 }
 
+/**
+ * Reinicia solo los datos del día de Cocina 3D (logros diarios).
+ * Se llama al confirmar cierre de caja. No toca logros globales ni lifetimeStats.
+ */
+export function resetCocinaDailyData(tenantId: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    const store = loadStore(tenantId)
+    const newStore: AchievementStore = {
+      ...store,
+      dailyDate: todayStr(),
+      dailyUnlocked: [],
+    }
+    saveStore(tenantId, newStore)
+  } catch {
+    // ignore
+  }
+}
+
 /* ═══════════════ EVALUATION ═══════════════ */
 
 function isDailyUnlocked(store: AchievementStore, id: string): boolean {

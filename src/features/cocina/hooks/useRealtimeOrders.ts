@@ -10,6 +10,10 @@ import {
 
 interface UseRealtimeOrdersParams {
   tenantId: string | undefined
+  /** Inicio del turno (apertura_at). Si null y no hay hasta, no se muestran pedidos. */
+  desde?: string | null
+  /** Fin del turno (cierre_at). Si se pasa, se listan solo pedidos del turno cerrado (p. ej. en "Entregado") hasta un nuevo turno. */
+  hasta?: string | null
 }
 
 interface RawPedido {
@@ -21,7 +25,7 @@ interface RawPedido {
   estado_pedido: string
 }
 
-export function useRealtimeOrders({ tenantId }: UseRealtimeOrdersParams) {
+export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersParams) {
   const [orders, setOrders] = useState<KitchenOrder[]>([])
   const [stats, setStats] = useState<KitchenStats>({
     todayTotal: 0,
@@ -65,24 +69,44 @@ export function useRealtimeOrders({ tenantId }: UseRealtimeOrdersParams) {
 
   const fetchOrders = useCallback(async () => {
     if (!tenantId) return
+    if (desde === null && hasta === undefined) {
+      setOrders([])
+      setStats({
+        todayTotal: 0,
+        todayRevenue: 0,
+        activeCount: 0,
+        deliveredCount: 0,
+      })
+      return
+    }
     const supabase = createClient()
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const fromDate = desde
+      ? new Date(desde)
+      : (() => {
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          return today
+        })()
 
-    const { data } = await supabase
+    let query = supabase
       .from('pedidos')
       .select('id, numero_pedido, total, created_at, tipo, estado_pedido')
       .eq('tenant_id', tenantId)
       .eq('estado_pedido', 'FACT')
-      .gte('created_at', today.toISOString())
-      .order('created_at', { ascending: false })
+      .gte('created_at', fromDate.toISOString())
+
+    if (hasta) {
+      query = query.lte('created_at', new Date(hasta).toISOString())
+    }
+
+    const { data } = await query.order('created_at', { ascending: false })
 
     if (data) {
       const processed = processRawOrders(data)
       setOrders(processed)
       setStats(computeStats(processed))
     }
-  }, [tenantId, processRawOrders, computeStats])
+  }, [tenantId, desde, hasta, processRawOrders, computeStats])
 
   // Initial fetch
   useEffect(() => {
