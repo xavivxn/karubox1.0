@@ -94,22 +94,21 @@ function HoloCard({ achievement }: { achievement: Achievement }) {
   return (
     <motion.div
       ref={cardRef}
-      style={{ rotateX, rotateY, transformPerspective: 900 }}
+      style={{
+        rotateX,
+        rotateY,
+        transformPerspective: 900,
+        width: 280,
+        height: 380,
+        border: '2px solid transparent',
+        background: 'linear-gradient(#0f0c24, #0f0c24) padding-box, linear-gradient(135deg, #f43f5e, #a855f7, #3b82f6, #06b6d4, #10b981, #f59e0b, #f43f5e) border-box',
+      }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       className="relative rounded-3xl overflow-hidden cursor-pointer select-none animate-holo-glow"
       initial={{ scale: 0, rotate: -18, opacity: 0 }}
       animate={{ scale: 1, rotate: 0, opacity: 1 }}
       transition={{ type: 'spring', bounce: 0.52, duration: 0.7 }}
-      style={{
-        width: 280,
-        height: 380,
-        rotateX,
-        rotateY,
-        transformPerspective: 900,
-        border: '2px solid transparent',
-        background: 'linear-gradient(#0f0c24, #0f0c24) padding-box, linear-gradient(135deg, #f43f5e, #a855f7, #3b82f6, #06b6d4, #10b981, #f59e0b, #f43f5e) border-box',
-      }}
     >
       {/* Rainbow holo gradient layer */}
       <div
