@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { LayoutDashboard, FileText, Loader2, ShoppingCart } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
@@ -34,6 +34,15 @@ export default function POSView() {
   const { sesionAbierta, loading: loadingCaja } = useEstadoCaja(tenant?.id ?? null)
   const { categorias, productos, loading, feedback: dataFeedback } = usePOSData()
   const { handleConfirmOrder, isProcessing } = useOrderConfirmation()
+  const initialCategorySet = useRef(false)
+
+  // Al cargar el POS, seleccionar la primera categoría (no "Todos") para que lo primero que se vea sea una categoría definida
+  useEffect(() => {
+    if (categorias.length > 0 && !initialCategorySet.current) {
+      setSelectedCategory(categorias[0].id)
+      initialCategorySet.current = true
+    }
+  }, [categorias])
 
   // Merge feedback from data loading
   const currentFeedback = feedback || dataFeedback

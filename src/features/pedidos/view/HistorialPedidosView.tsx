@@ -93,12 +93,13 @@ export function HistorialPedidosView() {
 
       {/* Filtros */}
       <div
-        className={`rounded-xl border p-3 sm:rounded-2xl sm:p-4 ${
+        className={`min-w-0 overflow-hidden rounded-xl border p-3 sm:rounded-2xl sm:p-4 ${
           darkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
         }`}
       >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-5">
-          <div>
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-5">
+          {/* min-w-0 evita overflow en iOS Safari: el control nativo date impone ancho mínimo y en grid min-width:auto lo respeta */}
+          <div className="min-w-0">
             <label className={`mb-1 block text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
               Desde
             </label>
@@ -106,13 +107,13 @@ export function HistorialPedidosView() {
               type="date"
               value={filters.fechaDesde}
               onChange={(e) => setFilter('fechaDesde', e.target.value)}
-              className={`w-full min-h-[44px] rounded-xl border px-3 py-2.5 text-base sm:text-sm ${
+              className={`w-full min-w-0 max-w-full min-h-[44px] rounded-xl border px-3 py-2.5 text-base sm:text-sm ${
                 darkMode ? 'border-gray-600 bg-gray-800 text-gray-100' : 'border-gray-300 bg-white text-gray-900'
               }`}
               aria-label="Fecha desde"
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className={`mb-1 block text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
               Hasta
             </label>
@@ -120,7 +121,7 @@ export function HistorialPedidosView() {
               type="date"
               value={filters.fechaHasta}
               onChange={(e) => setFilter('fechaHasta', e.target.value)}
-              className={`w-full min-h-[44px] rounded-xl border px-3 py-2.5 text-base sm:text-sm ${
+              className={`w-full min-w-0 max-w-full min-h-[44px] rounded-xl border px-3 py-2.5 text-base sm:text-sm ${
                 darkMode ? 'border-gray-600 bg-gray-800 text-gray-100' : 'border-gray-300 bg-white text-gray-900'
               }`}
               aria-label="Fecha hasta"

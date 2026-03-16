@@ -15,8 +15,9 @@ export const ClienteFormFields = ({ formData, onChange }: ClienteFormFieldsProps
     onChange({ ...formData, [field]: value })
   }
 
+  // min-w-0 max-w-full evita overflow en iOS Safari; min-h-[44px] área táctil recomendada
   const inputClass =
-    'w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors'
+    'w-full min-w-0 max-w-full min-h-[44px] px-4 py-2.5 text-base rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:ring-blue-400 sm:text-sm'
   const labelClass = 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'
 
   return (
@@ -86,8 +87,8 @@ export const ClienteFormFields = ({ formData, onChange }: ClienteFormFieldsProps
         />
       </div>
 
-      {/* Fecha de nacimiento */}
-      <div>
+      {/* Fecha de nacimiento — min-w-0 en contenedor evita overflow en Safari */}
+      <div className="min-w-0">
         <label className={labelClass}>Fecha de nacimiento (opcional)</label>
         <input
           type="date"

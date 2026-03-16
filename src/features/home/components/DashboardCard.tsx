@@ -15,8 +15,8 @@ const CARD_LABELS: Record<DashboardCard['icon'], string> = {
   pos: 'Ingresar al POS',
   admin: 'Ver panel admin',
   pedidos: 'Ver historial',
-  clientes: 'Ver clientes →',
-  cocina: 'Abrir cocina 3D →',
+  clientes: 'Ver clientes',
+  cocina: 'Abrir Cocina 3D',
 }
 
 interface DashboardCardProps {
@@ -62,51 +62,56 @@ export function DashboardCardComponent({
       onClick={handleClick}
       disabled={isDisabled}
       className={`
-        group relative overflow-hidden rounded-3xl shadow-2xl transition-all duration-300 text-left w-full
+        group relative rounded-3xl shadow-2xl transition-all duration-300 text-left w-full
         focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent
-        ${isDisabled ? 'pointer-events-none opacity-60 cursor-not-allowed scale-100' : 'hover:scale-105 cursor-pointer'}
+        ${isDisabled ? 'pointer-events-none opacity-60 cursor-not-allowed scale-100' : 'hover:scale-105 cursor-pointer active:scale-[1.02]'}
         ${!isDisabled ? c.shadow : ''}
         ${bgCls}
         ${isThisCardLoading ? `ring-2 ring-offset-2 ring-offset-transparent ${c.ring}` : ''}
+        min-w-0
       `}
+      style={{ WebkitTapHighlightColor: 'transparent' }}
       aria-busy={isThisCardLoading}
       aria-disabled={isDisabled}
     >
-      {/* Overlay de carga en el card activo */}
-      {isThisCardLoading && (
-        <div
-          role="status"
-          aria-live="polite"
-          className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-3xl ${
-            darkMode ? 'bg-gray-900/80' : 'bg-white/85'
-          } backdrop-blur-sm transition-opacity duration-200`}
-        >
-          <Loader2
-            className={`w-10 h-10 animate-spin ${darkMode ? c.iconDark : c.iconLight}`}
-            aria-hidden
-          />
-          <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-            Cargando…
+      {/* Contenedor interno con overflow-hidden: recorta blob/contenido pero el ring del botón no se corta (Android/iOS Safari) */}
+      <span className="relative block overflow-hidden rounded-3xl">
+        {/* Overlay de carga en el card activo */}
+        {isThisCardLoading && (
+          <span
+            role="status"
+            aria-live="polite"
+            className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-3xl ${
+              darkMode ? 'bg-gray-900/80' : 'bg-white/85'
+            } backdrop-blur-sm transition-opacity duration-200`}
+          >
+            <Loader2
+              className={`w-10 h-10 animate-spin ${darkMode ? c.iconDark : c.iconLight}`}
+              aria-hidden
+            />
+            <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Cargando…
+            </span>
           </span>
-        </div>
-      )}
+        )}
 
-      <div className={`absolute top-0 right-0 w-40 h-40 rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-500 ${c.blob}`} />
-      <div className="relative p-8 space-y-4">
-        <div className={`inline-flex p-4 rounded-2xl ${darkMode ? c.iconBgDark : c.iconBgLight}`}>
-          <Icon className={`w-8 h-8 ${darkMode ? c.iconDark : c.iconLight}`} />
-        </div>
-        <div>
-          <h3 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{card.title}</h3>
-          <p className={`text-base leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            {card.description}
-          </p>
-        </div>
-        <span className={`inline-flex items-center gap-1 text-sm font-semibold ${darkMode ? c.iconDark : c.iconLight}`}>
-          {label}
+        <span className={`absolute top-0 right-0 w-40 h-40 rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-500 ${c.blob}`} />
+        <span className="relative block p-8 space-y-4">
+          <span className={`inline-flex p-4 rounded-2xl ${darkMode ? c.iconBgDark : c.iconBgLight}`}>
+            <Icon className={`w-8 h-8 ${darkMode ? c.iconDark : c.iconLight}`} />
+          </span>
+          <span className="block">
+            <h3 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{card.title}</h3>
+            <p className={`text-base leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              {card.description}
+            </p>
+          </span>
+          <span className={`inline-flex items-center gap-1 text-sm font-semibold ${darkMode ? c.iconDark : c.iconLight}`}>
+            {label}
+          </span>
         </span>
-      </div>
-      <div className={`absolute bottom-0 left-0 right-0 h-2 ${darkMode ? c.barDark : c.barLight}`} />
+        <span className={`absolute bottom-0 left-0 right-0 h-2 ${darkMode ? c.barDark : c.barLight}`} />
+      </span>
     </button>
   )
 }

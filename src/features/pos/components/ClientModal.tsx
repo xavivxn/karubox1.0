@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { X, Search, UserPlus, Pencil, User } from 'lucide-react'
+import { X, UserPlus, Pencil, User, ChevronDown, ChevronUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
@@ -11,6 +11,7 @@ import type { Cliente } from '@/types/supabase'
 const DEBOUNCE_MS = 320
 const MIN_NOMBRE_LENGTH = 2
 const MIN_CI_LENGTH = 1
+const MIN_TELEFONO_LENGTH = 3
 const SUGERENCIAS_LIMIT = 8
 const CACHE_CLIENTES_LIMIT = 500
 
@@ -37,6 +38,7 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
   const [modoCrear, setModoCrear] = useState(false)
   const [editingClienteId, setEditingClienteId] = useState<string | null>(null)
   const [clienteEnEdicion, setClienteEnEdicion] = useState<Cliente | null>(null)
+  const [masDatosAbierto, setMasDatosAbierto] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { setCliente } = useCartStore()
 
@@ -76,7 +78,7 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
     setModoCrear(false)
   }, [])
 
-  // Búsqueda en tiempo real por nombre o CI (debounced), ignorando tildes
+  // Búsqueda automática en tiempo real por nombre, CI o teléfono (debounced)
   useEffect(() => {
     if (!isOpen || !tenant || estaEditando) {
       setSugerencias([])
@@ -85,10 +87,12 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
 
     const nombreTrim = nombre.trim()
     const ciTrim = ci.trim()
+    const telTrim = telefono.trim().replace(/\D/g, '')
     const tieneNombre = nombreTrim.length >= MIN_NOMBRE_LENGTH
     const tieneCi = ciTrim.length >= MIN_CI_LENGTH
+    const tieneTelefono = telTrim.length >= MIN_TELEFONO_LENGTH
 
-    if (!tieneNombre && !tieneCi) {
+    if (!tieneNombre && !tieneCi && !tieneTelefono) {
       setSugerencias([])
       return
     }
@@ -111,7 +115,8 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
       const filtrados = clientesCache.filter((c) => {
         const matchNombre = tieneNombre && normalizarParaBusqueda(c.nombre ?? '').includes(nombreNorm)
         const matchCi = tieneCi && c.ci != null && normalizarParaBusqueda(c.ci).includes(ciNorm)
-        return matchNombre || matchCi
+        const matchTel = tieneTelefono && c.telefono != null && c.telefono.replace(/\D/g, '').includes(telTrim)
+        return matchNombre || matchCi || matchTel
       })
 
       setSugerencias(filtrados.slice(0, SUGERENCIAS_LIMIT))
@@ -124,7 +129,7 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
         debounceRef.current = null
       }
     }
-  }, [isOpen, tenant?.id, nombre, ci, estaEditando, clientesCache])
+  }, [isOpen, tenant?.id, nombre, ci, telefono, estaEditando, clientesCache])
 
   if (!isOpen) return null
 
@@ -240,6 +245,18 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
     }
   }
 
+  const crearClienteClick = () => {
+    if (!nombre.trim()) {
+      alert('Ingresá el nombre del cliente')
+      return
+    }
+    if (!telefono.trim() && !ci.trim() && !ruc.trim()) {
+      alert('Ingresá teléfono, CI o RUC')
+      return
+    }
+    crearCliente()
+  }
+
   const seleccionarCliente = () => {
     if (clienteEncontrado) {
       setCliente(clienteEncontrado)
@@ -316,6 +333,7 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
     setClienteEnEdicion(null)
     setEditingClienteId(null)
     setModoCrear(false)
+    setMasDatosAbierto(false)
     onClose()
   }
 
@@ -328,112 +346,120 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
     handleClose()
   }
 
+  const inputBase =
+    'w-full min-w-0 max-w-full min-h-[44px] px-4 py-2.5 text-base rounded-xl border-2 focus:outline-none focus:ring-2 transition-all sm:text-base ' +
+    (darkMode
+      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-blue-400/30'
+      : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200')
+
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm ${darkMode ? 'bg-black/70' : 'bg-black/60'}`}>
-      <div className={`flex max-h-[90vh] max-w-lg w-full flex-col overflow-hidden rounded-2xl shadow-2xl animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-        {/* Header */}
-        <div className={`flex flex-shrink-0 items-center justify-between rounded-t-2xl border-b-2 p-6 ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50'}`}>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600">
-              <span className="text-xl text-white">👤</span>
+    <div className={`fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4 backdrop-blur-sm ${darkMode ? 'bg-black/70' : 'bg-black/60'}`}>
+      <button
+        type="button"
+        className="absolute inset-0 z-0 cursor-default sm:cursor-pointer"
+        aria-label="Cerrar"
+        onClick={handleClose}
+      />
+      <div
+        className={`relative z-10 flex max-h-[90dvh] w-full min-w-0 flex-col overflow-hidden rounded-t-2xl shadow-2xl animate-in fade-in slide-in-from-bottom duration-200 sm:max-h-[85vh] sm:max-w-lg sm:rounded-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
+        style={{
+          marginLeft: 'env(safe-area-inset-left)',
+          marginRight: 'env(safe-area-inset-right)',
+          marginBottom: 'env(safe-area-inset-bottom)'
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="client-modal-title"
+      >
+        {/* Header compacto en móvil */}
+        <div className={`flex flex-shrink-0 items-center justify-between gap-2 border-b-2 px-4 py-3 sm:rounded-t-2xl sm:p-6 ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50'}`}>
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 sm:h-10 sm:w-10">
+              <span className="text-lg text-white sm:text-xl">👤</span>
             </div>
-            <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Buscar o Crear Cliente</h2>
+            <h2 id="client-modal-title" className={`truncate text-lg font-bold sm:text-2xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Buscar o Crear Cliente
+            </h2>
           </div>
           <button
+            type="button"
             onClick={handleClose}
-            className={`rounded-full p-2 transition-all ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-white hover:shadow-md'}`}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all sm:h-10 sm:w-10 sm:p-2 min-h-[44px] min-w-[44px"
+            aria-label="Cerrar"
           >
             <X size={22} className={darkMode ? 'text-gray-300' : 'text-gray-600'} />
           </button>
         </div>
 
-        {/* Body - scrollable */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
-          {/* Formulario: búsqueda/crear o editar cliente encontrado */}
+        {/* Body - scrollable, overscroll para Safari */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4 sm:p-6">
+          <div className="space-y-4 sm:space-y-5">
+          {/* Formulario: búsqueda/crear o editar — orden pensado para cajero rápido en móvil */}
           {(!clienteEncontrado || estaEditando) && (
             <>
-              <p className={`text-xs mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Escribe nombre o cédula y se mostrarán los clientes del tenant. Elige uno de la lista o crea uno nuevo.
+              <p className={`text-xs sm:mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Nombre o cédula → elegí de la lista o creá uno nuevo.
               </p>
-              {/* Nombre - Siempre visible */}
-              <div>
-                <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                  Nombre Completo <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (nombre.trim() || telefono.trim() || ci.trim() || ruc.trim()) && buscarCliente()}
-                  placeholder="Ej: Juan Pérez"
-                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all text-base ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-blue-400/30' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'}`}
-                  disabled={searching}
-                />
-              </div>
 
-              {/* Teléfono, CI, RUC */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                    Teléfono
-                  </label>
-                  <input
-                    type="tel"
-                    value={telefono}
-                    onChange={(e) => setTelefono(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (nombre.trim() || telefono.trim() || ci.trim() || ruc.trim()) && buscarCliente()}
-                    placeholder="(0981) 123-456"
-                    className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all text-base ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-blue-400/30' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'}`}
-                    disabled={searching}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                    CI (Cédula)
+              {/* Bloque rápido: Nombre + Teléfono + CI */}
+              <div className="space-y-3">
+                <div className="min-w-0">
+                  <label className={`block text-sm font-bold mb-1.5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                    Nombre <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={ci}
-                    onChange={(e) => setCi(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (nombre.trim() || telefono.trim() || ci.trim() || ruc.trim()) && buscarCliente()}
-                    placeholder="1234567"
-                    className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all text-base ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-blue-400/30' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'}`}
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    placeholder="Juan Pérez"
+                    className={inputBase}
                     disabled={searching}
                   />
                 </div>
+                <div className="grid grid-cols-1 gap-3 min-w-0 sm:grid-cols-2">
+                  <div className="min-w-0">
+                    <label className={`block text-sm font-bold mb-1.5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Teléfono</label>
+                    <input
+                      type="tel"
+                      value={telefono}
+                      onChange={(e) => setTelefono(e.target.value)}
+                      placeholder="0981 123 456"
+                      className={inputBase}
+                      disabled={searching}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <label className={`block text-sm font-bold mb-1.5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>CI</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={ci}
+                      onChange={(e) => setCi(e.target.value)}
+                      placeholder="1234567"
+                      className={inputBase}
+                      disabled={searching}
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Fecha de nacimiento (opcional) */}
-              <div>
-                <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                  Fecha de nacimiento <span className={darkMode ? 'text-gray-400 font-normal' : 'text-gray-500 font-normal'}>(opcional)</span>
-                </label>
-                <input
-                  type="date"
-                  value={fechaNacimiento}
-                  onChange={(e) => setFechaNacimiento(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all text-base ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-blue-400/30' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'}`}
-                  disabled={searching}
-                />
-              </div>
-
-              {/* Lista de sugerencias en tiempo real */}
+              {/* Sugerencias en tiempo real — muy visible para tocar rápido */}
               {sugerencias.length > 0 && (
                 <div className={`rounded-xl border-2 overflow-hidden ${darkMode ? 'border-blue-500/40 bg-gray-700/50' : 'border-blue-200 bg-blue-50/50'}`}>
                   <div className={`px-3 py-2 border-b text-xs font-semibold ${darkMode ? 'border-gray-600 text-blue-300' : 'border-blue-100 text-blue-700'}`}>
-                    {searching ? 'Buscando...' : `${sugerencias.length} coincidencia${sugerencias.length !== 1 ? 's' : ''} — haz clic para elegir`}
+                    {searching ? 'Buscando...' : `${sugerencias.length} coincidencia${sugerencias.length !== 1 ? 's' : ''} — tocá para elegir`}
                   </div>
-                  <ul className="max-h-48 overflow-y-auto p-1.5 space-y-1" role="listbox">
+                  <ul className="max-h-44 overflow-y-auto overscroll-contain p-1.5 space-y-1" role="listbox">
                     {sugerencias.map((c) => (
                       <li key={c.id}>
                         <button
                           type="button"
                           onClick={() => seleccionarSugerencia(c)}
-                          className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors ${darkMode ? 'hover:bg-gray-600/80 text-gray-100' : 'hover:bg-blue-100 text-gray-800'}`}
+                          className={`w-full text-left px-3 py-3 rounded-lg flex items-center gap-3 transition-colors min-h-[48px] ${darkMode ? 'hover:bg-gray-600/80 active:bg-gray-600 text-gray-100' : 'hover:bg-blue-100 active:bg-blue-200 text-gray-800'}`}
                           role="option"
                         >
-                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${darkMode ? 'bg-blue-600/60' : 'bg-blue-100'}`}>
-                            <User size={14} className={darkMode ? 'text-blue-200' : 'text-blue-600'} />
+                          <div className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${darkMode ? 'bg-blue-600/60' : 'bg-blue-100'}`}>
+                            <User size={16} className={darkMode ? 'text-blue-200' : 'text-blue-600'} />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className={`font-semibold text-sm truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>{c.nombre}</div>
@@ -450,183 +476,152 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
                 </div>
               )}
 
-              <div>
-                <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                  RUC <span className={darkMode ? 'text-gray-400 font-normal' : 'text-gray-500 font-normal'}>(opcional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={ruc}
-                  onChange={(e) => setRuc(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (nombre.trim() || telefono.trim() || ci.trim() || ruc.trim()) && buscarCliente()}
-                  placeholder="80012345-6"
-                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all text-base ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-blue-400/30' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'}`}
-                  disabled={searching}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                  Email <span className={darkMode ? 'text-gray-400 font-normal' : 'text-gray-500 font-normal'}>(opcional)</span>
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="cliente@email.com"
-                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all text-base ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-blue-400/30' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'}`}
-                  disabled={searching}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                  Dirección <span className={darkMode ? 'text-gray-400 font-normal' : 'text-gray-500 font-normal'}>(opcional, para factura)</span>
-                </label>
-                <input
-                  type="text"
-                  value={direccion}
-                  onChange={(e) => setDireccion(e.target.value)}
-                  placeholder="Av. Principal 123"
-                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all text-base ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-blue-400/30' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'}`}
-                  disabled={searching}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                  Pasaporte <span className={darkMode ? 'text-gray-400 font-normal' : 'text-gray-500 font-normal'}>(extranjeros, opcional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={pasaporte}
-                  onChange={(e) => setPasaporte(e.target.value)}
-                  placeholder="AB123456"
-                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all text-base ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-blue-400/30' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'}`}
-                  disabled={searching}
-                />
-              </div>
-
-              {/* Botones de acción */}
-              <div className="flex flex-col gap-3 pt-2">
-                {estaEditando ? (
-                  <div className="flex gap-3">
-                    <button
-                      onClick={guardarCambiosCliente}
-                      disabled={searching || !nombre.trim()}
-                      className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold transition-all shadow-md disabled:cursor-not-allowed ${darkMode ? 'bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-600 disabled:shadow-none' : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-lg disabled:bg-gray-300 disabled:shadow-none'}`}
-                    >
-                      {searching ? 'Guardando...' : 'Guardar cambios'}
-                    </button>
-                    <button
-                      onClick={cancelarEdicion}
-                      disabled={searching}
-                      className={`rounded-xl px-6 py-3 font-semibold transition-all ${darkMode ? 'bg-gray-600 text-gray-200 hover:bg-gray-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-3">
-                    <button
-                      onClick={buscarCliente}
-                      disabled={searching || (!nombre.trim() && !telefono.trim() && !ci.trim() && !ruc.trim())}
-                      className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold transition-all shadow-md disabled:cursor-not-allowed ${darkMode ? 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-600 disabled:shadow-none' : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg disabled:bg-gray-300 disabled:shadow-none'}`}
-                    >
-                      <Search size={18} />
-                      {searching ? 'Buscando...' : 'Buscar Cliente'}
-                    </button>
-                    {!modoCrear && (
-                      <button
-                        onClick={() => {
-                          if (!nombre.trim()) {
-                            alert('Por favor ingresa el nombre del cliente')
-                            return
-                          }
-                          if (!telefono.trim() && !ci.trim() && !ruc.trim()) {
-                            alert('Por favor ingresa teléfono, CI o RUC')
-                            return
-                          }
-                          crearCliente()
-                        }}
-                        disabled={searching || !nombre.trim() || (!telefono.trim() && !ci.trim() && !ruc.trim())}
-                        className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold transition-all shadow-md disabled:cursor-not-allowed ${darkMode ? 'bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-600 disabled:shadow-none' : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-lg disabled:bg-gray-300 disabled:shadow-none'}`}
-                      >
-                        <UserPlus size={18} />
-                        {searching ? 'Creando...' : 'Crear Nuevo'}
-                      </button>
-                    )}
+              {/* Sección colapsable "Más datos" — en móvil cerrada por defecto */}
+              <div className="min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setMasDatosAbierto((v) => !v)}
+                  className={`flex w-full items-center justify-between rounded-xl border-2 px-4 py-3 text-left text-sm font-semibold transition-colors min-h-[44px] ${darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700/50' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                >
+                  <span>Más datos (RUC, email, dirección…)</span>
+                  {masDatosAbierto ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </button>
+                {masDatosAbierto && (
+                  <div className="mt-3 space-y-3 pl-0">
+                    <div className="min-w-0">
+                      <label className={`block text-sm font-bold mb-1.5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Fecha nac. (opcional)</label>
+                      <input
+                        type="date"
+                        value={fechaNacimiento}
+                        onChange={(e) => setFechaNacimiento(e.target.value)}
+                        className={inputBase}
+                        disabled={searching}
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <label className={`block text-sm font-bold mb-1.5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>RUC (opcional)</label>
+                      <input type="text" value={ruc} onChange={(e) => setRuc(e.target.value)} placeholder="80012345-6" className={inputBase} disabled={searching} />
+                    </div>
+                    <div className="min-w-0">
+                      <label className={`block text-sm font-bold mb-1.5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Email (opcional)</label>
+                      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="cliente@email.com" className={inputBase} disabled={searching} />
+                    </div>
+                    <div className="min-w-0">
+                      <label className={`block text-sm font-bold mb-1.5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Dirección (opcional)</label>
+                      <input type="text" value={direccion} onChange={(e) => setDireccion(e.target.value)} placeholder="Av. Principal 123" className={inputBase} disabled={searching} />
+                    </div>
+                    <div className="min-w-0">
+                      <label className={`block text-sm font-bold mb-1.5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Pasaporte (opcional)</label>
+                      <input type="text" value={pasaporte} onChange={(e) => setPasaporte(e.target.value)} placeholder="AB123456" className={inputBase} disabled={searching} />
+                    </div>
                   </div>
                 )}
-                {estaEditando && (
-                  <p className={`text-center text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Editando datos del cliente. Guarda o cancela.</p>
+              </div>
+
+              {/* Botones de acción — solo en desktop (en móvil solo en barra fija); un solo botón Crear */}
+              <div className="hidden flex-col gap-3 pt-2 sm:flex">
+                {estaEditando ? (
+                  <>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={guardarCambiosCliente}
+                        disabled={searching || !nombre.trim()}
+                        className={`min-h-[44px] flex-1 flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold transition-all shadow-md disabled:cursor-not-allowed ${darkMode ? 'bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-600 disabled:shadow-none' : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-lg disabled:bg-gray-300 disabled:shadow-none'}`}
+                      >
+                        {searching ? 'Guardando...' : 'Guardar cambios'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelarEdicion}
+                        disabled={searching}
+                        className={`min-h-[44px] rounded-xl px-6 py-3 font-semibold transition-all ${darkMode ? 'bg-gray-600 text-gray-200 hover:bg-gray-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                    <p className={`text-center text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Editando. Guardá o cancelá.</p>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={crearClienteClick}
+                    disabled={searching || !nombre.trim() || (!telefono.trim() && !ci.trim() && !ruc.trim())}
+                    className={`min-h-[44px] w-full rounded-xl px-6 py-3 font-semibold transition-all shadow-md disabled:cursor-not-allowed flex items-center justify-center gap-2 ${darkMode ? 'bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-600 disabled:shadow-none' : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-lg disabled:bg-gray-300 disabled:shadow-none'}`}
+                  >
+                    <UserPlus size={18} />
+                    {searching ? 'Creando...' : 'Crear cliente'}
+                  </button>
                 )}
               </div>
             </>
           )}
 
-          {/* Resultado: Cliente encontrado */}
+          {/* Resultado: Cliente encontrado — botones apilados en móvil */}
           {clienteEncontrado && (
-            <div className={`rounded-xl border-2 p-5 shadow-lg ${darkMode ? 'border-green-500/60 bg-gray-700/50' : 'border-green-400 bg-gradient-to-br from-green-50 to-emerald-50'}`}>
-              <div className="flex items-center gap-2 mb-4">
+            <div className={`rounded-xl border-2 p-4 shadow-lg sm:p-5 ${darkMode ? 'border-green-500/60 bg-gray-700/50' : 'border-green-400 bg-gradient-to-br from-green-50 to-emerald-50'}`}>
+              <div className="flex items-center gap-2 mb-3 sm:mb-4">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500">
                   <span className="text-lg text-white">✓</span>
                 </div>
-                <h3 className={`font-bold text-lg ${darkMode ? 'text-green-300' : 'text-green-900'}`}>Cliente Encontrado</h3>
+                <h3 className={`font-bold text-base sm:text-lg ${darkMode ? 'text-green-300' : 'text-green-900'}`}>Cliente encontrado</h3>
               </div>
-              
-              <div className={`rounded-lg p-4 space-y-2 mb-4 ${darkMode ? 'bg-gray-700/80' : 'bg-white'}`}>
-                <div className="flex items-center gap-2">
-                  <span className={`font-medium min-w-[80px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Nombre:</span>
-                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{clienteEncontrado.nombre}</span>
+              <div className={`rounded-lg p-3 space-y-2 mb-4 sm:p-4 ${darkMode ? 'bg-gray-700/80' : 'bg-white'}`}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`font-medium shrink-0 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Nombre:</span>
+                  <span className={`font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>{clienteEncontrado.nombre}</span>
                 </div>
                 {clienteEncontrado.telefono && (
-                  <div className="flex items-center gap-2">
-                    <span className={`font-medium min-w-[80px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Teléfono:</span>
-                    <span className={darkMode ? 'text-gray-200' : 'text-gray-900'}>{clienteEncontrado.telefono}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`font-medium shrink-0 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Teléfono:</span>
+                    <span className={`truncate ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>{clienteEncontrado.telefono}</span>
                   </div>
                 )}
                 {clienteEncontrado.ci && (
-                  <div className="flex items-center gap-2">
-                    <span className={`font-medium min-w-[80px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>CI:</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`font-medium shrink-0 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>CI:</span>
                     <span className={darkMode ? 'text-gray-200' : 'text-gray-900'}>{clienteEncontrado.ci}</span>
                   </div>
                 )}
                 {(clienteEncontrado as { ruc?: string }).ruc && (
-                  <div className="flex items-center gap-2">
-                    <span className={`font-medium min-w-[80px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>RUC:</span>
-                    <span className={darkMode ? 'text-gray-200' : 'text-gray-900'}>{(clienteEncontrado as { ruc?: string }).ruc}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`font-medium shrink-0 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>RUC:</span>
+                    <span className={`truncate ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>{(clienteEncontrado as { ruc?: string }).ruc}</span>
                   </div>
                 )}
                 {clienteEncontrado.email && (
-                  <div className="flex items-center gap-2">
-                    <span className={`font-medium min-w-[80px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Email:</span>
-                    <span className={darkMode ? 'text-gray-200' : 'text-gray-900'}>{clienteEncontrado.email}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`font-medium shrink-0 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Email:</span>
+                    <span className={`truncate ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>{clienteEncontrado.email}</span>
                   </div>
                 )}
                 {clienteEncontrado.direccion && (
-                  <div className="flex items-center gap-2">
-                    <span className={`font-medium min-w-[80px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Dirección:</span>
-                    <span className={darkMode ? 'text-gray-200' : 'text-gray-900'}>{clienteEncontrado.direccion}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`font-medium shrink-0 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Dirección:</span>
+                    <span className={`truncate ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>{clienteEncontrado.direccion}</span>
                   </div>
                 )}
                 <div className={`flex items-center gap-2 border-t pt-2 ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-                  <span className={`font-semibold text-lg ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                  <span className={`font-semibold text-base sm:text-lg ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                     ⭐ {clienteEncontrado.puntos_totales} puntos
                   </span>
                 </div>
               </div>
-
-              <div className="flex gap-3">
+              <div className="hidden flex-col gap-3 sm:flex sm:flex-row sm:gap-3">
                 <button
+                  type="button"
                   onClick={iniciarEdicion}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold transition-all shadow-md hover:shadow-lg bg-amber-500 text-white hover:bg-amber-600"
+                  className="min-h-[44px] flex-1 flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold transition-all shadow-md bg-amber-500 text-white hover:bg-amber-600 active:bg-amber-700"
                 >
                   <Pencil size={18} />
                   Editar
                 </button>
                 <button
+                  type="button"
                   onClick={seleccionarCliente}
-                  className="flex-1 rounded-xl px-6 py-3 font-bold text-lg transition-all shadow-lg hover:shadow-xl bg-green-600 text-white hover:bg-green-700"
+                  className="min-h-[44px] flex-1 rounded-xl px-6 py-3 font-bold text-base sm:text-lg transition-all shadow-lg bg-green-600 text-white hover:bg-green-700 active:bg-green-800 flex items-center justify-center gap-2"
                 >
-                  ✓ Seleccionar este Cliente
+                  ✓ Usar este cliente
                 </button>
               </div>
             </div>
@@ -645,8 +640,8 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
             </div>
           )}
 
-          {/* Divider */}
-          <div className="relative my-4">
+          {/* Divider + Continuar sin cliente — en desktop dentro del scroll; en móvil va en barra fija */}
+          <div className="relative my-4 hidden sm:block">
             <div className="absolute inset-0 flex items-center">
               <div className={`w-full border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}></div>
             </div>
@@ -654,11 +649,77 @@ export default function ClientModal({ isOpen, onClose, darkMode }: Props) {
               <span className={`px-4 font-medium ${darkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'}`}>O</span>
             </div>
           </div>
-
-          {/* Continuar sin cliente */}
           <button
+            type="button"
             onClick={continuarSinCliente}
-            className={`w-full rounded-xl border-2 px-6 py-3 font-semibold transition-all ${darkMode ? 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600 hover:border-gray-500' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 hover:border-gray-400'}`}
+            className={`hidden w-full rounded-xl border-2 px-6 py-3 font-semibold transition-all min-h-[44px] sm:block ${darkMode ? 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600 hover:border-gray-500' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 hover:border-gray-400'}`}
+          >
+            Continuar sin cliente
+          </button>
+        </div>
+        </div>
+
+        {/* Barra fija abajo en móvil: acciones siempre visibles para cajero apurado */}
+        <div
+          className={`flex flex-shrink-0 flex-col gap-2 border-t p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:hidden ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}
+        >
+          {clienteEncontrado && (
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={iniciarEdicion}
+                className="min-h-[44px] flex-1 rounded-xl px-4 py-3 font-semibold bg-amber-500 text-white active:bg-amber-600 flex items-center justify-center gap-2"
+              >
+                <Pencil size={18} />
+                Editar
+              </button>
+              <button
+                type="button"
+                onClick={seleccionarCliente}
+                className="min-h-[44px] flex-1 rounded-xl px-4 py-3 font-bold bg-green-600 text-white active:bg-green-700 flex items-center justify-center gap-2"
+              >
+                ✓ Usar
+              </button>
+            </div>
+          )}
+          {(!clienteEncontrado || estaEditando) && (
+            <>
+              {estaEditando ? (
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={cancelarEdicion}
+                    disabled={searching}
+                    className={`min-h-[44px] flex-1 rounded-xl px-4 py-3 font-semibold ${darkMode ? 'bg-gray-600 text-gray-200' : 'bg-gray-200 text-gray-700'}`}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={guardarCambiosCliente}
+                    disabled={searching || !nombre.trim()}
+                    className="min-h-[44px] flex-1 rounded-xl px-4 py-3 font-semibold bg-green-600 text-white disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {searching ? '...' : 'Guardar'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={crearClienteClick}
+                  disabled={searching || !nombre.trim() || (!telefono.trim() && !ci.trim() && !ruc.trim())}
+                  className="min-h-[44px] w-full rounded-xl px-4 py-3 font-semibold bg-green-600 text-white disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <UserPlus size={18} />
+                  {searching ? 'Creando...' : 'Crear cliente'}
+                </button>
+              )}
+            </>
+          )}
+          <button
+            type="button"
+            onClick={continuarSinCliente}
+            className={`min-h-[44px] w-full rounded-xl border-2 px-4 py-3 font-semibold sm:hidden ${darkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-600 hover:bg-gray-100'}`}
           >
             Continuar sin cliente
           </button>

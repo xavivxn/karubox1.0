@@ -44,9 +44,6 @@ export default function CategoryList({ categories, selectedCategory, onSelectCat
   return (
     <div className={`rounded-2xl shadow-lg p-3 sm:p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1 sm:flex-wrap sm:overflow-x-visible sm:pb-0">
-        <ChipButton active={selectedCategory === null} darkMode={darkMode} onClick={() => onSelectCategory(null)}>
-          Todos
-        </ChipButton>
         {categories.map((cat) => (
           <ChipButton
             key={cat.id}
@@ -57,6 +54,9 @@ export default function CategoryList({ categories, selectedCategory, onSelectCat
             {cat.nombre}
           </ChipButton>
         ))}
+        <ChipButton active={selectedCategory === null} darkMode={darkMode} onClick={() => onSelectCategory(null)}>
+          Todos
+        </ChipButton>
       </div>
     </div>
   )

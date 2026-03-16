@@ -29,52 +29,78 @@ export const ClienteModal = ({
   if (!showModal) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl dark:shadow-black/30 max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {editingCliente ? '✏️ Editar Cliente' : '➕ Nuevo Cliente'}
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-1 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              disabled={saving}
-            >
-              <X size={24} />
-            </button>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+      {/* Overlay a pantalla completa (safe-area no aquí para que tape todo) */}
+      <div
+        className="absolute inset-0 bg-black/50 dark:bg-black/70"
+        aria-hidden
+        onClick={onClose}
+      />
+      <div
+        className="relative flex max-h-[90dvh] w-full min-w-0 flex-col overflow-hidden rounded-t-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/30 sm:max-h-[85vh] sm:max-w-md sm:rounded-xl"
+        style={{
+          marginLeft: 'env(safe-area-inset-left)',
+          marginRight: 'env(safe-area-inset-right)',
+          marginBottom: 'env(safe-area-inset-bottom)'
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cliente-modal-title"
+      >
+        {/* Contenedor con scroll interno (Safari: overflow en el contenido, no en el card) */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+          <div className="p-4 sm:p-6">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3 pb-4 sm:mb-6 sm:pb-0">
+              <h2
+                id="cliente-modal-title"
+                className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl"
+              >
+                {editingCliente ? '✏️ Editar Cliente' : '➕ Nuevo Cliente'}
+              </h2>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                aria-label="Cerrar"
+              >
+                <X size={24} />
+              </button>
+            </div>
 
-          {/* Form */}
-          <ClienteFormFields formData={formData} onChange={onFormChange} />
+            {/* Form */}
+            <ClienteFormFields formData={formData} onChange={onFormChange} />
 
-          {/* Botones */}
-          <div className="flex gap-4 mt-6">
-            <button
-              onClick={onClose}
-              disabled={saving}
-              className="flex-1 px-4 py-3 rounded-lg font-semibold disabled:opacity-50 transition-colors bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={onSave}
-              disabled={saving}
-              className="flex-1 px-4 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Check size={18} />
-                  {editingCliente ? 'Actualizar' : 'Crear'}
-                </>
-              )}
-            </button>
+            {/* Botones: apilados en móvil, en fila en desktop */}
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:gap-4">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                className="min-h-[44px] flex-1 rounded-lg bg-gray-200 px-4 py-3 font-semibold text-gray-700 transition-colors disabled:opacity-50 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 hover:bg-gray-300 sm:py-2.5"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={saving}
+                className="min-h-[44px] flex-1 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600 sm:py-2.5 flex items-center justify-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Check size={18} />
+                    {editingCliente ? 'Actualizar' : 'Crear'}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
