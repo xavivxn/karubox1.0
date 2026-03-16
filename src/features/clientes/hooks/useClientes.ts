@@ -123,7 +123,8 @@ export const useClientes = (tenantId: string | undefined): UseClientesReturn => 
       pasaporte: cliente.pasaporte || '',
       telefono: cliente.telefono || '',
       email: cliente.email || '',
-      direccion: cliente.direccion || ''
+      direccion: cliente.direccion || '',
+      fecha_nacimiento: cliente.fecha_nacimiento ?? ''
     })
     setShowModal(true)
   }
