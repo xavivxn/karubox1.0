@@ -7,11 +7,12 @@ import { getSesionesPasadasAction } from '@/app/actions/caja'
 import type { SesionCaja } from '@/features/caja/types/caja.types'
 import { useRealtimeOrders } from '../hooks/useRealtimeOrders'
 import { useAchievements } from '../hooks/useAchievements'
-import { STAGE_COLORS, STAGE_EMOJIS, STAGE_LABELS, type KitchenStage } from '../utils/cocina.utils'
+import { STAGE_COLORS, STAGE_EMOJIS, STAGE_LABELS, type KitchenOrder, type KitchenStage } from '../utils/cocina.utils'
 import KitchenCanvas from '../components/KitchenCanvas'
 import AchievementToastStack from '../components/AchievementToast'
 import AchievementsPanel from '../components/AchievementsPanel'
 import DiamondTrophyShowcase from '../components/DiamondTrophyShowcase'
+import OrderDetailModal from '../components/OrderDetailModal'
 
 const STAGES: KitchenStage[] = ['nuevo', 'cocinando', 'empacando', 'entregado']
 
@@ -121,7 +122,7 @@ function StatCard({
 
 /* ═══ Main View ═══ */
 export default function CocinaVirtualView() {
-  const { tenant } = useTenant()
+  const { tenant, isAdmin } = useTenant()
   const { sesionAbierta, ultimaSesionCerrada, loading: loadingCaja } = useEstadoCaja(tenant?.id ?? null)
   const { orders, stats, newDeliveryIds, clearDelivery } = useRealtimeOrders({
     tenantId: tenant?.id,
@@ -135,6 +136,8 @@ export default function CocinaVirtualView() {
   const [panelOpen, setPanelOpen] = useState(false)
   const [showcaseAchievement, setShowcaseAchievement] = useState<import('../utils/achievements').Achievement | null>(null)
   const [sesiones, setSesiones] = useState<SesionCaja[]>([])
+  const [selectedOrder, setSelectedOrder] = useState<KitchenOrder | null>(null)
+  const [stageOverrides, setStageOverrides] = useState<Record<string, KitchenStage>>({})
 
   useEffect(() => {
     if (!tenant?.id) return
@@ -150,6 +153,17 @@ export default function CocinaVirtualView() {
 
   const handleStreakChange = useCallback((s: number) => {
     setStreak(s)
+  }, [])
+
+  const handleOrderClick = useCallback((order: KitchenOrder) => {
+    // Apply any existing override so modal shows effective stage
+    const effectiveStage = stageOverrides[order.id] ?? order.stage
+    setSelectedOrder({ ...order, stage: effectiveStage })
+  }, [stageOverrides])
+
+  const handleStageChange = useCallback((orderId: string, stage: KitchenStage) => {
+    setStageOverrides((prev) => ({ ...prev, [orderId]: stage }))
+    setSelectedOrder((prev) => prev?.id === orderId ? { ...prev, stage } : prev)
   }, [])
 
   const {
@@ -172,7 +186,7 @@ export default function CocinaVirtualView() {
 
   const stageCounts = STAGES.map((s) => ({
     stage: s,
-    count: orders.filter((o) => o.stage === s).length,
+    count: orders.filter((o) => (stageOverrides[o.id] ?? o.stage) === s).length,
   }))
 
   const gsHora = useMemo(() => {
@@ -270,6 +284,8 @@ export default function CocinaVirtualView() {
           onDeliveryAnimated={clearDelivery}
           onStreakChange={handleStreakChange}
           sessionId={sesionAbierta?.id}
+          onOrderClick={handleOrderClick}
+          stageOverrides={stageOverrides}
         />
       </div>
 
@@ -305,6 +321,14 @@ export default function CocinaVirtualView() {
           tenantNombre={tenant?.nombre ?? 'Karúbox'}
         />
       )}
+
+      {/* Order detail modal */}
+      <OrderDetailModal
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        isAdmin={isAdmin}
+        onStageChange={handleStageChange}
+      />
     </div>
   )
 }

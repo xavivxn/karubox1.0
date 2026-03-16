@@ -240,7 +240,15 @@ function EmberParticles() {
 
 /* ═══════════════ ORDER CARD (on steroids) ═══════════════ */
 
-function OrderCard({ order, isNew }: { order: KitchenOrder; isNew: boolean }) {
+function OrderCard({
+  order,
+  isNew,
+  onClick,
+}: {
+  order: KitchenOrder
+  isNew: boolean
+  onClick?: () => void
+}) {
   const typeColor = getOrderColor(order.tipo)
   const typeLabel = ORDER_TYPE_LABELS[order.tipo] ?? order.tipo
   const isDone = order.stage === 'entregado'
@@ -248,12 +256,14 @@ function OrderCard({ order, isNew }: { order: KitchenOrder; isNew: boolean }) {
 
   return (
     <div
+      onClick={onClick}
       className={`
         relative bg-white dark:bg-gray-700/90 rounded-xl shadow-sm border p-3
         ${isNew ? 'animate-slam-in' : 'animate-fade-in-up'}
         ${isDone ? 'opacity-75 scale-[0.97] border-yellow-200 dark:border-amber-700/50' : 'border-gray-100 dark:border-gray-600'}
         ${isCooking ? 'animate-fire-shimmer' : ''}
-        hover:shadow-md dark:hover:shadow-black/20 transition-all duration-200
+        ${onClick ? 'cursor-pointer hover:shadow-md hover:border-blue-200 dark:hover:border-blue-500/40 active:scale-[0.98]' : 'hover:shadow-md'}
+        dark:hover:shadow-black/20 transition-all duration-200
       `}
     >
       {isCooking && <EmberParticles />}
@@ -312,12 +322,14 @@ function StageColumn({
   hasNewDelivery,
   hasNewOrder,
   onConfettiDone,
+  onOrderClick,
 }: {
   stage: KitchenStage
   orders: KitchenOrder[]
   hasNewDelivery: boolean
   hasNewOrder: boolean
   onConfettiDone: () => void
+  onOrderClick?: (order: KitchenOrder) => void
 }) {
   const isCooking = stage === 'cocinando'
   const isDelivered = stage === 'entregado'
@@ -363,7 +375,12 @@ function StageColumn({
           </div>
         )}
         {orders.map((order, i) => (
-          <OrderCard key={order.id} order={order} isNew={i === 0 && hasNewOrder} />
+          <OrderCard
+            key={order.id}
+            order={order}
+            isNew={i === 0 && hasNewOrder}
+            onClick={onOrderClick ? () => onOrderClick(order) : undefined}
+          />
         ))}
       </div>
 
@@ -442,6 +459,8 @@ export default function KitchenCanvas({
   onDeliveryAnimated,
   onStreakChange,
   sessionId,
+  onOrderClick,
+  stageOverrides,
 }: {
   orders: KitchenOrder[]
   stats: { todayRevenue: number; todayTotal: number; deliveredCount: number }
@@ -450,6 +469,8 @@ export default function KitchenCanvas({
   onStreakChange?: (streak: number) => void
   /** Id del turno de caja; al cambiar (nuevo turno = Empezar el día), se reinicia la racha. */
   sessionId?: string | null
+  onOrderClick?: (order: KitchenOrder) => void
+  stageOverrides?: Record<string, KitchenStage>
 }) {
   const soundPlayed = useRef<Set<string>>(new Set())
   const prevOrderCount = useRef(orders.length)
@@ -578,9 +599,12 @@ export default function KitchenCanvas({
       empacando: [],
       entregado: [],
     }
-    orders.forEach((o) => g[o.stage].push(o))
+    orders.forEach((o) => {
+      const effectiveStage = stageOverrides?.[o.id] ?? o.stage
+      g[effectiveStage].push({ ...o, stage: effectiveStage })
+    })
     return g
-  }, [orders])
+  }, [orders, stageOverrides])
 
   const handleConfettiDone = useCallback(
     (stage: KitchenStage) => {
@@ -632,6 +656,7 @@ export default function KitchenCanvas({
               hasNewDelivery={hasNewDeliveryInStage(stage)}
               hasNewOrder={newOrderStages.has(stage)}
               onConfettiDone={() => handleConfettiDone(stage)}
+              onOrderClick={onOrderClick}
             />
           ))}
         </div>

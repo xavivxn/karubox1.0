@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import {
+  KITCHEN_STAGES,
   STAGE_COLORS,
   STAGE_LABELS,
   STAGE_EMOJIS,
   getOrderColor,
   type KitchenOrder,
+  type KitchenStage,
 } from '../utils/cocina.utils'
 
 /* ═══════════════ TYPES ═══════════════ */
@@ -74,9 +76,13 @@ function SkeletonLine({ width = 'full' }: { width?: string }) {
 export default function OrderDetailModal({
   order,
   onClose,
+  isAdmin,
+  onStageChange,
 }: {
   order: KitchenOrder | null
   onClose: () => void
+  isAdmin?: boolean
+  onStageChange?: (orderId: string, stage: KitchenStage) => void
 }) {
   const [items, setItems] = useState<OrderItem[]>([])
   const [detail, setDetail] = useState<OrderDetail | null>(null)
@@ -294,6 +300,41 @@ export default function OrderDetailModal({
                 </div>
               )}
             </div>
+
+            {/* ── Admin: mover etapa ── */}
+            {isAdmin && onStageChange && (
+              <div
+                className="px-5 py-3 border-t border-gray-50"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  🔧 Mover etapa (admin)
+                </p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {KITCHEN_STAGES.map((s) => {
+                    const isActive = order.stage === s
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => onStageChange(order.id, s)}
+                        disabled={isActive}
+                        className={`
+                          flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl text-center
+                          transition-all duration-150 text-[10px] font-bold border-2
+                          ${isActive
+                            ? 'text-white border-transparent scale-[1.04] shadow-md'
+                            : 'border-gray-100 text-gray-400 hover:border-gray-200 hover:text-gray-600 hover:bg-gray-50 active:scale-95'
+                          }
+                        `}
+                        style={isActive ? { backgroundColor: STAGE_COLORS[s], borderColor: STAGE_COLORS[s] } : {}}
+                      >
+                        <span className="text-base">{STAGE_EMOJIS[s]}</span>
+                        <span className="leading-tight">{STAGE_LABELS[s]}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* ── Total footer ── */}
             <div
