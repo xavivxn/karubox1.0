@@ -396,36 +396,31 @@ export function ensureDailyReset(store: AchievementStore): {
 
 /**
  * Reinicia los logros del día cuando cambia la sesión de caja (nuevo turno).
- * - Guarda los logros del turno anterior en sessionHistory antes de limpiarlos.
- * - Si no hay sessionId, limpia dailySessionId para que al abrir la próxima caja se fuerce el reset.
+ * - Si sessionId es undefined (caja cargando), no toca nada para evitar limpiezas falsas.
+ * - Solo reinicia cuando hay un sessionId real y es distinto al actual.
  */
 export function ensureSessionReset(
   store: AchievementStore,
-  sessionId: string | undefined,
-  /** Timestamp ISO de apertura de la nueva sesión (para el historial) */
-  aperturaAt?: string
+  sessionId: string | undefined
 ): { store: AchievementStore; didReset: boolean } {
-  if (!sessionId) {
-    if (store.dailySessionId === '') return { store, didReset: false }
-    // Guardar sesión anterior en historial antes de limpiar
-    const history = archiveCurrentSession(store)
-    return { store: { ...store, dailySessionId: '', sessionHistory: history }, didReset: true }
-  }
+  // Sin sesión real todavía (cargando o caja cerrada): no tocar el store
+  if (!sessionId) return { store, didReset: false }
+  // Misma sesión: sin cambios
   if (store.dailySessionId === sessionId) return { store, didReset: false }
 
-  // Guardar sesión anterior en historial
+  // Nueva sesión de caja: archivar anterior y resetear logros del día
   const history = archiveCurrentSession(store)
-
-  // Limitar historial a 60 entradas (las más recientes)
   const trimmedHistory = trimHistory(history)
 
-  const newStore: AchievementStore = {
-    ...store,
-    dailySessionId: sessionId,
-    dailyUnlocked: [],
-    sessionHistory: trimmedHistory,
+  return {
+    store: {
+      ...store,
+      dailySessionId: sessionId,
+      dailyUnlocked: [],
+      sessionHistory: trimmedHistory,
+    },
+    didReset: true,
   }
-  return { store: newStore, didReset: true }
 }
 
 function archiveCurrentSession(store: AchievementStore): Record<string, SessionRecord> {

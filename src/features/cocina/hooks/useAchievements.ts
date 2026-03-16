@@ -32,36 +32,54 @@ export function useAchievements({ tenantId, sessionId, stats, orders, streak }: 
   const [newlyUnlocked, setNewlyUnlocked] = useState<Achievement[]>([])
   const [nextTarget, setNextTarget] = useState<NextTarget | null>(null)
   const prevStreak = useRef(0)
+  /**
+   * IDs de logros que ya estaban desbloqueados en el store al inicializar.
+   * La evaluación los omite para no re-disparar toasts al volver a la pantalla.
+   */
+  const preExistingIds = useRef<Set<string>>(new Set())
   const initialized = useRef(false)
-  // Carga y sincronización por tenant y sesión: al cambiar turno (sessionId) se reinician logros del día
+
+  // Carga inicial: una sola vez por tenant
   useEffect(() => {
     if (!tenantId) return
     const loaded = loadStore(tenantId)
-    const { store: afterSession } = ensureSessionReset(loaded, sessionId)
-    const { store: resetStore } = ensureDailyReset(afterSession)
-    setStore(resetStore)
-    saveStore(tenantId, resetStore)
+    const { store: afterDaily } = ensureDailyReset(loaded)
+    // Recordar qué logros ya existían ANTES de esta sesión de React
+    preExistingIds.current = new Set([
+      ...afterDaily.dailyUnlocked,
+      ...Object.keys(afterDaily.unlocked),
+    ])
+    setStore(afterDaily)
+    saveStore(tenantId, afterDaily)
     initialized.current = true
+  }, [tenantId])
+
+  // Al cambiar de sesión de caja (nuevo turno), resetear logros del día
+  useEffect(() => {
+    if (!tenantId || !sessionId) return
+    // Leer siempre desde localStorage para no trabajar con estado stale
+    const loaded = loadStore(tenantId)
+    const { store: afterSession, didReset } = ensureSessionReset(loaded, sessionId)
+    if (didReset) {
+      // Si hubo reset real de turno, los pre-existing ya no aplican (es una nueva sesión)
+      preExistingIds.current = new Set(Object.keys(afterSession.unlocked))
+      setStore(afterSession)
+      saveStore(tenantId, afterSession)
+    } else if (!store) {
+      // Store todavía null (race con carga inicial), sincronizar
+      setStore(afterSession)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId, sessionId])
 
   // Track combo milestones for lifetime stats
   useEffect(() => {
     if (!tenantId || !store) return
-
     let updated = false
     const ls = { ...store.lifetimeStats }
-
-    if (streak >= 5 && prevStreak.current < 5) {
-      ls.totalCombo5 += 1
-      updated = true
-    }
-    if (streak >= 10 && prevStreak.current < 10) {
-      ls.totalCombo10 += 1
-      updated = true
-    }
-
+    if (streak >= 5 && prevStreak.current < 5) { ls.totalCombo5 += 1; updated = true }
+    if (streak >= 10 && prevStreak.current < 10) { ls.totalCombo10 += 1; updated = true }
     prevStreak.current = streak
-
     if (updated) {
       const newStore = { ...store, lifetimeStats: ls }
       setStore(newStore)
@@ -73,26 +91,11 @@ export function useAchievements({ tenantId, sessionId, stats, orders, streak }: 
   useEffect(() => {
     if (!tenantId || !store) return
     if (stats.todayRevenue > store.lifetimeStats.bestDailyRevenue && store.lifetimeStats.bestDailyRevenue > 0) {
-      const newStore = {
-        ...store,
-        lifetimeStats: {
-          ...store.lifetimeStats,
-          bestDailyRevenue: stats.todayRevenue,
-          recordsBroken: store.lifetimeStats.recordsBroken + 1,
-        },
-      }
-      setStore(newStore)
-      saveStore(tenantId, newStore)
+      const newStore = { ...store, lifetimeStats: { ...store.lifetimeStats, bestDailyRevenue: stats.todayRevenue, recordsBroken: store.lifetimeStats.recordsBroken + 1 } }
+      setStore(newStore); saveStore(tenantId, newStore)
     } else if (store.lifetimeStats.bestDailyRevenue === 0 && stats.todayRevenue > 0) {
-      const newStore = {
-        ...store,
-        lifetimeStats: {
-          ...store.lifetimeStats,
-          bestDailyRevenue: stats.todayRevenue,
-        },
-      }
-      setStore(newStore)
-      saveStore(tenantId, newStore)
+      const newStore = { ...store, lifetimeStats: { ...store.lifetimeStats, bestDailyRevenue: stats.todayRevenue } }
+      setStore(newStore); saveStore(tenantId, newStore)
     }
   }, [stats.todayRevenue, tenantId, store])
 
@@ -100,41 +103,33 @@ export function useAchievements({ tenantId, sessionId, stats, orders, streak }: 
   useEffect(() => {
     if (!tenantId || !store) return
     if (stats.todayTotal > store.lifetimeStats.bestDailyOrders) {
-      const newStore = {
-        ...store,
-        lifetimeStats: {
-          ...store.lifetimeStats,
-          bestDailyOrders: stats.todayTotal,
-        },
-      }
-      setStore(newStore)
-      saveStore(tenantId, newStore)
+      const newStore = { ...store, lifetimeStats: { ...store.lifetimeStats, bestDailyOrders: stats.todayTotal } }
+      setStore(newStore); saveStore(tenantId, newStore)
     }
   }, [stats.todayTotal, tenantId, store])
 
-  // Evaluate achievements periodically
+  // Evaluate achievements
   useEffect(() => {
     if (!tenantId || !store || !initialized.current) return
 
-    const stageCounts: Record<KitchenStage, number> = {
-      nuevo: 0,
-      cocinando: 0,
-      empacando: 0,
-      entregado: 0,
-    }
+    const stageCounts: Record<KitchenStage, number> = { nuevo: 0, cocinando: 0, empacando: 0, entregado: 0 }
     orders.forEach((o) => { stageCounts[o.stage] += 1 })
-
     const deliveryCount = orders.filter((o) => o.tipo === 'delivery').length
 
     const ctx = { stats, orders, streak, stageCounts, deliveryCount, store }
-
     const { newlyUnlocked: fresh, updatedStore } = evaluateAchievements(ctx)
 
+    // Filtrar los que ya existían al cargar la pantalla (no re-disparar toasts)
+    const reallyNew = fresh.filter((a) => !preExistingIds.current.has(a.id))
+
+    if (reallyNew.length > 0) {
+      setNewlyUnlocked((prev) => [...prev, ...reallyNew])
+      playAchievementSound()
+    }
+
     if (fresh.length > 0) {
-      setNewlyUnlocked((prev) => [...prev, ...fresh])
       setStore(updatedStore)
       saveStore(tenantId, updatedStore)
-      playAchievementSound()
     }
 
     setNextTarget(getNextTarget({ ...ctx, store: updatedStore }))
@@ -146,6 +141,7 @@ export function useAchievements({ tenantId, sessionId, stats, orders, streak }: 
     const interval = setInterval(() => {
       const { store: resetStore, didReset } = ensureDailyReset(store)
       if (didReset) {
+        preExistingIds.current = new Set(Object.keys(resetStore.unlocked))
         setStore(resetStore)
         saveStore(tenantId, resetStore)
       }
@@ -153,10 +149,7 @@ export function useAchievements({ tenantId, sessionId, stats, orders, streak }: 
     return () => clearInterval(interval)
   }, [tenantId, store])
 
-  const clearNewlyUnlocked = useCallback(() => {
-    setNewlyUnlocked([])
-  }, [])
-
+  const clearNewlyUnlocked = useCallback(() => setNewlyUnlocked([]), [])
   const dismissAchievement = useCallback((id: string) => {
     setNewlyUnlocked((prev) => prev.filter((a) => a.id !== id))
   }, [])
