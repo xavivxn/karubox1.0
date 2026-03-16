@@ -236,12 +236,16 @@ export async function getHistorialSesionStatsAction(
         .lte('created_at', hasta),
     ])
 
-    // Build cajeros breakdown
+    // Build cajeros breakdown (Supabase may return usuarios as object or array)
     const cajeroMap = new Map<string, { nombre: string; cantidad: number }>()
     for (const row of pedidosRes.data ?? []) {
       const uid = (row.usuario_id as string) ?? 'desconocido'
-      const nombre =
-        (row.usuarios as { nombre: string | null } | null)?.nombre ?? 'Sin nombre'
+      const u = row.usuarios as unknown
+      const nombre = Array.isArray(u) && u[0] != null && typeof u[0] === 'object' && 'nombre' in u[0]
+        ? String((u[0] as { nombre: unknown }).nombre ?? 'Sin nombre')
+        : u != null && typeof u === 'object' && 'nombre' in u
+          ? String((u as { nombre: unknown }).nombre ?? 'Sin nombre')
+          : 'Sin nombre'
       const prev = cajeroMap.get(uid)
       if (prev) {
         prev.cantidad += 1
