@@ -97,7 +97,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   return (
     <div
       className={`flex flex-col ${
-        isLoginPage ? 'h-screen overflow-hidden' : 'min-h-screen'
+        isLoginPage ? 'min-h-[100dvh] min-h-screen overflow-y-auto' : 'min-h-screen'
       } ${
         hideNavbar
           ? THEME_CONFIG.DARK.background
@@ -110,11 +110,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <AppNavbar pageTitle={pageInfo.title} pageSubtitle={pageInfo.subtitle} />
       )}
       <InactiveTenantOverlay />
-      <main className={`flex-1 min-h-0 flex flex-col ${isLoginPage ? 'overflow-y-auto' : ''} ${pageInfo.fullWidth ? "py-4" : "px-4 py-6"}`}>
+      <main
+        className={`flex flex-col ${isLoginPage ? '' : 'flex-1 min-h-0 min-w-0'} ${pageInfo.fullWidth ? "py-4" : "px-4 py-6"}`}
+        style={isLoginPage ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}
+      >
         {pageInfo.fullWidth ? (
           children
         ) : (
-          <div className="max-w-7xl mx-auto space-y-10">{children}</div>
+          <div className="w-full min-w-0 max-w-7xl mx-auto space-y-10 overflow-x-hidden">{children}</div>
         )}
       </main>
       <AppFooter isDark={hideNavbar || darkMode} />

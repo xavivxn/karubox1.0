@@ -34,6 +34,12 @@ export const ROUTES = {
     ADMIN: 'admin',
   } as const,
 
+  /** Query param para breadcrumb de Historial de pedidos: 'home' = desde Inicio, 'pos' = desde Punto de Venta */
+  PEDIDOS_FROM: {
+    HOME: 'home',
+    POS: 'pos',
+  } as const,
+
   // Rutas de API (futuro)
   API: {
     AUTH: '/api/auth',

@@ -132,14 +132,17 @@ export function Breadcrumb() {
         icon: <ShoppingCart className="w-4 h-4" />,
       })
     } else if (pathname.startsWith('/home/pedidos')) {
-      items.push({
-        label: 'Punto de Venta',
-        path: ROUTES.PROTECTED.POS,
-        icon: <ShoppingCart className="w-4 h-4" />,
-      })
+      const fromPedidos = searchParams.get('from')
+      if (fromPedidos === ROUTES.PEDIDOS_FROM.POS) {
+        items.push({
+          label: 'Punto de Venta',
+          path: `${ROUTES.PROTECTED.POS}`,
+          icon: <ShoppingCart className="w-4 h-4" />,
+        })
+      }
       items.push({
         label: 'Historial de pedidos',
-        path: ROUTES.PROTECTED.PEDIDOS,
+        path: `${ROUTES.PROTECTED.PEDIDOS}${fromPedidos ? `?from=${fromPedidos}` : ''}`,
         icon: <FileText className="w-4 h-4" />,
       })
     } else if (pathname.startsWith('/home/kds')) {

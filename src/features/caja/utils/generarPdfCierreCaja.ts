@@ -110,12 +110,18 @@ export function generarPdfCierreCaja(
   doc.text('RESUMEN DEL TURNO', MARGIN, startY)
   startY += 8
 
+  const gastosExtra = sesion.gastos_extra && Array.isArray(sesion.gastos_extra) ? sesion.gastos_extra : []
+  const totalGastosExtra = gastosExtra.reduce((sum, g) => sum + Number(g.monto || 0), 0)
+
   const rows: [string, string][] = [
     ['Fecha de apertura', sesion.apertura_at ? formatFecha(sesion.apertura_at) : '—'],
     ['Fecha de cierre', sesion.cierre_at ? formatFecha(sesion.cierre_at) : '—'],
     ['Total ventas', formatGuaranies(sesion.total_ventas)],
     ['Costo estimado', formatGuaranies(sesion.total_costo_estimado)],
     ['Monto pagado a empleados', formatGuaranies(sesion.monto_pagado_empleados)],
+    ...(gastosExtra.length > 0
+      ? gastosExtra.map((g) => [g.descripcion || 'Gasto extra', formatGuaranies(Number(g.monto))] as [string, string])
+      : []),
     ['Cantidad de pedidos', String(sesion.cantidad_pedidos)],
     ['Ganancia neta', formatGuaranies(sesion.ganancia_neta)],
   ]
@@ -168,11 +174,11 @@ export function generarPdfCierreCaja(
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
   doc.setTextColor(...GRAY_MUTED)
-  doc.text(
-    'Ganancia neta = Total ventas − Costo estimado − Monto pagado a empleados',
-    MARGIN + 4,
-    startY + 8
-  )
+  const formula =
+    totalGastosExtra > 0
+      ? 'Ganancia neta = Total ventas − Costo − Pagado empleados − Gastos extra'
+      : 'Ganancia neta = Total ventas − Costo estimado − Monto pagado a empleados'
+  doc.text(formula, MARGIN + 4, startY + 8)
 
   addFooter(doc)
 
