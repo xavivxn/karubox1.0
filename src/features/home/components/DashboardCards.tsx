@@ -22,7 +22,7 @@ export function DashboardCards({ darkMode }: DashboardCardsProps) {
   const bottomRow = DASHBOARD_CARDS.slice(3)
 
   return (
-    <section className="max-w-6xl mx-auto space-y-8">
+    <section className="max-w-6xl mx-auto space-y-8 px-3 md:px-0">
       {/* First row: up to 3 cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {topRow.map((card) => (

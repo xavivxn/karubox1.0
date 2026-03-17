@@ -74,27 +74,27 @@ export function DashboardCardComponent({
       aria-busy={isThisCardLoading}
       aria-disabled={isDisabled}
     >
-      {/* Contenedor interno con overflow-hidden: recorta blob/contenido pero el ring del botón no se corta (Android/iOS Safari) */}
-      <span className="relative block overflow-hidden rounded-3xl">
-        {/* Overlay de carga en el card activo */}
-        {isThisCardLoading && (
-          <span
-            role="status"
-            aria-live="polite"
-            className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-3xl ${
-              darkMode ? 'bg-gray-900/80' : 'bg-white/85'
-            } backdrop-blur-sm transition-opacity duration-200`}
-          >
-            <Loader2
-              className={`w-10 h-10 animate-spin ${darkMode ? c.iconDark : c.iconLight}`}
-              aria-hidden
-            />
-            <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Cargando…
-            </span>
+      {/* Overlay de carga fuera del overflow-hidden para que no se recorte en móvil (Android/iOS) */}
+      {isThisCardLoading && (
+        <span
+          role="status"
+          aria-live="polite"
+          className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-3xl ${
+            darkMode ? 'bg-gray-900/80' : 'bg-white/85'
+          } backdrop-blur-sm transition-opacity duration-200`}
+        >
+          <Loader2
+            className={`w-10 h-10 animate-spin ${darkMode ? c.iconDark : c.iconLight}`}
+            aria-hidden
+          />
+          <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            Cargando…
           </span>
-        )}
+        </span>
+      )}
 
+      {/* Contenedor con overflow-hidden solo para blob/contenido; el ring y el overlay quedan fuera */}
+      <span className="relative block overflow-hidden rounded-3xl">
         <span className={`absolute top-0 right-0 w-40 h-40 rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-500 ${c.blob}`} />
         <span className="relative block p-8 space-y-4">
           <span className={`inline-flex p-4 rounded-2xl ${darkMode ? c.iconBgDark : c.iconBgLight}`}>
