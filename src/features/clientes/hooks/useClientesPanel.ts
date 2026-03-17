@@ -71,7 +71,10 @@ export interface UseClientesPanelReturn {
   refetch: () => Promise<void>
 }
 
-export const useClientesPanel = (tenantId: string | undefined): UseClientesPanelReturn => {
+export const useClientesPanel = (
+  tenantId: string | undefined,
+  tenantNombre?: string
+): UseClientesPanelReturn => {
   // ── Clientes ─────────────────────────────
   const [clientes, setClientes] = useState<ClienteConVisita[]>([])
   const [loading, setLoading] = useState(true)
@@ -201,8 +204,52 @@ export const useClientesPanel = (tenantId: string | undefined): UseClientesPanel
       await registrarCampana(tenantId, tipoCampana, ids, puntosRegalo, mensaje)
       if (puntosRegalo > 0) await fetchClientes()
       setShowCampana(false)
+
+      const conEmail = destinatarios.filter(
+        (c) => c.email?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email.trim())
+      )
+      let emailMsg = ''
+      if (conEmail.length > 0 && tenantNombre) {
+        try {
+          const res = await fetch('/api/campaign/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tenantNombre,
+              destinatarios: conEmail.map((c) => ({
+                email: c.email!.trim(),
+                nombre: c.nombre ?? '',
+                puntos_totales: c.puntos_totales,
+                puntos_regalo: puntosRegalo,
+                dias_sin_visita: c.dias_sin_visita ?? undefined,
+              })),
+              subject: `Mensaje de ${tenantNombre}`,
+              mensajeConVariables: mensaje,
+            }),
+          })
+          const data = await res.json()
+          if (data.error === 'EMAIL_NOT_CONFIGURED') {
+            emailMsg = '\n\nPara enviar por email, configurá RESEND_API_KEY en el servidor.'
+          } else if (data.sent > 0) {
+            emailMsg = `\n\nSe enviaron ${data.sent} emails.`
+            if (data.failed > 0) {
+              emailMsg += ` (${data.failed} fallos)`
+              if (Array.isArray(data.failedEmails) && data.failedEmails.length > 0) {
+                emailMsg += `: ${data.failedEmails.join(', ')}`
+              }
+              if (data.lastError) emailMsg += `\nMotivo: ${data.lastError}`
+              if (data.hint) emailMsg += `\n\n💡 ${data.hint}`
+            }
+          }
+        } catch {
+          emailMsg = '\n\nNo se pudo enviar por email (revisá la conexión o RESEND_API_KEY).'
+        }
+      } else if (conEmail.length > 0 && !tenantNombre) {
+        emailMsg = '\n\nPara enviar por email, el nombre del negocio debe estar disponible.'
+      }
+
       const puntosMsg = puntosRegalo > 0 ? ` Se acreditaron ${puntosRegalo} pts a cada cliente.` : ''
-      alert(`✅ Campaña registrada. ${ids.length} destinatarios.${puntosMsg}\n\nLos mensajes se enviarán cuando configures WhatsApp y/o Email.`)
+      alert(`✅ Campaña registrada. ${ids.length} destinatarios.${puntosMsg}${emailMsg}`)
     } catch (e: any) {
       alert(`Error al registrar campaña: ${e.message}`)
     } finally {

@@ -50,7 +50,7 @@ export const ClientesPanelView = () => {
     handleCloseModal,
     handleFormChange,
     handleGuardar,
-  } = useClientesPanel(tenant?.id)
+  } = useClientesPanel(tenant?.id, tenant?.nombre)
 
   if (tenantLoading) {
     return (
