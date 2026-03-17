@@ -4,6 +4,8 @@ import type { KitchenOrder, KitchenStats, KitchenStage } from './cocina.utils'
 
 export type AchievementTier = 'bronze' | 'silver' | 'gold' | 'diamond'
 export type AchievementType = 'daily' | 'global'
+/** Alto = toast + sonido; normal = solo panel (menos ruido). */
+export type AchievementImpact = 'high' | 'normal'
 
 export interface Achievement {
   id: string
@@ -12,6 +14,8 @@ export interface Achievement {
   tier: AchievementTier
   emoji: string
   type: AchievementType
+  /** Si es 'high', se muestra toast y sonido al desbloquear; si 'normal', solo en panel. */
+  impact?: AchievementImpact
 }
 
 export interface AchievementEvalContext {
@@ -193,6 +197,7 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     tier: 'diamond',
     emoji: '🚀',
     type: 'daily',
+    impact: 'high',
   },
   {
     id: 'multimillonario',
@@ -201,6 +206,7 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     tier: 'diamond',
     emoji: '💎',
     type: 'daily',
+    impact: 'high',
   },
   {
     id: 'cocina-llena',
@@ -209,6 +215,7 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     tier: 'diamond',
     emoji: '🏭',
     type: 'daily',
+    impact: 'high',
   },
   {
     id: 'combo-master',
@@ -217,6 +224,7 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     tier: 'diamond',
     emoji: '⚡',
     type: 'daily',
+    impact: 'high',
   },
   {
     id: 'leyenda-del-dia',
@@ -225,6 +233,7 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     tier: 'diamond',
     emoji: '👑',
     type: 'daily',
+    impact: 'high',
   },
   {
     id: 'tren-bala',
@@ -268,6 +277,7 @@ export const GLOBAL_ACHIEVEMENTS: Achievement[] = [
     tier: 'silver',
     emoji: '💯',
     type: 'global',
+    impact: 'high',
   },
   {
     id: 'rompe-records',
@@ -276,6 +286,7 @@ export const GLOBAL_ACHIEVEMENTS: Achievement[] = [
     tier: 'gold',
     emoji: '🏆',
     type: 'global',
+    impact: 'high',
   },
   {
     id: 'combo-habitual',
@@ -292,6 +303,7 @@ export const GLOBAL_ACHIEVEMENTS: Achievement[] = [
     tier: 'diamond',
     emoji: '🌟',
     type: 'global',
+    impact: 'high',
   },
   {
     id: 'leyenda-global',
@@ -300,6 +312,7 @@ export const GLOBAL_ACHIEVEMENTS: Achievement[] = [
     tier: 'diamond',
     emoji: '🐉',
     type: 'global',
+    impact: 'high',
   },
   {
     id: 'dia-perfecto',
@@ -308,6 +321,7 @@ export const GLOBAL_ACHIEVEMENTS: Achievement[] = [
     tier: 'diamond',
     emoji: '✨',
     type: 'global',
+    impact: 'high',
   },
 ]
 

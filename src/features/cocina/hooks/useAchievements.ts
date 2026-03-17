@@ -121,9 +121,11 @@ export function useAchievements({ tenantId, sessionId, stats, orders, streak }: 
 
     // Filtrar los que ya existían al cargar la pantalla (no re-disparar toasts)
     const reallyNew = fresh.filter((a) => !preExistingIds.current.has(a.id))
+    // Solo toast + sonido para logros de alto impacto; el resto solo en panel
+    const forToast = reallyNew.filter((a) => a.impact === 'high')
 
-    if (reallyNew.length > 0) {
-      setNewlyUnlocked((prev) => [...prev, ...reallyNew])
+    if (forToast.length > 0) {
+      setNewlyUnlocked((prev) => [...prev, ...forToast])
       playAchievementSound()
     }
 

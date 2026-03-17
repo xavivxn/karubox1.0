@@ -360,7 +360,9 @@ function StageColumn({
           <span className={`text-xl ${isCooking ? 'animate-pulse-fire' : ''}`}>
             {STAGE_EMOJIS[stage]}
           </span>
-          <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{STAGE_LABELS[stage]}</span>
+          <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
+            {STAGE_LABELS[stage]} · {orders.length} {orders.length === 1 ? 'pedido' : 'pedidos'}
+          </span>
         </div>
         <span
           className="text-xs font-extrabold px-2.5 py-1 rounded-full text-white min-w-[28px] text-center"
@@ -488,10 +490,12 @@ function ActivityTicker({ events }: { events: TickerEvent[] }) {
 
 function RecordBanner({ text }: { text: string }) {
   return (
-    <div className="animate-slam-in bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 rounded-xl px-4 py-2 flex items-center justify-center gap-2 shadow-lg">
-      <span className="text-lg">🏆</span>
-      <span className="text-sm font-black text-white tracking-wide">{text}</span>
-      <span className="text-lg">🏆</span>
+    <div
+      className="animate-slam-in rounded-xl px-4 py-2.5 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 ring-2 ring-amber-300/80 ring-offset-2 ring-offset-gray-900 dark:ring-offset-gray-800 shadow-[0_0_24px_rgba(245,158,11,0.5),0_0_48px_rgba(251,191,36,0.2)]"
+    >
+      <span className="text-xl drop-shadow-md">🏆</span>
+      <span className="text-sm font-black text-white tracking-wide drop-shadow-sm">{text}</span>
+      <span className="text-xl drop-shadow-md">🏆</span>
     </div>
   )
 }
@@ -507,6 +511,7 @@ export default function KitchenCanvas({
   sessionId,
   onOrderClick,
   stageOverrides,
+  bestDailyOrders = 0,
 }: {
   orders: KitchenOrder[]
   stats: KitchenStats
@@ -517,6 +522,8 @@ export default function KitchenCanvas({
   sessionId?: string | null
   onOrderClick?: (order: KitchenOrder) => void
   stageOverrides?: Record<string, KitchenStage>
+  /** Récord diario de pedidos para mostrar "A X de tu récord". */
+  bestDailyOrders?: number
 }) {
   const soundPlayed = useRef<Set<string>>(new Set())
   const prevOrderCount = useRef(orders.length)
@@ -525,6 +532,7 @@ export default function KitchenCanvas({
   const [newOrderStages, setNewOrderStages] = useState<Set<KitchenStage>>(new Set())
   const [tickerEvents, setTickerEvents] = useState<TickerEvent[]>([])
   const [streak, setStreak] = useState(0)
+  const prevStreakRef = useRef(0)
   const lastOrderTime = useRef(Date.now())
   const prevRevenueRef = useRef(stats.todayRevenue)
   const [record, setRecord] = useState<string | null>(null)
@@ -582,7 +590,7 @@ export default function KitchenCanvas({
       setTickerEvents((prev) => {
         const newEvents: TickerEvent[] = newOrders.map((o) => ({
           id: `new-${o.id}`,
-          text: `Pedido #${o.numero_pedido} recibido — ${formatGs(o.total)}`,
+          text: `Nuevo pedido #${o.numero_pedido} · ${formatGs(o.total)} (${ORDER_TYPE_LABELS[o.tipo] ?? o.tipo})`,
           emoji: tickerEmojiByTotal(o.total, false),
           ts: Date.now(),
           total: o.total,
@@ -612,7 +620,7 @@ export default function KitchenCanvas({
             setTickerEvents((prev) => [
               {
                 id: `del-${id}`,
-                text: `#${order.numero_pedido} entregado — +${formatGs(order.total)}`,
+                text: `Entregado #${order.numero_pedido} · +${formatGs(order.total)}`,
                 emoji: tickerEmojiByTotal(order.total, true),
                 ts: Date.now(),
                 total: order.total,
@@ -666,6 +674,29 @@ export default function KitchenCanvas({
     onStreakChange?.(streak)
   }, [streak, onStreakChange])
 
+  // Ticker al subir racha (3, 5, 8, 10)
+  useEffect(() => {
+    if (streak < 3 || streak <= prevStreakRef.current) {
+      prevStreakRef.current = streak
+      return
+    }
+    const prev = prevStreakRef.current
+    prevStreakRef.current = streak
+    const thresholds = [3, 5, 8, 10] as const
+    const hit = thresholds.find((t) => streak >= t && prev < t)
+    if (hit) {
+      setTickerEvents((prevEvents) => [
+        {
+          id: `combo-${hit}-${Date.now()}`,
+          text: `Combo x${hit} – ${hit} pedidos al hilo sin pausa`,
+          emoji: hit >= 10 ? '👑' : hit >= 5 ? '🔥' : '⚡',
+          ts: Date.now(),
+        },
+        ...prevEvents,
+      ].slice(0, 20))
+    }
+  }, [streak])
+
   // Compute pedidos/hora
   const pedidosHora = useMemo(() => {
     const now = new Date()
@@ -704,17 +735,31 @@ export default function KitchenCanvas({
 
   return (
     <div className="h-full w-full flex flex-col min-w-0">
-      {/* ─── Top Bar: Money counter + Combo + Rate ─── */}
+      {/* ─── Top Bar: negocio (izq) + energía (der) ─── */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80 flex-wrap gap-2">
-        <MoneyCounter value={stats.todayRevenue} label="Facturado hoy" icon="💰" />
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <MoneyCounter value={stats.todayRevenue} label="Facturado hoy" icon="💰" />
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🔥</span>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gray-400 dark:text-gray-400 font-semibold uppercase tracking-wider">En cocina</span>
+              <span className="text-lg font-black text-gray-900 dark:text-gray-100 tabular-nums">{stats.activeCount}</span>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-xl">⚡</span>
             <div className="flex flex-col">
-              <span className="text-[10px] text-gray-400 dark:text-gray-400 font-semibold uppercase tracking-wider">Pedidos/hora</span>
-              <span className="text-lg font-black text-gray-900 dark:text-gray-100">{pedidosHora}</span>
+              <span className="text-[10px] text-gray-400 dark:text-gray-400 font-semibold uppercase tracking-wider">Ritmo (ped/h)</span>
+              <span className="text-lg font-black text-gray-900 dark:text-gray-100 tabular-nums">{pedidosHora}</span>
             </div>
           </div>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {bestDailyOrders > 0 && stats.todayTotal < bestDailyOrders && (
+            <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+              A {bestDailyOrders - stats.todayTotal} de tu récord
+            </span>
+          )}
           {streak >= 3 && stats.activeCount > 0 && (
             <ComboBadge streak={streak} lastOrderTime={lastOrderTime.current} />
           )}

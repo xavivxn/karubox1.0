@@ -244,13 +244,13 @@ export default function CocinaVirtualView() {
         <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-3">
           <StatCard
             icon="📋"
-            label="Pedidos hoy"
+            label="Pedidos del día"
             value={stats.todayTotal}
             accent="#FF6B35"
           />
           <StatCard
             icon="💰"
-            label="Facturado"
+            label="Facturado hoy"
             value={stats.todayRevenue}
             accent="#4CAF50"
             isGs
@@ -271,15 +271,23 @@ export default function CocinaVirtualView() {
           />
           <StatCard
             icon="⚡"
-            label="Gs/hora"
+            label="Ritmo (Gs/h)"
             value={gsHora}
             accent="#9B59B6"
             isGs
           />
         </div>
 
-        {/* Trophy button */}
-        <button
+        {/* Zona energía: hint récord + trophy */}
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          {store?.lifetimeStats?.bestDailyOrders != null &&
+            store.lifetimeStats.bestDailyOrders > 0 &&
+            stats.todayTotal < store.lifetimeStats.bestDailyOrders && (
+              <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                A {store.lifetimeStats.bestDailyOrders - stats.todayTotal} de tu récord
+              </span>
+            )}
+          <button
           onClick={() => setPanelOpen(true)}
           className="flex-shrink-0 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/60 dark:to-yellow-950/40 border-2 border-amber-200 dark:border-amber-700/60 rounded-2xl px-4 py-3 flex flex-col items-center gap-1 hover:shadow-lg dark:hover:shadow-amber-500/10 hover:border-amber-300 dark:hover:border-amber-600 transition-all group"
         >
@@ -299,6 +307,7 @@ export default function CocinaVirtualView() {
             </div>
           )}
         </button>
+        </div>
       </div>
 
       {/* Stage badges — aparición escalonada */}
@@ -327,6 +336,7 @@ export default function CocinaVirtualView() {
           sessionId={sesionAbierta?.id}
           onOrderClick={handleOrderClick}
           stageOverrides={stageOverrides}
+          bestDailyOrders={store?.lifetimeStats?.bestDailyOrders ?? 0}
         />
       </div>
 

@@ -55,6 +55,13 @@ const PAGE_MAP: Array<{ test: (pathname: string) => boolean; info: PageInfo }> =
     }
   },
   {
+    test: (path) => path.startsWith('/home/configuracion'),
+    info: {
+      title: 'Configuración del negocio',
+      subtitle: 'Datos del local, fiscales y contacto.'
+    }
+  },
+  {
     test: (path) => path === '/owner',
     info: {
       title: 'Panel Owner',

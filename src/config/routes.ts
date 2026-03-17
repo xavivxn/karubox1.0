@@ -16,6 +16,7 @@ export const ROUTES = {
     ADMIN: '/home/admin',
     CLIENTES: '/home/admin/clientes',
     COCINA: '/home/admin/cocina',
+    CONFIGURACION: '/home/configuracion',
     OWNER: '/owner',
     // KDS: '/home/kds',
     // INVENTARIO: '/home/dashboard/inventario',

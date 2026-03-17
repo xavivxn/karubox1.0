@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ChevronRight, Home, Users, ShoppingCart, LayoutDashboard, ChefHat, Store, PlusCircle, Package, UserCog, Building2, FileText } from 'lucide-react'
+import { ChevronRight, Home, Users, ShoppingCart, LayoutDashboard, ChefHat, Store, PlusCircle, Package, UserCog, Building2, FileText, Settings } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { ROUTES } from '@/config/routes'
 
@@ -75,7 +75,13 @@ export function Breadcrumb() {
       })
     }
 
-    if (pathname.startsWith('/home/admin/cocina')) {
+    if (pathname.startsWith('/home/configuracion')) {
+      items.push({
+        label: 'Configuración del negocio',
+        path: ROUTES.PROTECTED.CONFIGURACION,
+        icon: <Settings className="w-4 h-4" />,
+      })
+    } else if (pathname.startsWith('/home/admin/cocina')) {
       const fromCocina = searchParams.get('from')
       if (fromCocina === ROUTES.COCINA_FROM.HOME) {
         items.push({
