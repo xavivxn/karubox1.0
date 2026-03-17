@@ -16,6 +16,37 @@ import OrderDetailModal from '../components/OrderDetailModal'
 
 const STAGES: KitchenStage[] = ['nuevo', 'cocinando', 'empacando', 'entregado']
 
+/* ═══ Skeleton while loading caja + initial orders fetch ═══ */
+function CocinaSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 h-[calc(100vh-160px)] text-gray-900 dark:text-gray-100 px-4 animate-in fade-in duration-300">
+      <div className="flex items-start gap-3">
+        <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-600 px-4 py-3 flex items-center gap-3 animate-pulse"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-600 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-16 mb-2" />
+                <div className="h-5 bg-gray-200 dark:bg-gray-600 rounded w-12" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="w-[72px] h-[72px] rounded-2xl bg-gray-100 dark:bg-gray-700 animate-pulse flex-shrink-0" />
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-8 w-24 rounded-full bg-gray-200 dark:bg-gray-600 animate-pulse" />
+        ))}
+      </div>
+      <div className="flex-1 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 animate-pulse min-h-[280px]" />
+    </div>
+  )
+}
+
 /* ═══ Animated number that counts up smoothly ═══ */
 function AnimatedNumber({ value, prefix }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(value)
@@ -124,7 +155,7 @@ function StatCard({
 export default function CocinaVirtualView() {
   const { tenant, isAdmin } = useTenant()
   const { sesionAbierta, ultimaSesionCerrada, loading: loadingCaja } = useEstadoCaja(tenant?.id ?? null)
-  const { orders, stats, newDeliveryIds, clearDelivery } = useRealtimeOrders({
+  const { orders, stats, newDeliveryIds, clearDelivery, initialLoad } = useRealtimeOrders({
     tenantId: tenant?.id,
     // Mientras se carga el estado de caja, no mostramos pedidos para evitar parpadeos.
     // Una vez resuelto, filtramos estrictamente por el turno correspondiente.
@@ -200,10 +231,16 @@ export default function CocinaVirtualView() {
     return Math.round(stats.todayRevenue / hoursElapsed)
   }, [stats.todayRevenue])
 
+  const isLoading = loadingCaja || initialLoad
+
+  if (isLoading) {
+    return <CocinaSkeleton />
+  }
+
   return (
-    <div className="flex flex-col gap-4 h-[calc(100vh-160px)] text-gray-900 dark:text-gray-100 px-4">
-      {/* Stats bar */}
-      <div className="flex items-start gap-3">
+    <div className="flex flex-col gap-4 h-[calc(100vh-160px)] text-gray-900 dark:text-gray-100 px-4 animate-in fade-in duration-500 fill-mode-forwards">
+      {/* Stats bar — aparece primero */}
+      <div className="flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-forwards" style={{ animationDelay: '0ms' }}>
         <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-3">
           <StatCard
             icon="📋"
@@ -264,8 +301,8 @@ export default function CocinaVirtualView() {
         </button>
       </div>
 
-      {/* Stage badges */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Stage badges — aparición escalonada */}
+      <div className="flex gap-2 flex-wrap animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-forwards" style={{ animationDelay: '80ms' }}>
         {stageCounts.map(({ stage, count }) => (
           <div
             key={stage}
@@ -279,8 +316,8 @@ export default function CocinaVirtualView() {
         ))}
       </div>
 
-      {/* Kitchen panel */}
-      <div className="flex-1 rounded-2xl overflow-hidden shadow-lg dark:shadow-black/30 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 relative">
+      {/* Kitchen panel — aparición escalonada */}
+      <div className="flex-1 rounded-2xl overflow-hidden shadow-lg dark:shadow-black/30 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 relative animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-forwards" style={{ animationDelay: '160ms' }}>
         <KitchenCanvas
           orders={orders}
           stats={stats}

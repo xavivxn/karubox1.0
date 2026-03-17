@@ -432,17 +432,19 @@ interface TickerEvent {
 }
 
 function ActivityTicker({ events }: { events: TickerEvent[] }) {
-  if (events.length === 0) return null
-
-  const doubled = [...events, ...events]
-
   return (
     <div className="w-full overflow-hidden bg-gray-900 rounded-xl h-8 flex items-center relative">
-      <div
-        className="flex gap-8 whitespace-nowrap animate-ticker"
-        style={{ '--ticker-duration': `${Math.max(events.length * 5, 15)}s` } as React.CSSProperties}
-      >
-        {doubled.map((ev, i) => {
+      {events.length === 0 ? (
+        <div className="flex items-center justify-center gap-2 w-full py-1">
+          <span className="text-gray-500 text-xs font-medium">Esperando actividad...</span>
+          <span className="text-gray-600">•</span>
+        </div>
+      ) : (
+        <div
+          className="flex gap-8 whitespace-nowrap animate-ticker"
+          style={{ '--ticker-duration': `${Math.max(events.length * 5, 15)}s` } as React.CSSProperties}
+        >
+          {[...events, ...events].map((ev, i) => {
           const isHighScore = ev.total != null && ev.total >= HIGH_SCORE_GS
           const amountText =
             ev.total != null
@@ -476,7 +478,8 @@ function ActivityTicker({ events }: { events: TickerEvent[] }) {
             </span>
           )
         })}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

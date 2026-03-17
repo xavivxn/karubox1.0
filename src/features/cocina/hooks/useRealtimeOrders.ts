@@ -34,6 +34,7 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
     deliveredCount: 0,
   })
   const [newDeliveryIds, setNewDeliveryIds] = useState<string[]>([])
+  const [initialLoad, setInitialLoad] = useState(true)
   const explodedRef = useRef<Set<string>>(new Set())
   const ordersRef = useRef<KitchenOrder[]>([])
 
@@ -69,7 +70,10 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
   }, [])
 
   const fetchOrders = useCallback(async () => {
-    if (!tenantId) return
+    if (!tenantId) {
+      setInitialLoad(false)
+      return
+    }
     if (desde === null && hasta === undefined) {
       ordersRef.current = []
       setOrders([])
@@ -79,6 +83,7 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
         activeCount: 0,
         deliveredCount: 0,
       })
+      setInitialLoad(false)
       return
     }
     const supabase = createClient()
@@ -114,6 +119,7 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
       setOrders(processed)
       setStats(computeStats(processed))
     }
+    setInitialLoad(false)
   }, [tenantId, desde, hasta, processRawOrders, computeStats])
 
   // Mantener ref en sync con orders para el intervalo (evitar setState dentro de setState)
@@ -181,5 +187,5 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
     setNewDeliveryIds((prev) => prev.filter((d) => d !== id))
   }, [])
 
-  return { orders, stats, newDeliveryIds, clearDelivery }
+  return { orders, stats, newDeliveryIds, clearDelivery, initialLoad }
 }

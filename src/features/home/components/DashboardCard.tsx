@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { ShoppingCart, BarChart3, FileText, Users, ChefHat, Loader2 } from 'lucide-react'
 import type { DashboardCard } from '../types/home.types'
 
@@ -44,12 +45,17 @@ export function DashboardCardComponent({
   isThisCardLoading = false,
   onNavigateStart,
 }: DashboardCardProps) {
+  const router = useRouter()
   const c = COLOR_MAP[card.color] ?? COLOR_MAP.blue
   const Icon = CARD_ICONS[card.icon]
   const label = CARD_LABELS[card.icon]
 
   const bgCls = darkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900' : c.bgLight
   const isDisabled = isGlobalLoading && !isThisCardLoading
+
+  const handleMouseEnter = () => {
+    if (card.icon === 'cocina') router.prefetch(card.href)
+  }
 
   const handleClick = () => {
     if (isGlobalLoading) return
@@ -60,6 +66,7 @@ export function DashboardCardComponent({
     <button
       type="button"
       onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
       disabled={isDisabled}
       className={`
         group relative rounded-3xl shadow-2xl transition-all duration-300 text-left w-full

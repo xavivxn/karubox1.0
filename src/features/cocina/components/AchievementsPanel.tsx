@@ -1,5 +1,6 @@
 'use client'
 
+import { createPortal } from 'react-dom'
 import { useCallback, useMemo, useState } from 'react'
 import { useTenant } from '@/contexts/TenantContext'
 import type { SesionCaja } from '@/features/caja/types/caja.types'
@@ -588,10 +589,10 @@ export default function AchievementsPanel({
 
   const sessionHistory = store?.sessionHistory ?? {}
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+  const modalContent = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center">
       <div
-        className={`absolute inset-0 backdrop-blur-sm animate-fade-in-up ${darkMode ? 'bg-black/60' : 'bg-black/50'}`}
+        className={`absolute inset-0 min-h-[100dvh] min-w-full backdrop-blur-sm animate-fade-in-up ${darkMode ? 'bg-black/60' : 'bg-black/50'}`}
         onClick={onClose}
       />
 
@@ -724,4 +725,5 @@ export default function AchievementsPanel({
       </div>
     </div>
   )
+  return createPortal(modalContent, document.body)
 }
