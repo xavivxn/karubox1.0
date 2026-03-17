@@ -16,7 +16,7 @@ const CARD_LABELS: Record<DashboardCard['icon'], string> = {
   admin: 'Ver panel admin',
   pedidos: 'Ver historial',
   clientes: 'Ver clientes',
-  cocina: 'Abrir Cocina 3D',
+  cocina: 'Abrir cocina 3D',
 }
 
 interface DashboardCardProps {

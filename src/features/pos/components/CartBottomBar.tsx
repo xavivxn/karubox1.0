@@ -3,8 +3,9 @@
 import { createPortal } from 'react-dom'
 import { useCartStore } from '@/store/cartStore'
 import { formatGuaranies } from '@/lib/utils/format'
-import { ShoppingCart, ChevronUp } from 'lucide-react'
-import { CART_SECTION_ID } from './ScrollToCartFAB'
+import { ShoppingCart, ChevronUp, ChevronDown } from 'lucide-react'
+import { CART_SECTION_ID, POS_PRODUCTS_SECTION_ID } from './ScrollToCartFAB'
+import { useCartSectionVisible } from '../hooks/useCartSectionVisible'
 
 interface Props {
   darkMode?: boolean
@@ -14,9 +15,15 @@ export function CartBottomBar({ darkMode }: Props) {
   const { items, getTotal } = useCartStore()
   const itemCount = items.reduce((sum, item) => sum + item.cantidad, 0)
   const total = getTotal()
+  const isCartVisible = useCartSectionVisible()
 
   const scrollToCart = () => {
     const el = document.getElementById(CART_SECTION_ID)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const scrollToProducts = () => {
+    const el = document.getElementById(POS_PRODUCTS_SECTION_ID)
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
@@ -53,8 +60,8 @@ export function CartBottomBar({ darkMode }: Props) {
       </div>
       <button
         type="button"
-        onClick={scrollToCart}
-        aria-label={`Ver carrito y finalizar pedido (${itemCount} ${itemCount === 1 ? 'ítem' : 'ítems'})`}
+        onClick={isCartVisible ? scrollToProducts : scrollToCart}
+        aria-label={isCartVisible ? 'Agregar más productos' : `Ver carrito y finalizar pedido (${itemCount} ${itemCount === 1 ? 'ítem' : 'ítems'})`}
         className={`
           flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5
           text-sm font-semibold text-white
@@ -67,8 +74,12 @@ export function CartBottomBar({ darkMode }: Props) {
           }
         `}
       >
-        <span>Ver carrito</span>
-        <ChevronUp className="h-4 w-4" aria-hidden />
+        <span>{isCartVisible ? 'Agregar más productos' : 'Ver carrito'}</span>
+        {isCartVisible ? (
+          <ChevronUp className="h-4 w-4" aria-hidden />
+        ) : (
+          <ChevronDown className="h-4 w-4" aria-hidden />
+        )}
       </button>
     </div>
   )

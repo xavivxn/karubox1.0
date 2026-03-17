@@ -19,7 +19,7 @@ import ClientModal from '../components/ClientModal'
 import CategoryList from '../components/CategoryList'
 import ProductGrid from '../components/ProductGrid'
 import { CartBottomBar } from '../components/CartBottomBar'
-import { CART_SECTION_ID } from '../components/ScrollToCartFAB'
+import { CART_SECTION_ID, POS_PRODUCTS_SECTION_ID } from '../components/ScrollToCartFAB'
 
 export default function POSView() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -158,7 +158,7 @@ export default function POSView() {
           </div>
         </header>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-6">
+          <div id={POS_PRODUCTS_SECTION_ID} className="lg:col-span-2 space-y-6 scroll-mt-4">
             <CategoryList
               categories={categorias}
               selectedCategory={selectedCategory}
