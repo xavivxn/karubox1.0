@@ -27,7 +27,19 @@ export function Breadcrumb() {
       icon: <Home className="w-4 h-4" />,
     })
 
-    if (pathname === '/owner/tenants/new') {
+    if (pathname === '/owner/caja') {
+      items.push({
+        label: 'Caja de socios',
+        path: '/owner/caja',
+        icon: <FileText className="w-4 h-4" />,
+      })
+    } else if (pathname === '/owner/tenants') {
+      items.push({
+        label: 'Lomiterías',
+        path: '/owner/tenants',
+        icon: <Store className="w-4 h-4" />,
+      })
+    } else if (pathname === '/owner/tenants/new') {
       items.push({
         label: 'Crear lomitería',
         path: '/owner/tenants/new',
