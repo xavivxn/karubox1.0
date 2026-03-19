@@ -127,7 +127,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <div className="w-full min-w-0 max-w-7xl mx-auto space-y-10 overflow-x-hidden">{children}</div>
         )}
       </main>
-      <AppFooter isDark={hideNavbar || darkMode} />
+      <AppFooter
+        isDark={hideNavbar || darkMode}
+        variant={isLoginPage ? 'login' : 'default'}
+      />
     </div>
   );
 }

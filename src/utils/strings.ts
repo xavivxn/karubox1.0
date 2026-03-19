@@ -4,6 +4,9 @@ export const LOGIN_STRINGS = {
   LOGIN_SUBTITLE: 'Karú rápido, caja fácil',
 } as const
 
+export const APP_VERSION = '1.0.0' as const
+export const APP_VERSION_LABEL = `KarúBox - v${APP_VERSION}` as const
+
 export const FEATURES = [
   {
     icon: '⚡',
