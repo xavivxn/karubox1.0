@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { CalendarRange, RefreshCw } from 'lucide-react'
 import { getOwnerCashSummary } from '@/app/actions/ownerCaja'
+import type { OwnerCashSummary as OwnerCashSummaryType } from '@/app/actions/ownerCaja'
 import { formatGuaranies } from '@/lib/utils/format'
 
 type PeriodType = 'month' | 'year'
@@ -16,9 +17,7 @@ export function OwnerCashSummary({ initialPeriodType = 'month' }: OwnerCashSumma
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [label, setLabel] = useState('')
-  const [summary, setSummary] = useState<Awaited<ReturnType<typeof getOwnerCashSummary>>['data'] | null>(
-    null
-  )
+  const [summary, setSummary] = useState<OwnerCashSummaryType | null>(null)
 
   useEffect(() => {
     const now = new Date()
