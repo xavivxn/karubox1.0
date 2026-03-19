@@ -94,6 +94,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
   // Ocultar navbar en rutas de autenticación
   const hideNavbar = NAV_EXCLUDED_PATHS.includes(pathname)
+
+  // POS necesita scroll interno para que `position: sticky` funcione en el contenedor correcto.
+  // No aplicamos esto al resto de la app para no afectar el scrollbar global.
+  const isPosPage = pathname.startsWith('/home/pos')
   
   const pageInfo =
     PAGE_MAP.find((entry) => entry.test(pathname))?.info ??
@@ -104,7 +108,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
   return (
     <div
       className={`flex flex-col ${
-        isLoginPage ? 'min-h-[100dvh] min-h-screen overflow-y-auto' : 'min-h-screen'
+        isLoginPage
+          ? 'min-h-[100dvh] min-h-screen overflow-y-auto'
+          : isPosPage
+            ? 'h-screen min-h-0 overflow-hidden'
+            : 'min-h-screen'
       } ${
         hideNavbar
           ? THEME_CONFIG.DARK.background
@@ -118,7 +126,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
       )}
       <InactiveTenantOverlay />
       <main
-        className={`flex flex-col ${isLoginPage ? '' : 'flex-1 min-h-0 min-w-0'} ${pageInfo.fullWidth ? "py-4" : "px-4 py-6"}`}
+        className={`flex flex-col ${isLoginPage ? '' : 'flex-1 min-h-0 min-w-0'} ${
+          pageInfo.fullWidth ? (isPosPage ? 'py-0' : 'py-4') : 'px-4 py-6'
+        } ${!isLoginPage && isPosPage ? 'overflow-hidden' : ''}`}
         style={isLoginPage ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}
       >
         {pageInfo.fullWidth ? (

@@ -11,13 +11,15 @@ interface Props {
   /** Mientras es true, no se puede agregar al carrito (ej. verificando estado de caja) */
   verificandoCaja?: boolean
   darkMode?: boolean
+  /** Si true, no muestra el título "Productos (N)" (útil en subsecciones con nombre de categoría) */
+  hideTitle?: boolean
 }
 
 function isCombo(product: Producto): boolean {
   return Boolean(product.combo_items && product.combo_items.length > 0)
 }
 
-export default function ProductGrid({ products, onAddProduct, loading, verificandoCaja, darkMode }: Props) {
+export default function ProductGrid({ products, onAddProduct, loading, verificandoCaja, darkMode, hideTitle }: Props) {
   const canAdd = !verificandoCaja
   if (loading) {
     return (
@@ -45,14 +47,16 @@ export default function ProductGrid({ products, onAddProduct, loading, verifican
 
   return (
     <div className={`rounded-2xl shadow-lg p-3 sm:p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-      <h2 className={`text-lg sm:text-2xl font-bold mb-3 sm:mb-6 px-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-        Productos <span className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>({products.length})</span>
-        {verificandoCaja && (
-          <span className={`ml-2 text-xs font-normal ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
-            Verificando caja…
-          </span>
-        )}
-      </h2>
+      {!hideTitle && (
+        <h2 className={`text-lg sm:text-2xl font-bold mb-3 sm:mb-6 px-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          Productos <span className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>({products.length})</span>
+          {verificandoCaja && (
+            <span className={`ml-2 text-xs font-normal ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+              Verificando caja…
+            </span>
+          )}
+        </h2>
+      )}
 
       {/* Mobile: lista compacta de filas */}
       <div className="flex flex-col gap-1.5 sm:hidden">

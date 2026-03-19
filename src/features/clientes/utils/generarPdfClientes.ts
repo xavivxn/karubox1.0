@@ -1,26 +1,35 @@
 /**
- * Genera un PDF con el reporte de clientes (tabla).
- * Plantilla estilizada: barra naranja, listado con total y footer.
+ * Genera un PDF con el reporte de clientes.
+ * Diseño tipo dashboard: filas con bordes sutiles, nombre destacado, contacto/identificación
+ * agrupados, badges de nivel y moneda alineada a la derecha. Optimizado para lectura y exportación.
  */
 
 import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import type { ClienteLocal } from '../types/clientes.types'
-import { formatearFecha } from './clientes.utils'
+import type { ClienteConVisita } from '../types/clientes.types'
+import { formatearFecha, getNivel } from './clientes.utils'
+import { formatGuaranies } from '@/lib/utils/format'
 import { PDF_FOOTER_TEXT } from './pdf.constants'
 
 const MARGIN = 16
 const HEADER_HEIGHT = 32
 const PAGE_WIDTH = 210
-const TABLE_WIDTH = PAGE_WIDTH - 2 * MARGIN
+const CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN
+const ROW_HEIGHT = 24
+/** Espacio reservado a la derecha para el monto (evita solapamiento con texto secundario) */
+const GASTADO_ZONE_MM = 44
 
-// Colores (mismos que cierre de caja + acentos)
+// Paleta profesional: acento naranja, gris pizarra, fondos suaves
 const ORANGE_HEADER = [234, 88, 12] as [number, number, number]
 const ORANGE_LIGHT = [254, 243, 199] as [number, number, number]
-const GRAY_LIGHT = [248, 250, 252] as [number, number, number]
 const GRAY_BORDER = [226, 232, 240] as [number, number, number]
 const GRAY_TEXT = [71, 85, 105] as [number, number, number]
 const GRAY_MUTED = [148, 163, 184] as [number, number, number]
+
+// Badges de fidelidad (fondo y texto)
+const BADGE_ORO = { fill: [254, 243, 199] as [number, number, number], text: [180, 83, 9] as [number, number, number] }
+const BADGE_PLATA = { fill: [248, 250, 252] as [number, number, number], text: [71, 85, 105] as [number, number, number] }
+const BADGE_BRONCE = { fill: [255, 237, 213] as [number, number, number], text: [194, 65, 12] as [number, number, number] }
 
 export interface OpcionesPdfClientes {
   tenantNombre?: string
@@ -90,11 +99,56 @@ function addFooter(doc: jsPDF, pageNumber?: number, totalPages?: number) {
   }
 }
 
+/** Sin saltos de línea ni caracteres problemáticos para PDF */
+function limpia(s: string | null | undefined): string {
+  return String(s ?? '').replace(/\r?\n/g, ' ').trim() || '-'
+}
+
+/** Trunca texto si excede ancho máximo en mm (aproximado con fontSize 8) */
+function truncar(doc: jsPDF, texto: string, maxMm: number, fontSize: number): string {
+  doc.setFontSize(fontSize)
+  const approxPerMm = 0.35
+  const maxChars = Math.floor(maxMm * approxPerMm)
+  if (texto.length <= maxChars) return texto
+  return texto.slice(0, maxChars - 2) + '…'
+}
+
+/** Dibuja un badge de nivel (Oro/Plata/Bronce) */
+function drawBadgeNivel(
+  doc: jsPDF,
+  nombreNivel: string,
+  x: number,
+  y: number
+) {
+  const nivel = nombreNivel.toLowerCase()
+  const cfg =
+    nivel === 'oro'
+      ? BADGE_ORO
+      : nivel === 'plata'
+        ? BADGE_PLATA
+        : BADGE_BRONCE
+
+  doc.setFontSize(7)
+  doc.setFont('helvetica', 'bold')
+  const w = Math.min(doc.getTextWidth(nombreNivel) + 6, 22)
+  const h = 5
+
+  doc.setFillColor(...cfg.fill)
+  doc.setDrawColor(...GRAY_BORDER)
+  doc.setLineWidth(0.1)
+  doc.roundedRect(x, y - 3.5, w, h, 1.2, 1.2, 'FD')
+  doc.setTextColor(...cfg.text)
+  doc.text(nombreNivel, x + 3, y + 0.5)
+  doc.setTextColor(...GRAY_TEXT)
+  doc.setFont('helvetica', 'normal')
+}
+
 /**
  * Genera el PDF del reporte de clientes y dispara la descarga.
+ * Acepta ClienteLocal o ClienteConVisita; si tiene total_gastado/ultima_visita/total_pedidos los muestra.
  */
 export function generarPdfClientes(
-  clientes: ClienteLocal[],
+  clientes: (ClienteLocal | ClienteConVisita)[],
   opciones: OpcionesPdfClientes = {}
 ): void {
   const { tenantNombre } = opciones
@@ -103,91 +157,100 @@ export function generarPdfClientes(
   const fechaReporteStr = formatFechaReporte()
   addHeader(doc, tenantNombre, fechaReporteStr)
 
-  /** Quita saltos de línea en celdas para que no se rompan en varias líneas */
-  const limpia = (s: string | null | undefined) => String(s ?? '').replace(/\r?\n/g, ' ').trim() || '-'
-
-  let startY = HEADER_HEIGHT + 12
+  let y = HEADER_HEIGHT + 12
 
   // Título de sección
   doc.setFontSize(12)
   doc.setTextColor(...GRAY_TEXT)
   doc.setFont('helvetica', 'bold')
-  doc.text('Listado de clientes', MARGIN, startY)
-  startY += 10
+  doc.text('Listado de clientes', MARGIN, y)
+  y += 10
 
-  const rows = clientes.map((c) => [
-    limpia(c.nombre),
-    limpia(c.ci),
-    limpia(c.telefono),
-    limpia(c.email),
-    String(c.puntos_totales ?? 0),
-    c.created_at ? formatearFecha(c.created_at) : '-',
-  ])
-
-  // Anchos que suman TABLE_WIDTH (178 mm). Fecha más ancha para que dd/mm/yyyy quepa en una línea.
-  const colNombre = 43
-  const colCI = 22
-  const colTelefono = 26
-  const colEmail = 47
-  const colPuntos = 16
-  const colRegistrado = 24
-
-  const headersCortos = ['Nombre', 'CI', 'Teléfono', 'Email', 'Pts', 'Fecha']
-
-  autoTable(doc, {
-    head: [headersCortos],
-    body: rows,
-    startY,
-    margin: { left: MARGIN, right: MARGIN },
-    tableWidth: TABLE_WIDTH,
-    theme: 'plain',
-    styles: {
-      fontSize: 8,
-      textColor: GRAY_TEXT,
-      cellPadding: { top: 4, right: 5, bottom: 4, left: 5 },
-      overflow: 'linebreak',
-      halign: 'left',
-    },
-    headStyles: {
-      fillColor: ORANGE_HEADER,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 8,
-      cellPadding: { top: 3, right: 4, bottom: 3, left: 4 },
-      halign: 'left',
-    },
-    columnStyles: {
-      0: { cellWidth: colNombre },
-      1: { cellWidth: colCI },
-      2: { cellWidth: colTelefono },
-      3: { cellWidth: colEmail },
-      4: { cellWidth: colPuntos, halign: 'right' },
-      5: { cellWidth: colRegistrado, halign: 'right' },
-    },
-    alternateRowStyles: {
-      fillColor: GRAY_LIGHT,
-    },
-  })
-
-  const finalY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? startY + 20
   const pageHeight = doc.internal.pageSize.getHeight()
-  let boxY = finalY + 14
+  const yMax = pageHeight - 24
 
-  // Si no hay espacio para la caja de resumen, pasar a nueva página
-  if (boxY + 14 > pageHeight - 22) {
-    doc.addPage()
-    boxY = 20
+  for (let i = 0; i < clientes.length; i++) {
+    if (y + ROW_HEIGHT > yMax) {
+      doc.addPage()
+      addHeader(doc, tenantNombre, fechaReporteStr)
+      y = HEADER_HEIGHT + 10
+    }
+
+    const c = clientes[i]
+    const conVisita = c && 'total_gastado' in c ? (c as ClienteConVisita) : null
+    const totalGastado = conVisita?.total_gastado ?? 0
+    const nivelInfo = getNivel(totalGastado)
+    const totalPedidos = conVisita?.total_pedidos ?? null
+
+    // ── Nombre (destacado)
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...GRAY_TEXT)
+    const nombre = truncar(doc, limpia(c.nombre), CONTENT_WIDTH - 50, 11)
+    doc.text(nombre, MARGIN, y + 5)
+
+    // ── Contacto (tel · email) a la izquierda
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(...GRAY_MUTED)
+    const tel = limpia(c.telefono)
+    const email = limpia(c.email)
+    const contacto = [tel !== '-' ? tel : '', email !== '-' ? email : ''].filter(Boolean).join(' · ') || '-'
+    doc.text(truncar(doc, contacto, 75, 8), MARGIN, y + 11)
+
+    // ── Identificación (CI / RUC) a la derecha de la segunda línea
+    const ci = limpia(c.ci)
+    const ruc = limpia(c.ruc ?? '')
+    const ident = [ci !== '-' ? `CI ${ci}` : '', ruc !== '-' ? `RUC ${ruc}` : ''].filter(Boolean).join(' · ') || '-'
+    doc.text(truncar(doc, ident, 55, 8), MARGIN + 80, y + 11)
+
+    // ── Badge de nivel
+    drawBadgeNivel(doc, nivelInfo.nombre, MARGIN, y + 17)
+
+    // ── Gastado (zona fija a la derecha, sin solapamiento)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(...GRAY_TEXT)
+    const gastoStr = formatGuaranies(totalGastado)
+    doc.text(gastoStr, MARGIN + CONTENT_WIDTH, y + 17, { align: 'right' })
+
+    // ── Opcional: pedidos (termina antes de la zona del gasto)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    doc.setTextColor(...GRAY_MUTED)
+    if (totalPedidos != null) {
+      const extrasMaxWidth = CONTENT_WIDTH - GASTADO_ZONE_MM - 26
+      doc.text(`Ped. ${totalPedidos}`, MARGIN + CONTENT_WIDTH - GASTADO_ZONE_MM, y + 17, { align: 'right' })
+    }
+
+    // ── Borde inferior sutil
+    doc.setDrawColor(...GRAY_BORDER)
+    doc.setLineWidth(0.2)
+    doc.line(MARGIN, y + ROW_HEIGHT - 2, MARGIN + CONTENT_WIDTH, y + ROW_HEIGHT - 2)
+
+    y += ROW_HEIGHT
   }
 
   // Caja de resumen (total clientes)
+  let boxY = y + 12
+  if (boxY + 14 > pageHeight - 22) {
+    doc.addPage()
+    addHeader(doc, tenantNombre, fechaReporteStr)
+    boxY = HEADER_HEIGHT + 10
+  }
+
   doc.setDrawColor(...GRAY_BORDER)
   doc.setFillColor(...ORANGE_LIGHT)
   doc.setLineWidth(0.2)
-  doc.roundedRect(MARGIN, boxY, TABLE_WIDTH, 12, 2, 2, 'FD')
+  doc.roundedRect(MARGIN, boxY, CONTENT_WIDTH, 12, 2, 2, 'FD')
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(10)
   doc.setTextColor(...GRAY_TEXT)
-  doc.text(`Total: ${clientes.length} ${clientes.length === 1 ? 'cliente' : 'clientes'}`, MARGIN + 8, boxY + 8)
+  doc.text(
+    `Total: ${clientes.length} ${clientes.length === 1 ? 'cliente' : 'clientes'}`,
+    MARGIN + 8,
+    boxY + 8
+  )
 
   const totalPages = doc.getNumberOfPages()
   for (let p = 1; p <= totalPages; p++) {

@@ -148,4 +148,6 @@ export const TIPO_LABELS: Record<TipoCampana, string> = {
   inactivos_30: 'Inactivos +30 días',
   personalizado: 'Mensaje personalizado',
   cumpleanos: 'Cumpleaños de hoy',
+  nivel_oro: 'Solo nivel Oro',
+  top10_gasto: 'Top 10 por gasto',
 }

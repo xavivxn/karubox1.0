@@ -11,9 +11,10 @@ import type {
   CampanaConfig,
   TipoCampana,
   Segmentos,
+  SegmentosNivel,
 } from '../types/clientes.types'
 import { INITIAL_FORM_DATA } from '../types/clientes.types'
-import { validarFormulario, normalizarParaBusqueda } from '../utils/clientes.utils'
+import { validarFormulario, normalizarParaBusqueda, getNivel } from '../utils/clientes.utils'
 import {
   getClientesConVisita,
   getCampanaConfig,
@@ -29,6 +30,7 @@ export interface UseClientesPanelReturn {
   filteredClientes: ClienteConVisita[]
   loading: boolean
   segments: Segmentos
+  segmentosNivel: SegmentosNivel
   campanaConfig: CampanaConfig | null
   savingConfig: boolean
 
@@ -41,6 +43,7 @@ export interface UseClientesPanelReturn {
   tipoCampana: TipoCampana
   destinatarios: ClienteConVisita[]
   ejecutandoCampana: boolean
+  top10PorGasto: ClienteConVisita[]
   handleAbrirCampana: (tipo: TipoCampana) => void
   handleCerrarCampana: () => void
   handleRegistrarCampana: (mensaje: string, puntosRegalo: number) => Promise<void>
@@ -154,6 +157,27 @@ export const useClientesPanel = (
     return { total: clientes.length, activos, enRiesgo, inactivos }
   }, [clientes])
 
+  // ── Segmentos por nivel VIP ───────────────
+  const segmentosNivel: SegmentosNivel = useMemo(() => {
+    let oro = 0
+    let plata = 0
+    let bronce = 0
+
+    clientes.forEach((c) => {
+      const info = getNivel(c.total_gastado ?? 0)
+      if (info.nivel === 'oro') oro++
+      else if (info.nivel === 'plata') plata++
+      else bronce++
+    })
+
+    return { oro, plata, bronce }
+  }, [clientes])
+
+  // Top 10 por gasto (para bloque y campañas)
+  const top10PorGasto: ClienteConVisita[] = useMemo(() => {
+    return [...clientes].sort((a, b) => (b.total_gastado ?? 0) - (a.total_gastado ?? 0)).slice(0, 10)
+  }, [clientes])
+
   // ── Clientes que cumplen años hoy ─────────
   const clientesCumpleHoy = useMemo(() => {
     const today = new Date()
@@ -186,8 +210,10 @@ export const useClientesPanel = (
     if (tipoCampana === 'inactivos_15') return [...segments.enRiesgo, ...segments.inactivos]
     if (tipoCampana === 'inactivos_30') return segments.inactivos
     if (tipoCampana === 'cumpleanos') return clientesCumpleHoyList
+    if (tipoCampana === 'nivel_oro') return clientes.filter((c) => getNivel(c.total_gastado ?? 0).nivel === 'oro')
+    if (tipoCampana === 'top10_gasto') return top10PorGasto
     return clientes
-  }, [tipoCampana, segments, clientes, clientesCumpleHoyList])
+  }, [tipoCampana, segments, clientes, clientesCumpleHoyList, top10PorGasto])
 
   // ── Campaña ───────────────────────────────
   const handleAbrirCampana = (tipo: TipoCampana) => {
@@ -205,51 +231,10 @@ export const useClientesPanel = (
       if (puntosRegalo > 0) await fetchClientes()
       setShowCampana(false)
 
-      const conEmail = destinatarios.filter(
-        (c) => c.email?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email.trim())
-      )
-      let emailMsg = ''
-      if (conEmail.length > 0 && tenantNombre) {
-        try {
-          const res = await fetch('/api/campaign/send-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tenantNombre,
-              destinatarios: conEmail.map((c) => ({
-                email: c.email!.trim(),
-                nombre: c.nombre ?? '',
-                puntos_totales: c.puntos_totales,
-                puntos_regalo: puntosRegalo,
-                dias_sin_visita: c.dias_sin_visita ?? undefined,
-              })),
-              subject: `Mensaje de ${tenantNombre}`,
-              mensajeConVariables: mensaje,
-            }),
-          })
-          const data = await res.json()
-          if (data.error === 'EMAIL_NOT_CONFIGURED') {
-            emailMsg = '\n\nPara enviar por email, configurá RESEND_API_KEY en el servidor.'
-          } else if (data.sent > 0) {
-            emailMsg = `\n\nSe enviaron ${data.sent} emails.`
-            if (data.failed > 0) {
-              emailMsg += ` (${data.failed} fallos)`
-              if (Array.isArray(data.failedEmails) && data.failedEmails.length > 0) {
-                emailMsg += `: ${data.failedEmails.join(', ')}`
-              }
-              if (data.lastError) emailMsg += `\nMotivo: ${data.lastError}`
-              if (data.hint) emailMsg += `\n\n💡 ${data.hint}`
-            }
-          }
-        } catch {
-          emailMsg = '\n\nNo se pudo enviar por email (revisá la conexión o RESEND_API_KEY).'
-        }
-      } else if (conEmail.length > 0 && !tenantNombre) {
-        emailMsg = '\n\nPara enviar por email, el nombre del negocio debe estar disponible.'
-      }
-
       const puntosMsg = puntosRegalo > 0 ? ` Se acreditaron ${puntosRegalo} pts a cada cliente.` : ''
-      alert(`✅ Campaña registrada. ${ids.length} destinatarios.${puntosMsg}${emailMsg}`)
+      alert(
+        `✅ Campaña registrada. ${ids.length} destinatarios.${puntosMsg}\nWhatsApp y Email: Próximamente.`
+      )
     } catch (e: any) {
       alert(`Error al registrar campaña: ${e.message}`)
     } finally {
@@ -373,6 +358,7 @@ export const useClientesPanel = (
     filteredClientes,
     loading,
     segments,
+    segmentosNivel,
     campanaConfig,
     savingConfig,
     searchTerm,
@@ -381,6 +367,7 @@ export const useClientesPanel = (
     tipoCampana,
     destinatarios,
     ejecutandoCampana,
+    top10PorGasto,
     handleAbrirCampana,
     handleCerrarCampana,
     handleRegistrarCampana,
