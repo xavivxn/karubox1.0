@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { ClienteConVisita } from '../types/clientes.types'
-import { formatearFecha } from '../utils/clientes.utils'
+import { formatearFecha, getNivel } from '../utils/clientes.utils'
 import { formatGuaranies } from '@/lib/utils/format'
 
 interface TransaccionRow {
@@ -203,6 +203,45 @@ export const ClienteDetailDrawer = ({
                     value={formatGuaranies(cliente.total_gastado)}
                   />
                 </div>
+
+                {/* Nivel VIP y próximo nivel */}
+                {(() => {
+                  const nivelInfo = getNivel(cliente.total_gastado ?? 0)
+                  const nivelCls =
+                    nivelInfo.nivel === 'oro'
+                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                      : nivelInfo.nivel === 'plata'
+                        ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                        : 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
+
+                  return (
+                    <div className="mt-3 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                          Nivel
+                        </span>
+                        <span className={`px-2.5 py-1 rounded-full text-sm font-bold ${nivelCls}`}>
+                          {nivelInfo.nombre}
+                        </span>
+                      </div>
+
+                      {nivelInfo.gastoParaProximo != null &&
+                        nivelInfo.nombreProximo &&
+                        nivelInfo.gastoParaProximo > 0 && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Próximo nivel:{' '}
+                            <span className="font-semibold text-gray-700 dark:text-gray-300">
+                              {nivelInfo.nombreProximo}
+                            </span>
+                            {' — te faltan '}
+                            <span className="font-bold text-orange-600 dark:text-orange-400">
+                              {formatGuaranies(nivelInfo.gastoParaProximo)}
+                            </span>
+                          </p>
+                        )}
+                    </div>
+                  )
+                })()}
 
                 {/* Días sin visita badge */}
                 {(() => {

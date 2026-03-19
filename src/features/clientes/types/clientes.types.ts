@@ -87,9 +87,49 @@ export type ClienteConVisita = ClienteLocal & {
 export type SegmentoCliente = 'activo' | 'en_riesgo' | 'inactivo' | 'sin_visita'
 
 /**
+ * Nivel del cliente por gasto acumulado (VIP)
+ */
+export type NivelCliente = 'bronce' | 'plata' | 'oro'
+
+/**
+ * Umbral mínimo de gasto para cada nivel VIP.
+ * - Mantiene un orden ascendente para poder calcular "próximo nivel".
+ */
+export interface NivelUmbral {
+  nivel: NivelCliente
+  nombre: string
+  gastoMinimo: number
+  orden: number
+}
+
+/**
+ * Umbrales por defecto: Bronce < 500k, Plata 500k–2M, Oro >= 2M
+ */
+export const NIVELES_DEFAULT: NivelUmbral[] = [
+  { nivel: 'bronce', nombre: 'Bronce', gastoMinimo: 0, orden: 1 },
+  { nivel: 'plata', nombre: 'Plata', gastoMinimo: 500_000, orden: 2 },
+  { nivel: 'oro', nombre: 'Oro', gastoMinimo: 2_000_000, orden: 3 },
+]
+
+/**
+ * Conteos por nivel VIP (Oro, Plata, Bronce)
+ */
+export interface SegmentosNivel {
+  oro: number
+  plata: number
+  bronce: number
+}
+
+/**
  * Tipo de campaña de fidelización
  */
-export type TipoCampana = 'inactivos_15' | 'inactivos_30' | 'personalizado' | 'cumpleanos'
+export type TipoCampana =
+  | 'inactivos_15'
+  | 'inactivos_30'
+  | 'personalizado'
+  | 'cumpleanos'
+  | 'nivel_oro'
+  | 'top10_gasto'
 
 /**
  * Configuración de campañas por tenant

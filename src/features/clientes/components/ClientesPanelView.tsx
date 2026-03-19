@@ -15,6 +15,8 @@ import { CampanaModal } from './CampanaModal'
 import { ClienteDetailDrawer } from './ClienteDetailDrawer'
 import { ClientesTableRich } from './ClientesTableRich'
 import { ClienteModal } from './ClienteModal'
+import { LevelSegmentCards } from './LevelSegmentCards'
+import { TopClientesGasto } from './TopClientesGasto'
 import type { TipoCampana } from '../types/clientes.types'
 
 export const ClientesPanelView = () => {
@@ -24,6 +26,7 @@ export const ClientesPanelView = () => {
     filteredClientes,
     loading,
     segments,
+    segmentosNivel,
     campanaConfig,
     savingConfig,
     clientesCumpleHoy,
@@ -33,6 +36,7 @@ export const ClientesPanelView = () => {
     tipoCampana,
     destinatarios,
     ejecutandoCampana,
+    top10PorGasto,
     handleAbrirCampana,
     handleCerrarCampana,
     handleRegistrarCampana,
@@ -93,6 +97,20 @@ export const ClientesPanelView = () => {
         {/* ── Tarjetas de segmentos ── */}
         <SegmentCards segments={segments} loading={loading} />
 
+        {/* ── VIP (Niveles + Top 10): columnas con misma altura; niveles apilados en columna para no dejar hueco ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0 lg:items-stretch">
+          <div className="lg:col-span-2 min-w-0 flex flex-col">
+            <LevelSegmentCards segmentosNivel={segmentosNivel} loading={loading} layout="column" />
+          </div>
+          <div className="min-w-0 flex flex-col">
+            <TopClientesGasto
+              clientes={top10PorGasto}
+              onClienteClick={handleAbrirDrawer}
+              loading={loading}
+            />
+          </div>
+        </div>
+
         {/* ── Panel de Campañas ── */}
         <section className="bg-white dark:bg-gray-800/80 rounded-xl sm:rounded-2xl shadow-sm dark:shadow-black/20 border border-gray-200 dark:border-gray-700 p-4 sm:p-6 space-y-5 min-w-0 overflow-hidden">
           <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 min-w-0">
@@ -101,7 +119,7 @@ export const ClientesPanelView = () => {
           </h2>
 
           {/* Botones de campaña */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
             <CampanaButton
               label="Inactivos +15 días"
               count={segments.enRiesgo.length + segments.inactivos.length}
@@ -133,6 +151,23 @@ export const ClientesPanelView = () => {
               colorCls="border-pink-300 dark:border-pink-600 hover:bg-pink-50 dark:hover:bg-pink-900/30 text-pink-800 dark:text-pink-200"
               countCls="bg-pink-100 dark:bg-pink-800/60 text-pink-700 dark:text-pink-300"
               onClick={() => handleAbrirCampana('cumpleanos')}
+            />
+
+            <CampanaButton
+              label="Solo nivel Oro"
+              count={segmentosNivel.oro}
+              emoji="👑"
+              colorCls="border-amber-300 dark:border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 text-amber-800 dark:text-amber-200"
+              countCls="bg-amber-100 dark:bg-amber-800/60 text-amber-700 dark:text-amber-300"
+              onClick={() => handleAbrirCampana('nivel_oro')}
+            />
+            <CampanaButton
+              label="Top 10 por gasto"
+              count={Math.min(10, top10PorGasto.length)}
+              emoji="🏆"
+              colorCls="border-emerald-300 dark:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200"
+              countCls="bg-emerald-100 dark:bg-emerald-800/60 text-emerald-700 dark:text-emerald-300"
+              onClick={() => handleAbrirCampana('top10_gasto')}
             />
           </div>
 

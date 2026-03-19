@@ -10,6 +10,7 @@ import { X, Send, Gift, Users, MessageSquare, Info, Loader2, Lightbulb } from 'l
 import type { ClienteConVisita, TipoCampana, CampanaConfig } from '../types/clientes.types'
 import { DEFAULT_TEMPLATES } from '../types/clientes.types'
 import { TIPO_LABELS } from '../services/campanasService'
+import { generarPdfCampanaDestinatarios } from '../utils/generarPdfCampanaDestinatarios'
 
 interface CampanaModalProps {
   isOpen: boolean
@@ -27,6 +28,8 @@ const TIPO_DESCRIPCION: Record<TipoCampana, string> = {
   inactivos_30: 'clientes que no vienen hace 30 días o más',
   personalizado: 'todos los clientes registrados',
   cumpleanos: 'clientes que cumplen años hoy',
+  nivel_oro: 'solo clientes con nivel Oro',
+  top10_gasto: 'top 10 por gasto acumulado',
 }
 
 const TIPO_ICON: Record<TipoCampana, string> = {
@@ -34,6 +37,8 @@ const TIPO_ICON: Record<TipoCampana, string> = {
   inactivos_30: '😴',
   personalizado: '📣',
   cumpleanos: '🎂',
+  nivel_oro: '👑',
+  top10_gasto: '🏆',
 }
 
 const CONFIG_TEMPLATE_KEY: Record<TipoCampana, keyof CampanaConfig> = {
@@ -41,6 +46,9 @@ const CONFIG_TEMPLATE_KEY: Record<TipoCampana, keyof CampanaConfig> = {
   inactivos_30: 'template_wa_30dias',
   personalizado: 'template_wa_personalizado',
   cumpleanos: 'template_wa_cumpleanos',
+  // VIP: usamos el template personalizado como fallback.
+  nivel_oro: 'template_wa_personalizado',
+  top10_gasto: 'template_wa_personalizado',
 }
 
 const CONFIG_PUNTOS_KEY: Record<TipoCampana, keyof CampanaConfig> = {
@@ -48,6 +56,9 @@ const CONFIG_PUNTOS_KEY: Record<TipoCampana, keyof CampanaConfig> = {
   inactivos_30: 'puntos_regalo_30dias',
   personalizado: 'puntos_regalo_personalizado',
   cumpleanos: 'puntos_regalo_cumpleanos',
+  // VIP: usamos los puntos del template personalizado como fallback.
+  nivel_oro: 'puntos_regalo_personalizado',
+  top10_gasto: 'puntos_regalo_personalizado',
 }
 
 // Placeholders amigables en el texto; se convierten a {{variable}} al enviar
@@ -115,7 +126,7 @@ export const CampanaModal = ({
   ]
 
   const mensajeEjemplo =
-    tipo === 'personalizado'
+    tipo === 'personalizado' || tipo === 'nivel_oro' || tipo === 'top10_gasto'
       ? `Hola [Nombre del cliente], desde [Nombre del negocio] te saludamos. Te regalamos [Puntos de regalo] puntos. ¡Gracias por ser parte!`
       : tipo === 'cumpleanos'
         ? `¡Feliz cumpleaños, [Nombre del cliente]! Desde [Nombre del negocio] te regalamos [Puntos de regalo] puntos. ¡Que lo disfrutes!`
@@ -291,9 +302,29 @@ export const CampanaModal = ({
           <div className="flex items-start gap-3 rounded-xl border border-blue-200 dark:border-blue-800/60 bg-blue-50 dark:bg-blue-900/20 p-3">
             <Info size={18} className="text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" />
             <p className="text-sm text-blue-700 dark:text-blue-200">
-              <strong className="font-semibold">Nota:</strong> Los mensajes de WhatsApp y Email se enviarán
-              cuando el canal esté configurado. Los puntos regalo se acreditan al confirmar.
+              <strong className="font-semibold">WhatsApp y Email:</strong> Próximamente. Mientras tanto, podés
+              registrar la campaña y descargar el informe PDF con la lista completa de destinatarios.
             </p>
+          </div>
+
+          {/* Descarga de PDF (no bloquea el registro) */}
+          <div className="flex justify-end mt-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (destinatarios.length === 0) return
+                generarPdfCampanaDestinatarios(destinatarios, {
+                  tenantNombre,
+                  tipo,
+                  puntosRegalo,
+                  mensajeBase: mensaje,
+                })
+              }}
+              disabled={destinatarios.length === 0}
+              className="px-4 py-2.5 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Descargar informe PDF
+            </button>
           </div>
         </div>
 

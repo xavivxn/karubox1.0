@@ -3,7 +3,8 @@
  * Funciones auxiliares para el módulo de clientes
  */
 
-import type { ClienteFormData } from '../types/clientes.types'
+import type { ClienteFormData, NivelCliente, NivelUmbral } from '../types/clientes.types'
+import { NIVELES_DEFAULT } from '../types/clientes.types'
 
 /**
  * Normaliza un texto para búsqueda: minúsculas y sin tildes/acentos.
@@ -42,6 +43,46 @@ export const validarFormulario = (formData: ClienteFormData): { valid: boolean; 
   }
 
   return { valid: true }
+}
+
+/**
+ * Resultado de getNivel: nivel actual y datos para "próximo nivel".
+ */
+export interface NivelInfo {
+  nivel: NivelCliente
+  nombre: string
+  orden: number
+  gastoParaProximo: number | null
+  nombreProximo: string | null
+}
+
+/**
+ * Obtiene el nivel VIP del cliente según su gasto total acumulado.
+ * Usa umbrales por defecto si no se pasa config.
+ */
+export function getNivel(totalGastado: number, umbrales: NivelUmbral[] = NIVELES_DEFAULT): NivelInfo {
+  const sorted = [...umbrales].sort((a, b) => b.gastoMinimo - a.gastoMinimo)
+  for (const u of sorted) {
+    if (totalGastado >= u.gastoMinimo) {
+      const next = sorted.find((x) => x.orden === u.orden + 1)
+      return {
+        nivel: u.nivel,
+        nombre: u.nombre,
+        orden: u.orden,
+        gastoParaProximo: next ? next.gastoMinimo - totalGastado : null,
+        nombreProximo: next ? next.nombre : null,
+      }
+    }
+  }
+
+  const first = sorted[sorted.length - 1]
+  return {
+    nivel: first.nivel,
+    nombre: first.nombre,
+    orden: first.orden,
+    gastoParaProximo: null,
+    nombreProximo: null,
+  }
 }
 
 /**

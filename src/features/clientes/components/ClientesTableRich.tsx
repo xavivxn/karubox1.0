@@ -6,7 +6,8 @@
 import { Eye, Edit2 } from 'lucide-react'
 import type { ClienteConVisita } from '../types/clientes.types'
 import { getSegmento } from '../types/clientes.types'
-import { formatearFecha } from '../utils/clientes.utils'
+import { formatearFecha, getNivel } from '../utils/clientes.utils'
+import { formatGuaranies } from '@/lib/utils/format'
 
 interface ClientesTableRichProps {
   clientes: ClienteConVisita[]
@@ -30,6 +31,12 @@ const SEGMENTO_BADGE: Record<string, { label: string; cls: string }> = {
   en_riesgo:  { label: 'En riesgo',  cls: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' },
   inactivo:   { label: 'Inactivo',   cls: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' },
   sin_visita: { label: 'Sin visitas',cls: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' },
+}
+
+const NIVEL_BADGE: Record<string, string> = {
+  oro: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
+  plata: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+  bronce: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300',
 }
 
 function diasLabel(dias: number | null): string {
@@ -75,11 +82,17 @@ export const ClientesTableRich = ({
               <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Puntos
               </th>
+              <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Nivel
+              </th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Última visita
               </th>
               <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Pedidos
+              </th>
+              <th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Total gastado
               </th>
               <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Acciones
@@ -90,7 +103,7 @@ export const ClientesTableRich = ({
           <tbody className="divide-y divide-gray-100 dark:divide-gray-600">
             {clientes.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-5 py-14 text-center text-gray-400 dark:text-gray-500">
+                <td colSpan={9} className="px-5 py-14 text-center text-gray-400 dark:text-gray-500">
                   {searchTerm
                     ? `No se encontraron clientes para "${searchTerm}"`
                     : 'No hay clientes registrados. Creá el primero.'}
@@ -101,6 +114,8 @@ export const ClientesTableRich = ({
                 const segmento = getSegmento(cliente.dias_sin_visita)
                 const badge = SEGMENTO_BADGE[segmento]
                 const dot = SEGMENTO_DOT[segmento]
+                const nivelInfo = getNivel(cliente.total_gastado ?? 0)
+                const nivelBadgeCls = NIVEL_BADGE[nivelInfo.nivel] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
 
                 return (
                   <tr
@@ -141,6 +156,13 @@ export const ClientesTableRich = ({
                       </span>
                     </td>
 
+                    {/* Nivel VIP */}
+                    <td className="px-5 py-3.5 text-center">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${nivelBadgeCls}`}>
+                        {nivelInfo.nombre}
+                      </span>
+                    </td>
+
                     {/* Última visita */}
                     <td className="px-5 py-3.5">
                       <div>
@@ -162,6 +184,11 @@ export const ClientesTableRich = ({
                     {/* Total pedidos */}
                     <td className="px-5 py-3.5 text-center text-gray-600 dark:text-gray-400 font-medium">
                       {cliente.total_pedidos}
+                    </td>
+
+                    {/* Total gastado */}
+                    <td className="px-5 py-3.5 text-right text-gray-700 dark:text-gray-300 font-medium tabular-nums">
+                      {formatGuaranies(cliente.total_gastado ?? 0)}
                     </td>
 
                     {/* Acciones */}
