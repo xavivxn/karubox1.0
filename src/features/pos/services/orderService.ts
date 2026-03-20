@@ -7,6 +7,7 @@ import type { TipoPedido, FeedbackDetail } from '../types/pos.types'
 import { calcularPuntos, formatTipoPedido, formatItemModificacionesForTicket } from '../utils/pos.utils'
 import { formatGuaranies } from '@/lib/utils/format'
 import { printService } from './printService'
+import { registrarCanjePuntos, registrarPuntosGanados } from '@/lib/db/puntos'
 
 /** Convierte error de Supabase en Error con mensaje legible para el usuario y la consola */
 function toError(err: PostgrestError | Error, context: string): Error {
@@ -47,6 +48,21 @@ export const orderService = {
     const puntosBonus = items.reduce((sum, item) => sum + ((item.puntos_extra ?? 0) * item.cantidad), 0)
     const puntosGenerados = puntosAuto + puntosBonus
 
+    const canjeItems = items.filter((i) => i.modo === 'canje' && i.tipo === 'producto')
+    const puntosCosteCanje = canjeItems.reduce((sum, item) => sum + ((item.puntos_canje ?? 0) * item.cantidad), 0)
+
+    if (canjeItems.length > 0) {
+      if (!cliente) {
+        throw new Error('Se requiere un cliente para canjear puntos')
+      }
+      if (puntosCosteCanje <= 0) {
+        throw new Error('El canje debe tener puntos asociados')
+      }
+      if (puntosCosteCanje > cliente.puntos_totales) {
+        throw new Error('El cliente no tiene suficientes puntos para el canje')
+      }
+    }
+
     // Crear pedido
     const { data: pedido, error: errorPedido } = await supabase
       .from('pedidos')
@@ -68,11 +84,22 @@ export const orderService = {
     const itemsToInsert = items.map((item) => ({
       pedido_id: pedido.id,
       producto_id: item.producto_id,
-      producto_nombre: item.nombre,
+      producto_nombre:
+        item.modo === 'canje' && item.tipo === 'producto' ? `CANJE: ${item.nombre}` : item.nombre,
       cantidad: item.cantidad,
-      precio_unitario: item.precio,
+      // En canje el total se cobra con puntos, por eso evitamos mostrar precios en tickets (manteniendo total=0).
+      precio_unitario: item.modo === 'canje' && item.tipo === 'producto' ? 0 : item.precio,
       subtotal: item.subtotal,
-      notas: formatItemModificacionesForTicket(item) ?? null
+      notas: (() => {
+        const baseNotas = formatItemModificacionesForTicket(item)
+        if (!(item.modo === 'canje' && item.tipo === 'producto')) return baseNotas ?? null
+
+        const puntosLinea = (item.puntos_canje ?? 0) * item.cantidad
+        const canjeNota =
+          puntosLinea > 0 ? `CANJE DE PUNTOS (${puntosLinea} pts)` : 'CANJE DE PUNTOS'
+
+        return baseNotas ? `${baseNotas} · ${canjeNota}` : canjeNota
+      })()
     }))
 
     const { data: itemsInsertados, error: errorItems } = await supabase
@@ -88,27 +115,30 @@ export const orderService = {
       id: itemsInsertados?.[index]?.id || item.id
     }))
 
-    // Actualizar puntos del cliente
+    // Canje de puntos (resetea saldo a 0) antes de acreditar puntos ganados
+    let puntosSaldoConsumidos = 0
+    if (cliente && canjeItems.length > 0) {
+      // Regla de negocio: al canjear, el saldo del cliente queda en 0.
+      // Por lo tanto consumimos TODO el saldo anterior.
+      puntosSaldoConsumidos = cliente.puntos_totales
+      await registrarCanjePuntos(
+        tenantId,
+        cliente.id,
+        puntosSaldoConsumidos,
+        pedido.id,
+        `Canje de puntos: costo solicitado ${puntosCosteCanje} pts; saldo consumido ${puntosSaldoConsumidos} pts`
+      )
+    }
+
+    // Acreditar puntos generados por la venta (solo sobre productos de venta)
     if (cliente && puntosGenerados > 0) {
-      const nuevosPuntos = cliente.puntos_totales + puntosGenerados
-
-      const { error: errorCliente } = await supabase
-        .from('clientes')
-        .update({ puntos_totales: nuevosPuntos })
-        .eq('id', cliente.id)
-
-      if (errorCliente) throw toError(errorCliente, 'Error al actualizar puntos del cliente')
-
-      await supabase.from('transacciones_puntos').insert({
-        tenant_id: tenantId,
-        cliente_id: cliente.id,
-        pedido_id: pedido.id,
-        tipo: 'ganado',
-        puntos: puntosGenerados,
-        saldo_anterior: cliente.puntos_totales,
-        saldo_nuevo: nuevosPuntos,
-        descripcion: `Puntos ganados por pedido #${pedido.numero_pedido}`
-      })
+      await registrarPuntosGanados(
+        tenantId,
+        cliente.id,
+        puntosGenerados,
+        pedido.id,
+        `Puntos ganados por pedido #${pedido.numero_pedido}`
+      )
     }
 
     // Descontar ingredientes o inventario según tipo de producto
@@ -187,6 +217,15 @@ export const orderService = {
 
     if (cliente) {
       successDetails.push({ label: 'Cliente', value: cliente.nombre })
+    }
+
+    if (canjeItems.length > 0 && cliente) {
+      const nombreCanjeado = canjeItems[0]?.nombre ?? '—'
+      successDetails.push({
+        label: 'Puntos canjeados',
+        value: `${puntosSaldoConsumidos} pts -> 0`
+      })
+      successDetails.push({ label: 'Producto canjeado', value: nombreCanjeado })
     }
 
     if (cliente && puntosGenerados > 0) {

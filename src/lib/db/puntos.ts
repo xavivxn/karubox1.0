@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { TransaccionPuntos } from '@/types/supabase'
 import { getClientePorId, actualizarPuntosCliente } from './clientes'
 
@@ -6,6 +6,7 @@ import { getClientePorId, actualizarPuntosCliente } from './clientes'
  * Calcular puntos según monto usando la función de base de datos
  */
 export async function calcularPuntos(monto: number, diaSemana?: number) {
+  const supabase = createClient()
   const dia = diaSemana ?? new Date().getDay()
   
   const { data, error } = await supabase.rpc('calcular_puntos', {
@@ -26,11 +27,13 @@ export async function calcularPuntos(monto: number, diaSemana?: number) {
  * Registrar ganancia de puntos
  */
 export async function registrarPuntosGanados(
+  tenantId: string,
   clienteId: string,
   puntos: number,
   pedidoId?: string,
   descripcion?: string
 ) {
+  const supabase = createClient()
   // Obtener saldo actual
   const cliente = await getClientePorId(clienteId)
   const saldoAnterior = cliente.puntos_totales
@@ -40,6 +43,7 @@ export async function registrarPuntosGanados(
   const { data: transaccion, error } = await supabase
     .from('transacciones_puntos')
     .insert({
+      tenant_id: tenantId,
       cliente_id: clienteId,
       pedido_id: pedidoId,
       tipo: 'ganado',
@@ -63,11 +67,13 @@ export async function registrarPuntosGanados(
  * Registrar canje de puntos
  */
 export async function registrarCanjePuntos(
+  tenantId: string,
   clienteId: string,
   puntosARestar: number,
   pedidoId?: string,
   descripcion?: string
 ) {
+  const supabase = createClient()
   // Obtener saldo actual
   const cliente = await getClientePorId(clienteId)
   const saldoAnterior = cliente.puntos_totales
@@ -83,6 +89,7 @@ export async function registrarCanjePuntos(
   const { data: transaccion, error } = await supabase
     .from('transacciones_puntos')
     .insert({
+      tenant_id: tenantId,
       cliente_id: clienteId,
       pedido_id: pedidoId,
       tipo: 'canjeado',
@@ -106,11 +113,13 @@ export async function registrarCanjePuntos(
  * Ajuste manual de puntos (por admin)
  */
 export async function ajustarPuntos(
+  tenantId: string,
   clienteId: string,
   ajuste: number,
   descripcion: string,
   usuarioResponsable?: string
 ) {
+  const supabase = createClient()
   // Obtener saldo actual
   const cliente = await getClientePorId(clienteId)
   const saldoAnterior = cliente.puntos_totales
@@ -120,6 +129,7 @@ export async function ajustarPuntos(
   const { data: transaccion, error } = await supabase
     .from('transacciones_puntos')
     .insert({
+      tenant_id: tenantId,
       cliente_id: clienteId,
       tipo: 'ajuste',
       puntos: ajuste,
@@ -143,6 +153,7 @@ export async function ajustarPuntos(
  * Obtener historial de transacciones de un cliente
  */
 export async function getHistorialPuntos(clienteId: string, limite: number = 50) {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('transacciones_puntos')
     .select('*')
@@ -158,6 +169,7 @@ export async function getHistorialPuntos(clienteId: string, limite: number = 50)
  * Obtener transacciones recientes (para admin)
  */
 export async function getTransaccionesRecientes(limite: number = 20) {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('transacciones_puntos')
     .select(`

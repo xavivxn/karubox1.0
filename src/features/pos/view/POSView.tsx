@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, FileText, Loader2, ShoppingCart, Search } from 'lucide-react'
+import { LayoutDashboard, FileText, Loader2, ShoppingCart, Search, Gift } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
 import { useEstadoCaja } from '@/features/caja/hooks/useEstadoCaja'
@@ -22,17 +22,19 @@ import ProductGrid from '../components/ProductGrid'
 import POSSearchBar from '../components/POSSearchBar'
 import { CartBottomBar } from '../components/CartBottomBar'
 import { CART_SECTION_ID, POS_PRODUCTS_SECTION_ID } from '../components/ScrollToCartFAB'
+import CanjePuntosModal from '../components/CanjePuntosModal'
 
 export default function POSView() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [isClientModalOpen, setIsClientModalOpen] = useState(false)
+  const [isCanjePuntosOpen, setIsCanjePuntosOpen] = useState(false)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
   const [showCajaCerradaModal, setShowCajaCerradaModal] = useState(false)
 
-  const { usuario, tenant, loading: tenantLoading, darkMode, isAdmin } = useTenant()
+  const { usuario, tenant, loading: tenantLoading, darkMode, isAdmin, isCajero } = useTenant()
   const { items, addItem, addComboItem } = useCartStore()
   const { sesionAbierta, loading: loadingCaja } = useEstadoCaja(tenant?.id ?? null)
   const { categorias, productos, loading, feedback: dataFeedback } = usePOSData()
@@ -259,6 +261,26 @@ export default function POSView() {
                         <span className="hidden sm:inline">Administración</span>
                       </Link>
                     )}
+
+                    {(isAdmin || isCajero) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!sesionAbierta) return
+                          setIsCanjePuntosOpen(true)
+                        }}
+                        title="Canje de puntos"
+                        disabled={!sesionAbierta}
+                        className={`inline-flex items-center justify-center rounded-lg border p-2 sm:rounded-xl sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-medium transition min-h-[40px] min-w-[40px] sm:min-h-0 sm:min-w-0 ${
+                          darkMode
+                            ? 'border-gray-600 text-gray-300 hover:bg-gray-700/50 hover:text-white'
+                            : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200'
+                        } ${!sesionAbierta ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}`}
+                      >
+                        <Gift className="h-4 w-4 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Canje de puntos</span>
+                      </button>
+                    )}
                   </div>
                 </header>
               </div>
@@ -407,6 +429,14 @@ export default function POSView() {
         isOpen={isClientModalOpen}
         onClose={() => setIsClientModalOpen(false)}
         darkMode={darkMode}
+      />
+
+      <CanjePuntosModal
+        key={isCanjePuntosOpen ? 'canje-open' : 'canje-closed'}
+        open={isCanjePuntosOpen}
+        onClose={() => setIsCanjePuntosOpen(false)}
+        darkMode={darkMode}
+        productos={productos}
       />
       <ItemCustomizationDrawer
         open={Boolean(editingItemId)}

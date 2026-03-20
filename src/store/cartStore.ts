@@ -43,6 +43,10 @@ export interface CartItem {
   comboItems?: ComboProductItem[] // Para combos: lista de productos componentes
   /** Puntos bonus por unidad definidos por el admin en este producto */
   puntos_extra?: number
+  /** Canje: línea que aplica descuento al total (subtotal=0) y se paga con puntos. */
+  modo?: 'venta' | 'canje'
+  /** Puntos requeridos por unidad para canjear este producto */
+  puntos_canje?: number
 }
 
 interface CartState {
@@ -55,6 +59,7 @@ interface CartState {
   // Acciones
   addItem: (producto: { id: string; nombre: string; descripcion?: string; precio: number; tiene_receta?: boolean; puntos_extra?: number }) => void
   addComboItem: (combo: { id: string; nombre: string; descripcion?: string; precio: number; comboItems: ComboProductItem[] }) => void
+  addCanjeItem: (item: { id: string; nombre: string; descripcion?: string; puntos_canje: number; cantidad?: number }) => void
   removeItem: (itemId: string) => void
   updateQuantity: (itemId: string, cantidad: number) => void
   updateItemCustomization: (itemId: string, customization: CartItemCustomization | null, extraCostPerUnit: number) => void
@@ -112,7 +117,8 @@ export const useCartStore = create<CartState>((set, get) => ({
             subtotal: producto.precio,
             extraCostPerUnit: 0,
             tipo: 'producto' as const,
-            puntos_extra: producto.puntos_extra ?? 0
+            puntos_extra: producto.puntos_extra ?? 0,
+            modo: 'venta'
           }
         ]
       })
@@ -135,21 +141,91 @@ export const useCartStore = create<CartState>((set, get) => ({
           subtotal: combo.precio,
           extraCostPerUnit: 0,
           tipo: 'combo' as const,
-          comboItems: combo.comboItems
+          comboItems: combo.comboItems,
+          modo: 'venta'
+        }
+      ]
+    })
+  },
+
+  addCanjeItem: ({ id, nombre, descripcion, puntos_canje, cantidad = 1 }) => {
+    const items = get().items
+
+    const existingItem = items.find(
+      (item) => item.producto_id === id && item.tipo === 'producto' && item.modo === 'canje'
+    )
+
+    if (existingItem) {
+      set({
+        items: items.map((item) =>
+          item.id === existingItem.id
+            ? {
+                ...item,
+                cantidad: item.cantidad + cantidad,
+                // Canje siempre aporta descuento: total del ítem = 0
+                subtotal: 0
+              }
+            : item
+        )
+      })
+
+      return
+    }
+
+    set({
+      items: [
+        ...items,
+        {
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `temp-${Date.now()}-${Math.random()}`,
+          producto_id: id,
+          nombre,
+          descripcion,
+          precio: 0,
+          cantidad,
+          subtotal: 0,
+          extraCostPerUnit: 0,
+          tipo: 'producto',
+          puntos_extra: 0,
+          modo: 'canje',
+          puntos_canje
         }
       ]
     })
   },
 
   removeItem: (itemId) => {
-    set({
-      items: get().items.filter(item => item.id !== itemId)
-    })
+    const nextItems = get().items.filter(item => item.id !== itemId)
+
+    // Si el carrito queda vacío, limpiamos también el resto de estado relacionado
+    // (cliente, tipo de pedido y emisión de factura) para evitar "estado fantasma".
+    if (nextItems.length === 0) {
+      set({
+        items: [],
+        cliente: null,
+        tipo: null,
+        conFactura: false
+      })
+      return
+    }
+
+    set({ items: nextItems })
   },
 
   updateQuantity: (itemId, cantidad) => {
     if (cantidad <= 0) {
-      get().removeItem(itemId)
+      const nextItems = get().items.filter(item => item.id !== itemId)
+
+      if (nextItems.length === 0) {
+        set({
+          items: [],
+          cliente: null,
+          tipo: null,
+          conFactura: false
+        })
+        return
+      }
+
+      set({ items: nextItems })
       return
     }
 
