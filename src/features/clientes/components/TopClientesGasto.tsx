@@ -1,6 +1,6 @@
 /**
- * Panel de Clientes - Top 10 por gasto
- * Lista rápida de los mejores clientes por total gastado; clic abre el drawer.
+ * Panel de Clientes - Top 10 por ventas
+ * Lista rápida de los mejores clientes por total vendido; clic abre el drawer.
  */
 
 'use client'
@@ -42,7 +42,7 @@ export const TopClientesGasto = ({ clientes, onClienteClick, loading }: TopClien
       <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-700">
         <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
           <Award size={18} className="text-amber-500 dark:text-amber-400" />
-          Top 10 por gasto
+          Top 10 por ventas
         </h3>
       </div>
 

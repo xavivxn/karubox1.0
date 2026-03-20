@@ -18,7 +18,7 @@ interface LevelSegmentCardsProps {
 const CARDS = [
   {
     label: 'Oro',
-    sublabel: 'mayor gasto',
+    sublabel: 'mayores ventas',
     icon: <Award size={22} className="text-amber-600 dark:text-amber-400" />,
     key: 'oro' as const,
     bg: 'bg-amber-50 dark:bg-amber-950/40',
@@ -28,7 +28,7 @@ const CARDS = [
   },
   {
     label: 'Plata',
-    sublabel: 'gasto medio',
+    sublabel: 'ventas medias',
     icon: <Medal size={22} className="text-gray-500 dark:text-gray-400" />,
     key: 'plata' as const,
     bg: 'bg-gray-50 dark:bg-gray-800/50',

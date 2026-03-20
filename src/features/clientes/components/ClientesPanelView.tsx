@@ -162,7 +162,7 @@ export const ClientesPanelView = () => {
               onClick={() => handleAbrirCampana('nivel_oro')}
             />
             <CampanaButton
-              label="Top 10 por gasto"
+              label="Top 10 por ventas"
               count={Math.min(10, top10PorGasto.length)}
               emoji="🏆"
               colorCls="border-emerald-300 dark:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200"

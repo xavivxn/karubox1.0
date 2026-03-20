@@ -92,7 +92,7 @@ export const ClientesTableRich = ({
                 Pedidos
               </th>
               <th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                Total gastado
+                Total en ventas
               </th>
               <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Acciones
@@ -186,7 +186,7 @@ export const ClientesTableRich = ({
                       {cliente.total_pedidos}
                     </td>
 
-                    {/* Total gastado */}
+                    {/* Total en ventas */}
                     <td className="px-5 py-3.5 text-right text-gray-700 dark:text-gray-300 font-medium tabular-nums">
                       {formatGuaranies(cliente.total_gastado ?? 0)}
                     </td>

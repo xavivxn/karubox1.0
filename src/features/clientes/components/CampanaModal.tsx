@@ -29,7 +29,7 @@ const TIPO_DESCRIPCION: Record<TipoCampana, string> = {
   personalizado: 'todos los clientes registrados',
   cumpleanos: 'clientes que cumplen años hoy',
   nivel_oro: 'solo clientes con nivel Oro',
-  top10_gasto: 'top 10 por gasto acumulado',
+  top10_gasto: 'top 10 por ventas acumuladas',
 }
 
 const TIPO_ICON: Record<TipoCampana, string> = {

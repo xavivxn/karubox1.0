@@ -199,7 +199,7 @@ export const ClienteDetailDrawer = ({
                   />
                   <MetricCard
                     icon={<Banknote size={16} className="text-green-600 dark:text-green-400" />}
-                    label="Total gastado"
+                    label="Total en ventas"
                     value={formatGuaranies(cliente.total_gastado)}
                   />
                 </div>

@@ -1,6 +1,6 @@
 /**
  * Panel de Clientes - Acciones VIP rápidas
- * Tarjeta con 2 accesos directos a campañas VIP: Oro y Top 10 por gasto.
+ * Tarjeta con 2 accesos directos a campañas VIP: Oro y Top 10 por ventas.
  */
 
 'use client'
