@@ -132,6 +132,7 @@ export function AppDashboardCard({
 
   const bgCls = darkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900' : c.bgLight
   const isDisabled = isGlobalLoading && !isThisCardLoading
+  const blobCls = darkMode ? c.blob.replace('500/10', '500/20') : c.blob
 
   const handleMouseEnter = () => {
     if (icon === 'cocina') router.prefetch(href)
@@ -150,6 +151,7 @@ export function AppDashboardCard({
       disabled={isDisabled}
       className={`
         group relative rounded-3xl shadow-2xl transition-all duration-300 text-left w-full
+        block h-full
         focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent
         ${isDisabled ? 'pointer-events-none opacity-60 cursor-not-allowed scale-100' : 'hover:scale-105 cursor-pointer active:scale-[1.02]'}
         ${!isDisabled ? c.shadow : ''}
@@ -179,8 +181,10 @@ export function AppDashboardCard({
         </span>
       )}
 
-      <span className="relative block overflow-hidden rounded-3xl">
-        <span className={`absolute top-0 right-0 w-40 h-40 rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-500 ${c.blob}`} />
+      <span className="relative block h-full overflow-hidden rounded-3xl">
+        <span
+          className={`absolute top-0 right-0 w-40 h-40 rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-500 ${blobCls}`}
+        />
         <span className="relative block p-8 space-y-4">
           <span className={`inline-flex p-4 rounded-2xl ${darkMode ? c.iconBgDark : c.iconBgLight}`}>
             <Icon className={`w-8 h-8 ${darkMode ? c.iconDark : c.iconLight}`} />

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { AppDashboardCard } from '@/features/common/components/AppDashboardCard'
+import { useTenant } from '@/contexts/TenantContext'
 
 const OWNER_CARDS = [
   {
@@ -25,6 +26,7 @@ const OWNER_CARDS = [
 
 export function OwnerHomeView() {
   const router = useRouter()
+  const { darkMode } = useTenant()
   const [loadingHref, setLoadingHref] = useState<string | null>(null)
 
   const handleNavigate = useCallback(
@@ -47,7 +49,7 @@ export function OwnerHomeView() {
             icon={card.icon}
             color={card.color}
             label={card.label}
-            darkMode={false}
+            darkMode={darkMode}
             isGlobalLoading={loadingHref !== null}
             isThisCardLoading={loadingHref === card.href}
             onNavigateStart={handleNavigate}
