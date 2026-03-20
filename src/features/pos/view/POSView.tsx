@@ -239,6 +239,25 @@ export default function POSView() {
                       )}
                       <span className="hidden sm:inline">Historial de pedidos</span>
                     </Link>
+                    {(isAdmin || isCajero) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!sesionAbierta) return
+                          setIsCanjePuntosOpen(true)
+                        }}
+                        title="Canje de puntos"
+                        disabled={!sesionAbierta}
+                        className={`inline-flex items-center justify-center rounded-lg border p-2 sm:rounded-xl sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-medium transition min-h-[40px] min-w-[40px] sm:min-h-0 sm:min-w-0 ${
+                          darkMode
+                            ? 'border-gray-600 text-gray-300 hover:bg-gray-700/50 hover:text-white'
+                            : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200'
+                        } ${!sesionAbierta ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}`}
+                      >
+                        <Gift className="h-4 w-4 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Canje de puntos</span>
+                      </button>
+                    )}
                     {isAdmin && (
                       <Link
                         href={ROUTES.PROTECTED.ADMIN}
@@ -261,26 +280,6 @@ export default function POSView() {
                         )}
                         <span className="hidden sm:inline">Administración</span>
                       </Link>
-                    )}
-
-                    {(isAdmin || isCajero) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!sesionAbierta) return
-                          setIsCanjePuntosOpen(true)
-                        }}
-                        title="Canje de puntos"
-                        disabled={!sesionAbierta}
-                        className={`inline-flex items-center justify-center rounded-lg border p-2 sm:rounded-xl sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-medium transition min-h-[40px] min-w-[40px] sm:min-h-0 sm:min-w-0 ${
-                          darkMode
-                            ? 'border-gray-600 text-gray-300 hover:bg-gray-700/50 hover:text-white'
-                            : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200'
-                        } ${!sesionAbierta ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}`}
-                      >
-                        <Gift className="h-4 w-4 sm:h-4 sm:w-4" />
-                        <span className="hidden sm:inline">Canje de puntos</span>
-                      </button>
                     )}
                   </div>
                 </header>
