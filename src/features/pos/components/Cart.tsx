@@ -65,8 +65,15 @@ export default function Cart({
   const itemCount = items.reduce((sum, item) => sum + item.cantidad, 0)
   const puntos = getTotalPuntos()
 
+  // En mobile/tablet el `CartBottomBar` es `fixed` y puede solapar el botón de confirmar.
+  // Solo reservamos espacio extra cuando existe `cliente` (porque al seleccionar cliente aparece
+  // la sección "¿Emitir factura?" y el bloque inferior crece).
+  const bottomBarPaddingClass = cliente ? 'pb-20 lg:pb-0' : ''
+
   return (
-    <div className={`rounded-2xl shadow-2xl flex flex-col h-full overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+    <div
+      className={`rounded-2xl shadow-2xl flex flex-col h-full overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'} ${bottomBarPaddingClass}`}
+    >
       {/* Header fijo */}
       <div className="flex items-center gap-3 p-3 border-b flex-shrink-0">
         <ShoppingBag className="text-orange-600" size={20} />
