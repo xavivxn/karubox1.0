@@ -16,7 +16,7 @@ const OWNER_CARDS = [
   },
   {
     title: 'Caja de socios',
-    description: 'Lista simple de cosas a pagar entre Naser e Ivan.',
+    description: 'Lista simple de cosas a pagar entre Naser e Iván.',
     href: '/owner/caja',
     icon: 'wallet' as const,
     color: 'purple' as const,
