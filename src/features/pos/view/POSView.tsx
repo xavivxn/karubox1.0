@@ -23,6 +23,7 @@ import POSSearchBar from '../components/POSSearchBar'
 import { CartBottomBar } from '../components/CartBottomBar'
 import { CART_SECTION_ID, POS_PRODUCTS_SECTION_ID } from '../components/ScrollToCartFAB'
 import CanjePuntosModal from '../components/CanjePuntosModal'
+import { AppFooter } from '@/components/layout/AppFooter'
 
 export default function POSView() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -420,6 +421,9 @@ export default function POSView() {
               </div>
             </div>
           </div>
+        </div>
+        <div className="pt-6">
+          <AppFooter isDark={darkMode} variant="default" />
         </div>
       </div>
       </div>
