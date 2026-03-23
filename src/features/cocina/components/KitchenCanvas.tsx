@@ -248,10 +248,14 @@ function EmberParticles() {
 function OrderCard({
   order,
   isNew,
+  compact = false,
+  minHeight,
   onClick,
 }: {
   order: KitchenOrder
   isNew: boolean
+  compact?: boolean
+  minHeight?: number
   onClick?: () => void
 }) {
   const typeColor = getOrderColor(order.tipo)
@@ -262,8 +266,9 @@ function OrderCard({
   return (
     <div
       onClick={onClick}
+      style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
       className={`
-        relative bg-white dark:bg-gray-700/90 rounded-xl shadow-sm border p-3
+        relative h-fit bg-white dark:bg-gray-700/90 rounded-xl shadow-sm border ${compact ? 'p-2.5' : 'p-3'}
         ${isNew ? 'animate-slam-in' : 'animate-fade-in-up'}
         ${isDone ? 'opacity-75 scale-[0.97] border-yellow-200 dark:border-amber-700/50' : 'border-gray-100 dark:border-gray-600'}
         ${isCooking ? 'animate-fire-shimmer' : ''}
@@ -274,9 +279,9 @@ function OrderCard({
       {isCooking && <EmberParticles />}
 
       <div className="flex items-center justify-between mb-1.5 relative z-[1]">
-        <span className="text-sm font-extrabold text-gray-800 dark:text-gray-100">#{order.numero_pedido}</span>
+        <span className={`${compact ? 'text-[13px]' : 'text-sm'} font-extrabold text-gray-800 dark:text-gray-100`}>#{order.numero_pedido}</span>
         <span
-          className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
+          className={`${compact ? 'text-[9px] px-1.5' : 'text-[10px] px-2'} font-bold py-0.5 rounded-full text-white`}
           style={{ backgroundColor: typeColor }}
         >
           {typeLabel}
@@ -284,7 +289,7 @@ function OrderCard({
       </div>
 
       <div className="flex items-center justify-between mb-1.5 relative z-[1]">
-        <span className="text-xs font-bold text-green-600 dark:text-green-400">{formatGs(order.total)}</span>
+        <span className={`${compact ? 'text-[11px]' : 'text-xs'} font-bold text-green-600 dark:text-green-400`}>{formatGs(order.total)}</span>
       </div>
 
       {!isDone && (
@@ -299,10 +304,10 @@ function OrderCard({
             />
           </div>
           <div className="flex items-center justify-between relative z-[1]">
-            <span className="text-[11px] text-gray-400 dark:text-gray-400 font-medium">
+            <span className={`${compact ? 'text-[10px]' : 'text-[11px]'} text-gray-400 dark:text-gray-400 font-medium`}>
               {formatElapsed(order.elapsed)}
             </span>
-            <span className="text-[10px] text-gray-300 dark:text-gray-500">
+            <span className={`${compact ? 'text-[9px]' : 'text-[10px]'} text-gray-300 dark:text-gray-500`}>
               {Math.round(order.progress * 100)}%
             </span>
           </div>
@@ -310,7 +315,7 @@ function OrderCard({
       )}
 
       {isDone && (
-        <div className="text-[11px] text-green-600 dark:text-green-400 font-semibold flex items-center gap-1 relative z-[1]">
+        <div className={`${compact ? 'text-[10px]' : 'text-[11px]'} text-green-600 dark:text-green-400 font-semibold flex items-center gap-1 relative z-[1]`}>
           <span>✅ Listo</span>
           <span className="text-green-500 dark:text-green-400/90">~{formatElapsed(order.elapsed)}</span>
         </div>
@@ -326,6 +331,10 @@ function StageColumn({
   orders,
   hasNewDelivery,
   hasNewOrder,
+  compact = false,
+  minHeight,
+  orderCardMinHeight,
+  targetVisibleCards,
   onConfettiDone,
   onOrderClick,
 }: {
@@ -333,14 +342,30 @@ function StageColumn({
   orders: KitchenOrder[]
   hasNewDelivery: boolean
   hasNewOrder: boolean
+  compact?: boolean
+  minHeight?: number
+  orderCardMinHeight?: number
+  targetVisibleCards?: number
   onConfettiDone: () => void
   onOrderClick?: (order: KitchenOrder) => void
 }) {
   const isCooking = stage === 'cocinando'
   const isDelivered = stage === 'entregado'
+  const effectiveVisibleCards = Math.max(1, Math.min(targetVisibleCards ?? 3, orders.length || 1))
+  const dynamicCardMinHeight = useMemo(() => {
+    if (!minHeight || !orderCardMinHeight) return orderCardMinHeight
+    const chromeReserve = compact ? 98 : 118
+    const available = Math.max(80, minHeight - chromeReserve)
+    const candidate = Math.floor(available / effectiveVisibleCards)
+    const contentBase = compact ? 74 : 88
+    const contentMax = compact ? 112 : 132
+    return Math.max(contentBase, Math.min(candidate, contentMax))
+  }, [compact, effectiveVisibleCards, minHeight, orderCardMinHeight])
+  const shouldForceCardMinHeight = orders.length <= effectiveVisibleCards
 
   return (
     <div
+      style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
       className={`
         relative flex flex-col rounded-2xl bg-gradient-to-b ${STAGE_BG[stage]}
         border overflow-hidden h-full min-h-[300px] min-w-0
@@ -353,14 +378,14 @@ function StageColumn({
 
       {/* Header */}
       <div
-        className="px-4 py-3 flex items-center justify-between border-b dark:border-gray-600"
+        className={`${compact ? 'px-3 py-2' : 'px-4 py-3'} flex items-center justify-between border-b dark:border-gray-600`}
         style={{ borderColor: `${STAGE_COLORS[stage]}25` }}
       >
         <div className="flex items-center gap-2">
-          <span className={`text-xl ${isCooking ? 'animate-pulse-fire' : ''}`}>
+          <span className={`${compact ? 'text-lg' : 'text-xl'} ${isCooking ? 'animate-pulse-fire' : ''}`}>
             {STAGE_EMOJIS[stage]}
           </span>
-          <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
+          <span className={`${compact ? 'text-xs' : 'text-sm'} font-bold text-gray-700 dark:text-gray-200`}>
             {STAGE_LABELS[stage]} · {orders.length} {orders.length === 1 ? 'pedido' : 'pedidos'}
           </span>
         </div>
@@ -373,7 +398,7 @@ function StageColumn({
       </div>
 
       {/* Orders */}
-      <div className="flex-1 p-2.5 space-y-2 overflow-y-auto custom-scrollbar">
+      <div className={`flex-1 ${compact ? 'p-2 space-y-1.5' : 'p-2.5 space-y-2'} overflow-y-auto custom-scrollbar`}>
         {orders.length === 0 && (
           <div className="flex-1 flex items-center justify-center py-8">
             <span className="text-sm text-gray-500 dark:text-gray-300 italic text-center px-2">
@@ -386,17 +411,19 @@ function StageColumn({
             key={order.id}
             order={order}
             isNew={i === 0 && hasNewOrder}
+            compact={compact}
+            minHeight={shouldForceCardMinHeight ? dynamicCardMinHeight : undefined}
             onClick={onOrderClick ? () => onOrderClick(order) : undefined}
           />
         ))}
       </div>
 
       {/* Workers footer */}
-      <div className="px-3 py-2 border-t border-gray-100/60 dark:border-gray-600 flex items-center gap-1">
+      <div className={`${compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} border-t border-gray-100/60 dark:border-gray-600 flex items-center gap-1`}>
         {WORKER_EMOJIS[stage].map((emoji, j) => (
           <span
             key={j}
-            className={`text-lg ${orders.length > 0 ? 'animate-worker-bounce' : ''}`}
+            className={`${compact ? 'text-base' : 'text-lg'} ${orders.length > 0 ? 'animate-worker-bounce' : ''}`}
             style={{ animationDelay: `${j * 0.2}s` }}
           >
             {emoji}
@@ -434,19 +461,28 @@ interface TickerEvent {
 }
 
 function ActivityTicker({ events }: { events: TickerEvent[] }) {
+  const baseEvents = useMemo(() => {
+    if (events.length === 0) return []
+    const minEventsForTrack = 8
+    const desired = Math.max(minEventsForTrack, events.length)
+    return Array.from({ length: desired }, (_, i) => events[i % events.length])
+  }, [events])
+
+  const loopEvents = useMemo(() => [...baseEvents, ...baseEvents], [baseEvents])
+
   return (
-    <div className="w-full overflow-hidden bg-gray-900 rounded-xl h-8 flex items-center relative">
+    <div className="w-full overflow-hidden bg-gradient-to-r from-slate-900 to-gray-900 dark:from-slate-900 dark:to-gray-900 rounded-lg h-8 flex items-center relative border border-slate-700/60 dark:border-gray-800/70">
       {events.length === 0 ? (
         <div className="flex items-center justify-center gap-2 w-full py-1">
-          <span className="text-gray-500 text-xs font-medium">Esperando actividad...</span>
-          <span className="text-gray-600">•</span>
+          <span className="text-slate-400 dark:text-gray-500 text-xs font-medium">Esperando actividad...</span>
+          <span className="text-slate-500 dark:text-gray-600">•</span>
         </div>
       ) : (
         <div
-          className="flex gap-8 whitespace-nowrap animate-ticker"
-          style={{ '--ticker-duration': `${Math.max(events.length * 5, 15)}s` } as React.CSSProperties}
+          className="flex w-max items-center justify-start gap-8 whitespace-nowrap animate-ticker pr-8"
+          style={{ '--ticker-duration': `${Math.max(baseEvents.length * 3.2, 18)}s` } as React.CSSProperties}
         >
-          {[...events, ...events].map((ev, i) => {
+          {loopEvents.map((ev, i) => {
           const isHighScore = ev.total != null && ev.total >= HIGH_SCORE_GS
           const amountText =
             ev.total != null
@@ -470,13 +506,13 @@ function ActivityTicker({ events }: { events: TickerEvent[] }) {
               </span>
               {amountText != null && labelText != null ? (
                 <>
-                  <span className="text-xs font-medium text-gray-400">{labelText}</span>
-                  <span className="text-xs font-bold text-emerald-300 tabular-nums">{amountText}</span>
+                  <span className="text-xs font-medium text-slate-300 dark:text-gray-400">{labelText}</span>
+                  <span className="text-xs font-bold text-emerald-300 dark:text-emerald-300 tabular-nums">{amountText}</span>
                 </>
               ) : (
-                <span className="text-xs font-medium text-gray-300">{ev.text}</span>
+                <span className="text-xs font-medium text-slate-200 dark:text-gray-300">{ev.text}</span>
               )}
-              <span className="text-gray-600">•</span>
+              <span className="text-slate-500 dark:text-gray-600">•</span>
             </span>
           )
         })}
@@ -544,12 +580,28 @@ export default function KitchenCanvas({
   const [isTickerCollapsed, setIsTickerCollapsed] = useState(false)
   const [tabletPage, setTabletPage] = useState(0)
   const tabletPagerRef = useRef<HTMLDivElement>(null)
+  const [viewportHeight, setViewportHeight] = useState(900)
+  const [kpiFlash, setKpiFlash] = useState({
+    pedidos: false,
+    facturado: false,
+    entregados: false,
+    ticket: false,
+  })
+  const prevKpiRef = useRef({
+    pedidos: stats.todayTotal,
+    facturado: stats.todayRevenue,
+    entregados: stats.deliveredCount,
+    ticket: 0,
+  })
+  const isDesktop = !isMobile && !isTablet
 
   useEffect(() => {
     const updateViewportType = () => {
       const width = window.innerWidth
+      const height = window.visualViewport?.height ?? window.innerHeight
       setIsMobile(width < 768)
       setIsTablet(width >= 768 && width < 1024)
+      setViewportHeight(height)
     }
     updateViewportType()
     window.addEventListener('resize', updateViewportType)
@@ -727,6 +779,74 @@ export default function KitchenCanvas({
     return Math.round(stats.todayTotal / hoursElapsed)
   }, [stats.todayTotal])
 
+  const ticketPromedio = useMemo(() => {
+    if (stats.todayTotal <= 0) return 0
+    return Math.round(stats.todayRevenue / stats.todayTotal)
+  }, [stats.todayRevenue, stats.todayTotal])
+
+  useEffect(() => {
+    const next = {
+      pedidos: stats.todayTotal,
+      facturado: stats.todayRevenue,
+      entregados: stats.deliveredCount,
+      ticket: ticketPromedio,
+    }
+    const prev = prevKpiRef.current
+    const pulses = {
+      pedidos: next.pedidos > prev.pedidos,
+      facturado: next.facturado > prev.facturado,
+      entregados: next.entregados > prev.entregados,
+      ticket: next.ticket > prev.ticket,
+    }
+    if (pulses.pedidos || pulses.facturado || pulses.entregados || pulses.ticket) {
+      setKpiFlash(pulses)
+      const t = setTimeout(
+        () => setKpiFlash({ pedidos: false, facturado: false, entregados: false, ticket: false }),
+        520
+      )
+      prevKpiRef.current = next
+      return () => clearTimeout(t)
+    }
+    prevKpiRef.current = next
+  }, [stats.todayTotal, stats.todayRevenue, stats.deliveredCount, ticketPromedio])
+
+  const desktopSizing = useMemo(() => {
+    // Reserva espacio real para: navbar global + paddings + ticker + header interno.
+    // Con esto el kanban siempre entra en viewport y el ticker queda visible.
+    const kanbanHeight = Math.max(260, Math.min(610, Math.round(viewportHeight - 315)))
+    // El grid desktop usa padding vertical (`p-2.5` => 20px totales).
+    // Si el minHeight del stage excede el alto útil interno, se recorta el footer.
+    const stageMinHeight = Math.max(220, kanbanHeight - 20)
+    if (viewportHeight <= 760) {
+      return {
+        compact: true,
+        stageMinHeight,
+        kanbanHeight,
+        orderCardMinHeight: 76,
+        targetVisibleCards: 2,
+        headerPad: 'px-2.5 py-2',
+      }
+    }
+    if (viewportHeight <= 900) {
+      return {
+        compact: true,
+        stageMinHeight,
+        kanbanHeight,
+        orderCardMinHeight: 88,
+        targetVisibleCards: 3,
+        headerPad: 'px-3 py-2',
+      }
+    }
+    return {
+      compact: false,
+      stageMinHeight,
+      kanbanHeight,
+      orderCardMinHeight: 100,
+      targetVisibleCards: 4,
+      headerPad: 'px-3 py-2.5',
+    }
+  }, [viewportHeight])
+
   const groups = useMemo(() => {
     const g: Record<KitchenStage, KitchenOrder[]> = {
       nuevo: [],
@@ -784,26 +904,70 @@ export default function KitchenCanvas({
   return (
     <div className="h-full w-full flex flex-col min-w-0">
       {/* ─── Top Bar: negocio (izq) + energía (der) ─── */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80 flex-wrap gap-2">
+      <div className={`${isDesktop ? `${desktopSizing.headerPad} pr-32 xl:pr-36` : 'px-4 py-3'} border-b border-gray-100 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80`}>
+        {isDesktop && (
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-1.5 mb-2">
+            <div className={`relative overflow-hidden rounded-lg border border-orange-300/70 dark:border-orange-700/50 bg-gradient-to-br from-orange-50 via-orange-100/70 to-amber-50 dark:from-orange-900/30 dark:via-orange-900/20 dark:to-amber-900/20 px-2.5 py-1.5 shadow-[0_0_0_1px_rgba(251,146,60,0.15),0_8px_18px_-12px_rgba(251,146,60,0.65)] ${kpiFlash.pedidos ? 'animate-celebrate' : ''}`}>
+              <div className="absolute right-1.5 top-1 text-sm opacity-80">📋</div>
+              {kpiFlash.pedidos && <div className="absolute inset-0 bg-orange-300/20 animate-pulse pointer-events-none" />}
+              <p className="text-[10px] font-bold tracking-wide text-orange-700 dark:text-orange-300">PEDIDOS DEL DÍA</p>
+              <p className="text-[15px] leading-5 font-black text-orange-800 dark:text-orange-100 tabular-nums">{stats.todayTotal.toLocaleString('es-PY')}</p>
+              <div className="mt-1 h-1 rounded-full bg-orange-200/80 dark:bg-orange-800/60 overflow-hidden">
+                <div className="h-full w-2/3 bg-gradient-to-r from-orange-500 to-amber-400" />
+              </div>
+            </div>
+
+            <div className={`relative overflow-hidden rounded-lg border border-emerald-300/70 dark:border-emerald-700/50 bg-gradient-to-br from-emerald-50 via-emerald-100/70 to-green-50 dark:from-emerald-900/30 dark:via-emerald-900/20 dark:to-green-900/20 px-2.5 py-1.5 shadow-[0_0_0_1px_rgba(16,185,129,0.15),0_8px_18px_-12px_rgba(16,185,129,0.65)] ${kpiFlash.facturado ? 'animate-celebrate' : ''}`}>
+              <div className="absolute right-1.5 top-1 text-sm opacity-80">💰</div>
+              {kpiFlash.facturado && <div className="absolute inset-0 bg-emerald-300/20 animate-pulse pointer-events-none" />}
+              <p className="text-[10px] font-bold tracking-wide text-emerald-700 dark:text-emerald-300">FACTURADO</p>
+              <p className="text-[15px] leading-5 font-black text-emerald-800 dark:text-emerald-100 tabular-nums">{formatGs(stats.todayRevenue)}</p>
+              <div className="mt-1 h-1 rounded-full bg-emerald-200/80 dark:bg-emerald-800/60 overflow-hidden">
+                <div className="h-full w-4/5 bg-gradient-to-r from-emerald-500 to-lime-400" />
+              </div>
+            </div>
+
+            <div className={`relative overflow-hidden rounded-lg border border-yellow-300/70 dark:border-yellow-700/50 bg-gradient-to-br from-yellow-50 via-yellow-100/70 to-amber-50 dark:from-yellow-900/30 dark:via-yellow-900/20 dark:to-amber-900/20 px-2.5 py-1.5 shadow-[0_0_0_1px_rgba(245,158,11,0.15),0_8px_18px_-12px_rgba(245,158,11,0.65)] ${kpiFlash.entregados ? 'animate-celebrate' : ''}`}>
+              <div className="absolute right-1.5 top-1 text-sm opacity-80">✅</div>
+              {kpiFlash.entregados && <div className="absolute inset-0 bg-yellow-300/20 animate-pulse pointer-events-none" />}
+              <p className="text-[10px] font-bold tracking-wide text-yellow-700 dark:text-yellow-300">ENTREGADOS</p>
+              <p className="text-[15px] leading-5 font-black text-yellow-800 dark:text-yellow-100 tabular-nums">{stats.deliveredCount.toLocaleString('es-PY')}</p>
+              <div className="mt-1 h-1 rounded-full bg-yellow-200/80 dark:bg-yellow-800/60 overflow-hidden">
+                <div className="h-full w-3/4 bg-gradient-to-r from-yellow-500 to-orange-400" />
+              </div>
+            </div>
+
+            <div className={`relative overflow-hidden rounded-lg border border-violet-300/70 dark:border-violet-700/50 bg-gradient-to-br from-violet-50 via-violet-100/70 to-fuchsia-50 dark:from-violet-900/30 dark:via-violet-900/20 dark:to-fuchsia-900/20 px-2.5 py-1.5 shadow-[0_0_0_1px_rgba(139,92,246,0.15),0_8px_18px_-12px_rgba(139,92,246,0.65)] ${kpiFlash.ticket ? 'animate-celebrate' : ''}`}>
+              <div className="absolute right-1.5 top-1 text-sm opacity-80">🧾</div>
+              {kpiFlash.ticket && <div className="absolute inset-0 bg-violet-300/20 animate-pulse pointer-events-none" />}
+              <p className="text-[10px] font-bold tracking-wide text-violet-700 dark:text-violet-300">TICKET PROM.</p>
+              <p className="text-[15px] leading-5 font-black text-violet-800 dark:text-violet-100 tabular-nums">{formatGs(ticketPromedio)}</p>
+              <div className="mt-1 h-1 rounded-full bg-violet-200/80 dark:bg-violet-800/60 overflow-hidden">
+                <div className="h-full w-3/5 bg-gradient-to-r from-violet-500 to-fuchsia-400" />
+              </div>
+            </div>
+          </div>
+        )}
+        <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="text-lg">🔥</span>
+            <span className={isDesktop ? 'text-base' : 'text-lg'}>🔥</span>
             <div className="flex flex-col">
               <span className="text-[10px] text-gray-400 dark:text-gray-400 font-semibold uppercase tracking-wider">En cocina</span>
-              <span className="text-lg font-black text-gray-900 dark:text-gray-100 tabular-nums">{stats.activeCount}</span>
+              <span className={`${isDesktop ? 'text-base' : 'text-lg'} font-black text-gray-900 dark:text-gray-100 tabular-nums`}>{stats.activeCount}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xl">⚡</span>
+            <span className={isDesktop ? 'text-lg' : 'text-xl'}>⚡</span>
             <div className="flex flex-col">
               <span className="text-[10px] text-gray-400 dark:text-gray-400 font-semibold uppercase tracking-wider">Ritmo (ped/h)</span>
-              <span className="text-lg font-black text-gray-900 dark:text-gray-100 tabular-nums">{pedidosHora}</span>
+              <span className={`${isDesktop ? 'text-base' : 'text-lg'} font-black text-gray-900 dark:text-gray-100 tabular-nums`}>{pedidosHora}</span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className={`flex items-center ${isDesktop ? 'gap-2' : 'gap-3'} flex-wrap`}>
           {bestDailyOrders > 0 && stats.todayTotal < bestDailyOrders && (
-            <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+            <span className={`${isDesktop ? 'text-[10px]' : 'text-[11px]'} font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap`}>
               A {bestDailyOrders - stats.todayTotal} de tu récord
             </span>
           )}
@@ -811,10 +975,11 @@ export default function KitchenCanvas({
             <ComboBadge streak={streak} lastOrderTime={lastOrderTime.current} />
           )}
         </div>
+        </div>
       </div>
 
       {/* ─── Contenido: kanban + ticker ─── */}
-      <div className="flex-1 min-h-0 min-w-0 w-full flex flex-col">
+      <div className="flex-1 min-h-0 min-w-0 w-full flex flex-col relative">
         {isMobile && (
           <div className="px-2.5 pb-2 sticky top-0 z-10">
             <div className="rounded-2xl border border-gray-100 dark:border-gray-600 bg-white/90 dark:bg-gray-800/90 p-1.5 backdrop-blur overflow-hidden">
@@ -882,7 +1047,7 @@ export default function KitchenCanvas({
         )}
 
         {record && (
-          <div className="px-4 pt-2 flex-shrink-0">
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none w-full max-w-[720px] px-3">
             <RecordBanner text={record} />
           </div>
         )}
@@ -937,7 +1102,10 @@ export default function KitchenCanvas({
             </div>
           </div>
         ) : (
-          <div className="flex-1 w-full min-w-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 lg:[grid-template-columns:repeat(4,minmax(0,1fr))] gap-3 p-3 overflow-x-auto overflow-y-hidden min-h-0">
+          <div
+            className="w-full min-w-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 lg:[grid-template-columns:repeat(4,minmax(0,1fr))] gap-2.5 p-2.5 overflow-x-auto overflow-y-hidden min-h-0 flex-none"
+            style={{ height: `${desktopSizing.kanbanHeight}px` }}
+          >
             {KITCHEN_STAGES.map((stage) => (
               <StageColumn
                 key={stage}
@@ -945,6 +1113,10 @@ export default function KitchenCanvas({
                 orders={filteredGroups[stage]}
                 hasNewDelivery={hasNewDeliveryInStage(stage)}
                 hasNewOrder={newOrderStages.has(stage)}
+                compact={desktopSizing.compact}
+                minHeight={desktopSizing.stageMinHeight}
+                orderCardMinHeight={desktopSizing.orderCardMinHeight}
+                targetVisibleCards={desktopSizing.targetVisibleCards}
                 onConfettiDone={() => handleConfettiDone(stage)}
                 onOrderClick={onOrderClick}
               />
@@ -963,7 +1135,7 @@ export default function KitchenCanvas({
             {!isTickerCollapsed && <ActivityTicker events={tickerEvents} />}
           </div>
         ) : (
-          <div className="px-3 pb-3 flex-shrink-0">
+          <div className="px-2.5 pb-0.5 pt-0 mt-1 flex-shrink-0">
             <ActivityTicker events={tickerEvents} />
           </div>
         )}

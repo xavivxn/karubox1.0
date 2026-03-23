@@ -95,9 +95,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
   // Ocultar navbar en rutas de autenticación
   const hideNavbar = NAV_EXCLUDED_PATHS.includes(pathname)
 
-  // POS necesita scroll interno para que `position: sticky` funcione en el contenedor correcto.
+  // POS y Cocina usan layout de altura bloqueada para priorizar workspace interno.
   // No aplicamos esto al resto de la app para no afectar el scrollbar global.
   const isPosPage = pathname.startsWith('/home/pos')
+  const isKitchenPage = pathname.startsWith('/home/admin/cocina')
+  const isWorkspacePage = isPosPage || isKitchenPage
   
   const pageInfo =
     PAGE_MAP.find((entry) => entry.test(pathname))?.info ??
@@ -112,6 +114,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
           ? 'min-h-[100dvh] min-h-screen overflow-y-auto'
           : isPosPage
             ? 'h-screen min-h-0 overflow-hidden'
+            : isKitchenPage
+              ? 'min-h-screen lg:h-screen lg:min-h-0 lg:overflow-hidden'
             : 'min-h-screen'
       } ${
         hideNavbar
@@ -127,8 +131,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <InactiveTenantOverlay />
       <main
         className={`flex flex-col ${isLoginPage ? '' : 'flex-1 min-h-0 min-w-0'} ${
-          pageInfo.fullWidth ? (isPosPage ? 'py-0' : 'py-4') : 'px-4 py-6'
-        } ${!isLoginPage && isPosPage ? 'overflow-hidden' : ''}`}
+          pageInfo.fullWidth ? ((isPosPage || isKitchenPage) ? 'py-0' : 'py-4') : 'px-4 py-6'
+        } ${!isLoginPage && isPosPage ? 'overflow-hidden' : ''} ${!isLoginPage && isKitchenPage ? 'lg:overflow-hidden' : ''}`}
         style={isLoginPage ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}
       >
         {pageInfo.fullWidth ? (
@@ -137,7 +141,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <div className="w-full min-w-0 max-w-7xl mx-auto space-y-10 overflow-x-hidden">{children}</div>
         )}
       </main>
-      {!isPosPage && (
+      {!isWorkspacePage && (
         <AppFooter
           isDark={hideNavbar || darkMode}
           variant={isLoginPage ? 'login' : 'default'}

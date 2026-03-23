@@ -24,7 +24,7 @@ function AchievementToastItem({ achievement, onDismiss }: AchievementToastProps)
       animate={{ x: 0, opacity: 1, rotate: 0, scale: 1 }}
       exit={{ x: 420, opacity: 0, scale: 0.88, transition: { duration: 0.22, ease: 'easeIn' } }}
       transition={{ type: 'spring', bounce: 0.45, duration: 0.52 }}
-      className="relative overflow-hidden rounded-2xl shadow-2xl border-2 px-5 py-4 flex items-center gap-4 min-w-[320px] max-w-[400px] bg-white backdrop-blur-sm cursor-pointer"
+      className="relative overflow-hidden rounded-2xl shadow-2xl border-2 px-5 py-4 flex items-center gap-4 min-w-[320px] max-w-[400px] bg-white dark:bg-gray-900/95 backdrop-blur-sm cursor-pointer"
       style={{
         borderColor: tierColor,
         boxShadow: `0 0 24px ${tierColor}50, 0 6px 24px rgba(0,0,0,0.15)`,
@@ -65,14 +65,14 @@ function AchievementToastItem({ achievement, onDismiss }: AchievementToastProps)
           <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: tierColor }}>
             {TIER_LABELS[achievement.tier]}
           </span>
-          <span className="text-[10px] text-gray-300">
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">
             {achievement.type === 'daily' ? '• Diario' : '• Global'}
           </span>
         </div>
-        <p className="text-sm font-black text-gray-900 truncate">
+        <p className="text-sm font-black text-gray-900 dark:text-gray-100 truncate">
           {achievement.name}
         </p>
-        <p className="text-xs text-gray-500 truncate">
+        <p className="text-xs text-gray-500 dark:text-gray-300 truncate">
           {achievement.description}
         </p>
       </motion.div>
@@ -80,7 +80,7 @@ function AchievementToastItem({ achievement, onDismiss }: AchievementToastProps)
       {/* Close button */}
       <button
         onClick={(e) => { e.stopPropagation(); onDismiss(achievement.id) }}
-        className="relative z-[1] text-gray-300 hover:text-gray-500 transition-colors text-lg"
+        className="relative z-[1] text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-lg"
       >
         ×
       </button>

@@ -340,6 +340,7 @@ export default function CocinaVirtualView() {
   }, [stats.todayRevenue, stats.todayTotal])
 
   const isLoading = loadingCaja || initialLoad
+  const isDesktopViewport = !isCompactViewport
 
   if (isLoading) {
     return <CocinaSkeleton />
@@ -347,18 +348,20 @@ export default function CocinaVirtualView() {
 
   return (
     <div
-      className="flex flex-col gap-4 text-gray-900 dark:text-gray-100 px-3 sm:px-4 animate-in fade-in duration-500 fill-mode-forwards"
+      className={`flex flex-col gap-3 text-gray-900 dark:text-gray-100 px-2.5 sm:px-3 lg:px-2.5 animate-in fade-in duration-500 fill-mode-forwards ${isDesktopViewport ? 'h-full min-h-0 overflow-hidden' : ''}`}
       style={{
-        minHeight: 'calc(var(--cocina-vh, 1vh) * 100)',
+        minHeight: isDesktopViewport ? undefined : 'calc(var(--cocina-vh, 1vh) * 100)',
+        height: isDesktopViewport ? '100%' : undefined,
         paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))',
         paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
         paddingLeft: 'calc(0.75rem + env(safe-area-inset-left, 0px))',
         paddingRight: 'calc(0.75rem + env(safe-area-inset-right, 0px))',
       }}
     >
-      {/* Stats bar — aparece primero */}
-      <div className="animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-forwards" style={{ animationDelay: '0ms' }}>
-        {isMobileViewport ? (
+      {/* Stats bar (solo mobile/tablet compact) */}
+      {(isMobileViewport || isCompactViewport) && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-forwards" style={{ animationDelay: '0ms' }}>
+          {isMobileViewport ? (
           <div className="rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 p-3 space-y-2.5">
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800/40 px-2.5 py-2">
@@ -393,52 +396,8 @@ export default function CocinaVirtualView() {
               </div>
             )}
           </div>
-        ) : isCompactViewport ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            <StatCard
-              icon="📋"
-              label="Pedidos del día"
-              value={stats.todayTotal}
-              accent="#FF6B35"
-            />
-            <StatCard
-              icon="💰"
-              label="Facturado hoy"
-              value={stats.todayRevenue}
-              accent="#4CAF50"
-              isGs
-            />
-            <StatCard
-              icon="✅"
-              label="Entregados"
-              value={stats.deliveredCount}
-              accent="#FFD700"
-              celebrate
-            />
-            <StatCard
-              icon="🧾"
-              label="Ticket promedio"
-              value={ticketPromedio}
-              accent="#9B59B6"
-              isGs
-            />
-            <div className="rounded-2xl border border-amber-200 dark:border-amber-700/60 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/60 dark:to-yellow-950/40 px-4 py-3 flex items-center">
-              {store?.lifetimeStats?.bestDailyOrders != null &&
-              store.lifetimeStats.bestDailyOrders > 0 &&
-              stats.todayTotal < store.lifetimeStats.bestDailyOrders ? (
-                <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                  A {store.lifetimeStats.bestDailyOrders - stats.todayTotal} de tu récord
-                </span>
-              ) : (
-                <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                  Rendimiento estable
-                </span>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-start gap-3">
-            <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-3">
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <StatCard
                 icon="📋"
                 label="Pedidos del día"
@@ -466,121 +425,101 @@ export default function CocinaVirtualView() {
                 accent="#9B59B6"
                 isGs
               />
-            </div>
-
-            {!isCompactViewport && (
-              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+              <div className="rounded-2xl border border-amber-200 dark:border-amber-700/60 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/60 dark:to-yellow-950/40 px-4 py-3 flex items-center">
                 {store?.lifetimeStats?.bestDailyOrders != null &&
-                store.lifetimeStats.bestDailyOrders > 0 ? (
-                  stats.todayTotal < store.lifetimeStats.bestDailyOrders ? (
-                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
-                      A {store.lifetimeStats.bestDailyOrders - stats.todayTotal} de tu récord
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                      Récord igualado o superado
-                    </span>
-                  )
+                store.lifetimeStats.bestDailyOrders > 0 &&
+                stats.todayTotal < store.lifetimeStats.bestDailyOrders ? (
+                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                    A {store.lifetimeStats.bestDailyOrders - stats.todayTotal} de tu récord
+                  </span>
                 ) : (
-                  <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
-                    Sin récord previo registrado
+                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                    Rendimiento estable
                   </span>
                 )}
-                <button
-                  onClick={() => setPanelOpen(true)}
-                  className="min-w-[110px] flex-shrink-0 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/60 dark:to-yellow-950/40 border-2 border-amber-200 dark:border-amber-700/60 rounded-2xl px-4 py-3 flex flex-col items-center gap-1.5 hover:shadow-lg dark:hover:shadow-amber-500/10 hover:border-amber-300 dark:hover:border-amber-600 transition-all group"
-                >
-                  <span className="text-2xl group-hover:animate-celebrate">🏆</span>
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
-                    {totalUnlocked}/{totalAchievements}
-                  </span>
-                  {dailyProgress > 0 && (
-                    <div className="w-12 h-1 bg-amber-100 dark:bg-amber-900/50 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${(dailyProgress / dailyTotal) * 100}%`,
-                          background: 'linear-gradient(90deg, #F59E0B, #FFD700)',
-                        }}
-                      />
-                    </div>
-                  )}
-                  <span className="text-[10px] font-semibold text-amber-700/90 dark:text-amber-300/90">
-                    Ver logros
-                  </span>
-                </button>
               </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Stage badges / resumen por etapa */}
-      {!isMobileViewport && (
-        isCompactViewport ? (
-          <div
-            className="rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 px-3 py-2.5 animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-forwards"
-            style={{ animationDelay: '80ms' }}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-gray-600 dark:text-gray-200">Pedidos por etapa</span>
-              <button
-                onClick={() => setShowTabletStageSummary((prev) => !prev)}
-                className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/70 text-gray-600 dark:text-gray-200"
-              >
-                {showTabletStageSummary ? 'Ver menos' : 'Ver todas'}
-              </button>
             </div>
+          )}
+        </div>
+      )}
 
-            {!showTabletStageSummary && (
-              <div className="mt-2 flex items-center gap-2 overflow-x-auto custom-scrollbar">
-                {stageCounts.slice(0, 3).map(({ stage, count }) => (
-                  <div
-                    key={stage}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 whitespace-nowrap border border-gray-200 dark:border-gray-600"
-                  >
-                    <span style={{ color: STAGE_COLORS[stage] }}>{STAGE_EMOJIS[stage]}</span>
-                    <span>{STAGE_LABELS[stage]}</span>
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-gray-200 dark:bg-gray-700">{count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+      {/* Stage badges / resumen por etapa (solo tablet compact) */}
+      {!isMobileViewport && isCompactViewport && (
+        <div
+          className="rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 px-3 py-2.5 animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-forwards"
+          style={{ animationDelay: '80ms' }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-gray-600 dark:text-gray-200">Pedidos por etapa</span>
+            <button
+              onClick={() => setShowTabletStageSummary((prev) => !prev)}
+              className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/70 text-gray-600 dark:text-gray-200"
+            >
+              {showTabletStageSummary ? 'Ver menos' : 'Ver todas'}
+            </button>
+          </div>
 
-            {showTabletStageSummary && (
-              <div className="mt-2 flex gap-2 flex-wrap">
-                {stageCounts.map(({ stage, count }) => (
-                  <div
-                    key={stage}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600"
-                  >
-                    <span style={{ color: STAGE_COLORS[stage] }}>{STAGE_EMOJIS[stage]}</span>
-                    <span>{STAGE_LABELS[stage]}</span>
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-gray-200 dark:bg-gray-700">{count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex gap-2 flex-wrap animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-forwards" style={{ animationDelay: '80ms' }}>
-            {stageCounts.map(({ stage, count }) => (
-              <div
-                key={stage}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-sm dark:shadow-black/30"
-                style={{ backgroundColor: STAGE_COLORS[stage] }}
-              >
-                <span>{STAGE_EMOJIS[stage]}</span>
-                <span>{STAGE_LABELS[stage]}</span>
-                <span className="bg-white/25 dark:bg-black/20 px-1.5 py-0.5 rounded-full text-[10px]">{count}</span>
-              </div>
-            ))}
-          </div>
-        )
+          {!showTabletStageSummary && (
+            <div className="mt-2 flex items-center gap-2 overflow-x-auto custom-scrollbar">
+              {stageCounts.slice(0, 3).map(({ stage, count }) => (
+                <div
+                  key={stage}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 whitespace-nowrap border border-gray-200 dark:border-gray-600"
+                >
+                  <span style={{ color: STAGE_COLORS[stage] }}>{STAGE_EMOJIS[stage]}</span>
+                  <span>{STAGE_LABELS[stage]}</span>
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-gray-200 dark:bg-gray-700">{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showTabletStageSummary && (
+            <div className="mt-2 flex gap-2 flex-wrap">
+              {stageCounts.map(({ stage, count }) => (
+                <div
+                  key={stage}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600"
+                >
+                  <span style={{ color: STAGE_COLORS[stage] }}>{STAGE_EMOJIS[stage]}</span>
+                  <span>{STAGE_LABELS[stage]}</span>
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-gray-200 dark:bg-gray-700">{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Kitchen panel — aparición escalonada */}
       <div className="flex-1 rounded-2xl overflow-hidden shadow-lg dark:shadow-black/30 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 relative animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-forwards" style={{ animationDelay: '160ms' }}>
+        {!isCompactViewport && (
+          <button
+            onClick={() => setPanelOpen(true)}
+            className="absolute top-3 right-3 z-20 w-[96px] bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/60 dark:to-yellow-950/40 border border-amber-200 dark:border-amber-700/60 rounded-xl px-2.5 py-2.5 flex flex-col items-center gap-1.5 hover:shadow-lg dark:hover:shadow-amber-500/10 hover:border-amber-300 dark:hover:border-amber-600 transition-all group backdrop-blur-sm"
+            title="Ver logros"
+            aria-label="Ver logros"
+          >
+            <span className="text-xl leading-none group-hover:animate-celebrate">🏆</span>
+            <span className="text-[10px] font-semibold text-amber-700/90 dark:text-amber-300/90 leading-none">
+              Logros
+            </span>
+            <span className="text-[11px] font-extrabold text-amber-700 dark:text-amber-300 tabular-nums leading-none">
+              {totalUnlocked}/{totalAchievements}
+            </span>
+            {dailyProgress > 0 && (
+              <div className="w-full h-1 bg-amber-100 dark:bg-amber-900/50 rounded-full overflow-hidden mt-0.5">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${(dailyProgress / dailyTotal) * 100}%`,
+                    background: 'linear-gradient(90deg, #F59E0B, #FFD700)',
+                  }}
+                />
+              </div>
+            )}
+          </button>
+        )}
         <KitchenCanvas
           orders={orders}
           stats={stats}
