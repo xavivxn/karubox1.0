@@ -98,8 +98,12 @@ function HoloCard({ achievement }: { achievement: Achievement }) {
         rotateX,
         rotateY,
         transformPerspective: 900,
-        width: 280,
-        height: 380,
+        // Ajuste responsivo: en mobile reduce el alto para que no tape el contenido.
+        width: 'clamp(170px, 28vw, 240px)',
+        // Mantener la relación rectangular sin depender de `vh` (evita que se dispare en notebooks).
+        aspectRatio: '280 / 380',
+        // Limita por altura disponible para que no aparezca scrollbar en desktop/notebooks.
+        maxHeight: 'calc(100dvh - 280px)',
         border: '2px solid transparent',
         background: 'linear-gradient(#0f0c24, #0f0c24) padding-box, linear-gradient(135deg, #f43f5e, #a855f7, #3b82f6, #06b6d4, #10b981, #f59e0b, #f43f5e) border-box',
       }}
@@ -150,7 +154,7 @@ function HoloCard({ achievement }: { achievement: Achievement }) {
       ))}
 
       {/* Card content */}
-      <div className="relative z-[1] h-full flex flex-col items-center justify-center p-8 gap-4">
+      <div className="relative z-[1] h-full flex flex-col items-center justify-center p-4 sm:p-5 gap-2 sm:gap-2.5">
         {/* Tier badge */}
         <span
           className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full"
@@ -166,7 +170,7 @@ function HoloCard({ achievement }: { achievement: Achievement }) {
         <motion.div
           animate={{ y: [0, -6, 0] }}
           transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-          className="text-7xl"
+          className="text-5xl sm:text-6xl md:text-6xl"
           style={{ filter: 'drop-shadow(0 0 16px rgba(167,139,250,0.9))' }}
         >
           {achievement.emoji}
@@ -174,14 +178,14 @@ function HoloCard({ achievement }: { achievement: Achievement }) {
 
         {/* Name */}
         <h2
-          className="text-2xl font-black text-center text-white leading-tight"
+          className="text-lg sm:text-xl md:text-2xl font-black text-center text-white leading-tight"
           style={{ textShadow: '0 0 20px rgba(167,139,250,0.8)' }}
         >
           {achievement.name}
         </h2>
 
         {/* Description */}
-        <p className="text-sm text-purple-200 text-center leading-snug opacity-90">
+        <p className="text-xs sm:text-sm text-purple-200 text-center leading-snug opacity-90">
           {achievement.description}
         </p>
 
@@ -224,7 +228,7 @@ function CopyButton({ achievement, tenantNombre }: { achievement: Achievement; t
       onClick={handleCopy}
       whileTap={{ scale: 0.95 }}
       whileHover={{ scale: 1.03 }}
-      className="relative overflow-hidden rounded-2xl px-7 py-3.5 font-black text-white text-sm flex items-center gap-2 shadow-xl"
+      className="relative overflow-hidden rounded-2xl px-2.5 sm:px-4 py-2 sm:py-2.5 font-black text-white text-[11px] sm:text-xs flex items-center justify-center gap-2 shadow-xl w-[min(270px,85vw)] text-center"
       style={{
         background: copied
           ? 'linear-gradient(135deg, #10b981, #059669)'
@@ -262,8 +266,14 @@ export default function DiamondTrophyShowcase({
       {achievement && (
         <motion.div
           key="showcase"
-          className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-8 overflow-hidden"
-          style={{ background: 'radial-gradient(ellipse at 50% 30%, #1e0a3c 0%, #0a0618 50%, #000 100%)' }}
+          className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-3 sm:gap-5 overflow-y-auto overflow-x-hidden"
+          style={{
+            background: 'radial-gradient(ellipse at 50% 30%, #1e0a3c 0%, #0a0618 50%, #000 100%)',
+            paddingTop: 'env(safe-area-inset-top, 0px)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            paddingLeft: 'env(safe-area-inset-left, 0px)',
+            paddingRight: 'env(safe-area-inset-right, 0px)',
+          }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -285,15 +295,15 @@ export default function DiamondTrophyShowcase({
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.55, type: 'spring', bounce: 0.3 }}
-            className="relative z-10 text-center px-6 space-y-2"
+            className="relative z-10 text-center px-4 sm:px-6 space-y-1 sm:space-y-1.5"
           >
             <p
-              className="text-2xl font-black text-white"
+              className="text-lg sm:text-xl md:text-2xl font-black text-white"
               style={{ textShadow: '0 0 24px rgba(167,139,250,0.7)' }}
             >
               ¡Sos una leyenda, {tenantNombre}! 🏆
             </p>
-            <p className="text-sm text-purple-300 max-w-xs mx-auto leading-relaxed">
+            <p className="text-xs sm:text-sm text-purple-300 max-w-[280px] sm:max-w-xs mx-auto leading-relaxed">
               Karúbox te felicita. Este logro es tuyo.
               <br />
               Presumilo en tus redes y que todos lo vean. 💪
@@ -305,20 +315,26 @@ export default function DiamondTrophyShowcase({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.75, type: 'spring', bounce: 0.3 }}
-            className="relative z-10 flex flex-col items-center gap-3"
+            className="relative z-10 flex flex-col items-center gap-1 sm:gap-1.5"
           >
             <CopyButton achievement={achievement} tenantNombre={tenantNombre} />
 
             <button
               onClick={onClose}
-              className="text-sm text-purple-400 hover:text-purple-200 transition-colors font-medium"
+              className="text-[11px] sm:text-sm text-purple-400 hover:text-purple-200 transition-colors font-medium"
             >
               × Cerrar
             </button>
           </motion.div>
 
           {/* Corner tag */}
-          <div className="absolute bottom-4 right-5 z-10 opacity-30">
+          <div
+            className="fixed z-10 opacity-30"
+            style={{
+              bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
+              right: 'calc(1.25rem + env(safe-area-inset-right, 0px))',
+            }}
+          >
             <span className="text-[10px] font-black tracking-widest text-purple-400 uppercase">
               Karúbox © Cocina en Vivo
             </span>

@@ -408,8 +408,8 @@ export default function POSView() {
           </div>
 
           <div id={CART_SECTION_ID} className="lg:col-span-1 scroll-mt-4">
-            <div className="sticky top-6">
-              <div style={{ maxHeight: 'calc(100vh - 200px)' }}>
+            <div className="lg:sticky lg:top-6">
+              <div className="max-h-none lg:max-h-[calc(100dvh-200px)]">
                 <Cart
                   onOpenClientModal={() => setIsClientModalOpen(true)}
                   onConfirmOrder={onConfirmOrder}

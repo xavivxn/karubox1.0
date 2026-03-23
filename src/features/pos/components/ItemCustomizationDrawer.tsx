@@ -31,6 +31,17 @@ function useIngredientEditor(
   const [catalogLoading, setCatalogLoading] = useState(false)
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [notes, setNotes] = useState('')
+  const recipeSlugs = useMemo(() => new Set(baseRecipe.map((ing) => ing.slug)), [baseRecipe])
+
+  const addableIngredients = useMemo(
+    () =>
+      catalog.filter(
+        (ingredient) =>
+          Boolean(ingredient.permite_extra_en_carrito) &&
+          !recipeSlugs.has(ingredient.slug)
+      ),
+    [catalog, recipeSlugs]
+  )
 
   // Cargar catálogo de ingredientes
   useEffect(() => {
@@ -61,7 +72,7 @@ function useIngredientEditor(
 
   // Inicializar cantidades desde customización existente
   useEffect(() => {
-    if (!isActive || baseRecipe.length === 0) return
+    if (!isActive) return
     const cust = existingCustomization
     const next: Record<string, number> = {}
     baseRecipe.forEach((ing) => {
@@ -71,9 +82,13 @@ function useIngredientEditor(
       const extraUnits = extra ? extra.quantityPerItem : 0
       next[ing.slug] = Math.min(MAX_QUANTITY, 1 + extraUnits)
     })
+    addableIngredients.forEach((ing) => {
+      const extra = cust?.extras.find((e) => e.slug === ing.slug)
+      next[ing.slug] = Math.min(MAX_QUANTITY, extra?.quantityPerItem ?? 0)
+    })
     setQuantities(next)
     setNotes(cust?.notes ?? '')
-  }, [isActive, existingCustomization, baseRecipe])
+  }, [isActive, existingCustomization, baseRecipe, addableIngredients])
 
   const priceBySlug = useMemo(() => {
     const map: Record<string, number> = {}
@@ -89,8 +104,14 @@ function useIngredientEditor(
         sum += (qty - 1) * (priceBySlug[ing.slug] ?? 0)
       }
     })
+    addableIngredients.forEach((ing) => {
+      const qty = quantities[ing.slug] ?? 0
+      if (qty > 0) {
+        sum += qty * (priceBySlug[ing.slug] ?? 0)
+      }
+    })
     return sum
-  }, [baseRecipe, quantities, priceBySlug])
+  }, [baseRecipe, addableIngredients, quantities, priceBySlug])
 
   const changeQuantity = useCallback((slug: string, delta: number) => {
     setQuantities((prev) => {
@@ -100,11 +121,12 @@ function useIngredientEditor(
   }, [])
 
   const buildCustomization = useCallback((): { customization: CartItemCustomization | null; extraCost: number } => {
+    const addableBySlug = new Map(addableIngredients.map((ing) => [ing.slug, ing]))
     const removedIngredients = baseRecipe
       .filter((ing) => (quantities[ing.slug] ?? 1) === 0)
       .map((ing) => ({ slug: ing.slug, label: ing.label }))
 
-    const extras = baseRecipe
+    const baseExtras = baseRecipe
       .filter((ing) => (quantities[ing.slug] ?? 1) > 1)
       .map((ing) => {
         const qty = quantities[ing.slug] ?? 1
@@ -115,9 +137,33 @@ function useIngredientEditor(
         }
       })
 
+    const addableExtras = addableIngredients
+      .filter((ing) => (quantities[ing.slug] ?? 0) > 0)
+      .map((ing) => ({
+        ingredienteId: ing.id,
+        slug: ing.slug,
+        label: ing.nombre,
+        unit: ing.unidad,
+        quantityPerItem: quantities[ing.slug] ?? 0,
+        unitPrice: priceBySlug[ing.slug] ?? 0
+      }))
+
+    const extras = [...baseExtras, ...addableExtras]
+
     const resolvedRecipe: IngredientRequirement[] = baseRecipe
       .filter((ing) => (quantities[ing.slug] ?? 1) > 0)
       .map((ing) => ({ ...ing, quantityPerItem: ing.quantityPerItem * (quantities[ing.slug] ?? 1) }))
+      .concat(
+        extras
+          .filter((extra) => addableBySlug.has(extra.slug))
+          .map((extra) => ({
+            ingredienteId: extra.ingredienteId,
+            slug: extra.slug,
+            label: extra.label,
+            unit: extra.unit,
+            quantityPerItem: extra.quantityPerItem
+          }))
+      )
 
     const hasChanges = removedIngredients.length > 0 || extras.length > 0 || notes.trim().length > 0
     if (!hasChanges) return { customization: null, extraCost: 0 }
@@ -126,7 +172,7 @@ function useIngredientEditor(
       customization: { removedIngredients, extras, resolvedRecipe, notes: notes.trim() || undefined },
       extraCost: extraCostPerUnit
     }
-  }, [baseRecipe, quantities, priceBySlug, notes, extraCostPerUnit])
+  }, [baseRecipe, addableIngredients, quantities, priceBySlug, notes, extraCostPerUnit])
 
   const reset = useCallback(() => {
     setQuantities({})
@@ -135,7 +181,7 @@ function useIngredientEditor(
   }, [])
 
   return {
-    baseRecipe, recipeLoading, catalogLoading, quantities, notes, setNotes,
+    baseRecipe, addableIngredients, recipeLoading, catalogLoading, quantities, notes, setNotes,
     priceBySlug, extraCostPerUnit, changeQuantity, buildCustomization, reset,
     isReady: !recipeLoading && !catalogLoading
   }
@@ -144,10 +190,11 @@ function useIngredientEditor(
 // ─── UI de ingredientes reutilizable ────────────────────────────────────────
 
 function IngredientEditorUI({
-  baseRecipe, recipeLoading, quantities, priceBySlug, changeQuantity,
+  baseRecipe, addableIngredients, recipeLoading, quantities, priceBySlug, changeQuantity,
   notes, setNotes, darkMode
 }: {
   baseRecipe: IngredientRequirement[]
+  addableIngredients: IngredientDefinition[]
   recipeLoading: boolean
   quantities: Record<string, number>
   priceBySlug: Record<string, number>
@@ -167,7 +214,7 @@ function IngredientEditorUI({
             <Loader2 className="w-5 h-5 animate-spin" /> Cargando...
           </div>
         ) : baseRecipe.length === 0 ? (
-          <p className="text-sm text-gray-500 py-2">Este producto no tiene receta.</p>
+          <p className="text-sm text-gray-500 py-2">Este producto no tiene receta base.</p>
         ) : (
           <div className="space-y-2">
             {baseRecipe.map((ing) => {
@@ -215,6 +262,75 @@ function IngredientEditorUI({
                       disabled={qty >= MAX_QUANTITY}
                       className="p-2.5 rounded-xl border-2 border-orange-500 bg-orange-500 text-white disabled:opacity-40 disabled:bg-gray-400 disabled:border-gray-400"
                       aria-label="Sumar una"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                  {extraCost > 0 && (
+                    <p className="text-xs font-semibold text-orange-500 shrink-0">
+                      +{formatGuaranies(extraCost)}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-2">
+          Extras agregables
+        </p>
+        {addableIngredients.length === 0 ? (
+          <p className="text-sm text-gray-500 py-2">
+            No hay materias primas habilitadas como extra.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {addableIngredients.map((ing) => {
+              const qty = quantities[ing.slug] ?? 0
+              const unitPrice = priceBySlug[ing.slug] ?? 0
+              const extraCost = qty > 0 ? qty * unitPrice : 0
+              return (
+                <div
+                  key={ing.slug}
+                  className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 border ${
+                    qty > 0
+                      ? darkMode
+                        ? 'border-orange-500/40 bg-orange-500/10'
+                        : 'border-orange-200 bg-orange-50'
+                      : darkMode
+                        ? 'border-gray-700 bg-gray-800/50'
+                        : 'border-gray-200 bg-gray-100'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{ing.nombre}</p>
+                    <p className="text-xs text-gray-500">
+                      {ing.unidad}
+                      {unitPrice > 0 && <span className="ml-1">· +{formatGuaranies(unitPrice)} c/u</span>}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => changeQuantity(ing.slug, -1)}
+                      disabled={qty <= 0}
+                      className="p-2.5 rounded-xl border-2 border-gray-300 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      aria-label="Quitar extra"
+                    >
+                      <Minus size={18} />
+                    </button>
+                    <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 font-bold tabular-nums">
+                      {qty}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => changeQuantity(ing.slug, 1)}
+                      disabled={qty >= MAX_QUANTITY}
+                      className="p-2.5 rounded-xl border-2 border-orange-500 bg-orange-500 text-white disabled:opacity-40 disabled:bg-gray-400 disabled:border-gray-400"
+                      aria-label="Agregar extra"
                     >
                       <Plus size={18} />
                     </button>
@@ -491,6 +607,7 @@ export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: Ite
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           <IngredientEditorUI
             baseRecipe={editor.baseRecipe}
+            addableIngredients={editor.addableIngredients}
             recipeLoading={editor.recipeLoading}
             quantities={editor.quantities}
             priceBySlug={editor.priceBySlug}

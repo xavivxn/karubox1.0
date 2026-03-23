@@ -17,7 +17,7 @@ export async function calcularPuntos(monto: number, diaSemana?: number) {
   if (error) {
     // Fallback: cálculo simple si la función falla
     console.warn('Error al calcular puntos con función DB:', error)
-    return Math.floor(monto / 100)
+    return Math.floor(monto * 0.05)
   }
   
   return data

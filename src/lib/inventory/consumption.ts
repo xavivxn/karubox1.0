@@ -358,6 +358,31 @@ export async function descontarIngredientesPorPedido({
       }
     }
 
+    // Ingredientes agregados como extras fuera de receta (ej: extra bacon en producto sin bacon base)
+    const extraSlugs = Array.from(
+      new Set(
+        itemsConReceta.flatMap((item) =>
+          (item.customization?.extras ?? []).map((extra) => extra.slug)
+        )
+      )
+    )
+    const extraIngredientMap = new Map<string, RecetaIngrediente>()
+    if (extraSlugs.length > 0) {
+      const { data: extraIngredients, error: extrasError } = await supabase
+        .from('ingredientes')
+        .select('id, slug, nombre, unidad, tipo_inventario, stock_actual, controlar_stock, tenant_id')
+        .eq('tenant_id', tenantId)
+        .in('slug', extraSlugs)
+
+      if (extrasError) {
+        console.error('Error al obtener ingredientes extra:', extrasError)
+      } else {
+        for (const ing of (extraIngredients ?? []) as unknown as RecetaIngrediente[]) {
+          extraIngredientMap.set(ing.slug, ing)
+        }
+      }
+    }
+
     // ── Acumular consumos por ingrediente único ────────────────────────────
     // Si varios ítems comparten un ingrediente, se suman en memoria antes
     // de hacer cualquier UPDATE a la DB.
@@ -379,6 +404,7 @@ export async function descontarIngredientesPorPedido({
     for (const item of itemsConReceta) {
       if (!item.producto_id) continue
       const receta = recetaMap.get(item.producto_id) ?? []
+      const recipeSlugs = new Set(receta.map((r) => r.ingredientes?.slug).filter(Boolean))
 
       const removidos = new Set(
         (item.customization?.removedIngredients ?? []).map((x: { slug: string }) => x.slug)
@@ -417,6 +443,33 @@ export async function descontarIngredientesPorPedido({
             cantidad_ajustada: r.cantidad + extraPorItem
           })
         }
+
+        if (ingredienteTotals.has(ing.id)) {
+          ingredienteTotals.get(ing.id)!.cantidadTotal += cantidadItem
+        } else {
+          ingredienteTotals.set(ing.id, {
+            ing,
+            cantidadTotal: cantidadItem,
+            stockAnterior: Number(ing.stock_actual ?? 0)
+          })
+        }
+      }
+
+      // Extras agregados que no estaban en la receta original
+      for (const [extraSlug, extraPorItem] of extrasMap.entries()) {
+        if (recipeSlugs.has(extraSlug) || extraPorItem <= 0) continue
+        const ing = extraIngredientMap.get(extraSlug)
+        if (!ing || !ing.controlar_stock) continue
+
+        const cantidadItem = extraPorItem * item.cantidad
+
+        customizacionesBatch.push({
+          item_pedido_id: item.id,
+          ingrediente_id: ing.id,
+          tipo: 'extra',
+          cantidad_original: 0,
+          cantidad_ajustada: extraPorItem
+        })
 
         if (ingredienteTotals.has(ing.id)) {
           ingredienteTotals.get(ing.id)!.cantidadTotal += cantidadItem

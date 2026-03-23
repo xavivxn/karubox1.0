@@ -10,7 +10,7 @@
 -- Características:
 -- ✅ Multi-tenant: Cada lomitería tiene su tenant_id
 -- ✅ Inventario automático con control de stock
--- ✅ Sistema de puntos automático (1 punto = 100 GS)
+-- ✅ Sistema de puntos automático (acumula 5% de la venta)
 -- ✅ Gestión de ingredientes y recetas
 -- ✅ Historial completo de movimientos
 -- ✅ Optimizado con índices para escalabilidad
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS clientes (
 COMMENT ON TABLE clientes IS 'Clientes por tenant con sistema de puntos';
 COMMENT ON COLUMN clientes.ci IS 'Cédula de identidad del cliente';
 COMMENT ON COLUMN clientes.ruc IS 'RUC (Registro Único del Contribuyente) del cliente';
-COMMENT ON COLUMN clientes.puntos_totales IS 'Puntos acumulados (1 punto = 100 GS)';
+COMMENT ON COLUMN clientes.puntos_totales IS 'Puntos acumulados (5% del monto de venta)';
 COMMENT ON COLUMN clientes.is_deleted IS 'Soft delete: mantiene historial de clientes y sus puntos';
 
 CREATE INDEX IF NOT EXISTS idx_clientes_tenant ON clientes(tenant_id);
@@ -476,11 +476,19 @@ CREATE INDEX IF NOT EXISTS idx_promociones_activa ON promociones(tenant_id, acti
 -- 15. FUNCIONES Y TRIGGERS
 -- ============================================
 
--- Función: Calcular puntos según monto (1 punto = 100 GS)
+-- Función: Calcular puntos según monto (5% del total)
 CREATE OR REPLACE FUNCTION calcular_puntos_por_monto(monto NUMERIC)
 RETURNS INTEGER AS $$
 BEGIN
-  RETURN FLOOR(monto / 100)::INTEGER;
+  RETURN FLOOR(monto * 0.05)::INTEGER;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Función compatibilidad RPC (frontend): calcular_puntos(monto, dia_semana)
+CREATE OR REPLACE FUNCTION calcular_puntos(monto NUMERIC, dia_semana INTEGER DEFAULT NULL)
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN calcular_puntos_por_monto(monto);
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
@@ -749,7 +757,7 @@ END $$;
 -- Características:
 -- ✅ Multi-tenant: Cada lomitería tiene su tenant_id
 -- ✅ Inventario automático con control de stock
--- ✅ Sistema de puntos automático (1 punto = 100 GS)
+-- ✅ Sistema de puntos automático (acumula 5% de la venta)
 -- ✅ Gestión de ingredientes y recetas
 -- ✅ Historial completo de movimientos
 -- ✅ Optimizado con índices para escalabilidad
@@ -931,7 +939,7 @@ CREATE TABLE IF NOT EXISTS clientes (
 COMMENT ON TABLE clientes IS 'Clientes por tenant con sistema de puntos';
 COMMENT ON COLUMN clientes.ci IS 'Cédula de identidad del cliente';
 COMMENT ON COLUMN clientes.ruc IS 'RUC (Registro Único del Contribuyente) del cliente';
-COMMENT ON COLUMN clientes.puntos_totales IS 'Puntos acumulados (1 punto = 100 GS)';
+COMMENT ON COLUMN clientes.puntos_totales IS 'Puntos acumulados (5% del monto de venta)';
 COMMENT ON COLUMN clientes.is_deleted IS 'Soft delete: mantiene historial de clientes y sus puntos';
 
 CREATE INDEX IF NOT EXISTS idx_clientes_tenant ON clientes(tenant_id);
@@ -1215,11 +1223,19 @@ CREATE INDEX IF NOT EXISTS idx_promociones_activa ON promociones(tenant_id, acti
 -- 15. FUNCIONES Y TRIGGERS
 -- ============================================
 
--- Función: Calcular puntos según monto (1 punto = 100 GS)
+-- Función: Calcular puntos según monto (5% del total)
 CREATE OR REPLACE FUNCTION calcular_puntos_por_monto(monto NUMERIC)
 RETURNS INTEGER AS $$
 BEGIN
-  RETURN FLOOR(monto / 100)::INTEGER;
+  RETURN FLOOR(monto * 0.05)::INTEGER;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Función compatibilidad RPC (frontend): calcular_puntos(monto, dia_semana)
+CREATE OR REPLACE FUNCTION calcular_puntos(monto NUMERIC, dia_semana INTEGER DEFAULT NULL)
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN calcular_puntos_por_monto(monto);
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 

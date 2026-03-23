@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Loader2, X, PlusCircle, Search, Trash2, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { IngredientDefinition } from '@/types/ingredients'
@@ -35,6 +36,7 @@ interface InventoryDrawerProps {
 }
 
 export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }: InventoryDrawerProps) {
+  const [mounted, setMounted] = useState(false)
   const [ingredients, setIngredients] = useState<IngredientDefinition[]>([])
   const [loadingIngredients, setLoadingIngredients] = useState(false)
   const [selectedSlug, setSelectedSlug] = useState<string>('')
@@ -42,6 +44,7 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
   const [quantity, setQuantity] = useState<number>(0)
   const [stockMin, setStockMin] = useState<number>(0)
   const [controlStock, setControlStock] = useState(true)
+  const [permiteExtraEnCarrito, setPermiteExtraEnCarrito] = useState(false)
   const [note, setNote] = useState('')
   const [currentStock, setCurrentStock] = useState<number | null>(null)
   const [currentProductId, setCurrentProductId] = useState<string | null>(null)
@@ -53,6 +56,10 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
     if (!open) return
 
     let isMounted = true
@@ -62,7 +69,7 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
       const { data, error } = await supabase
         .from('ingredientes')
         .select(
-          'id, tenant_id, slug, nombre, unidad, icono, precio_publico, stock_minimo_sugerido, descripcion, activo'
+          'id, tenant_id, slug, nombre, unidad, tipo_inventario, icono, precio_publico, stock_actual, stock_minimo, stock_minimo_sugerido, controlar_stock, descripcion, activo, permite_extra_en_carrito'
         )
         .eq('tenant_id', tenantId)
         .eq('activo', true)
@@ -89,7 +96,7 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
   useEffect(() => {
     if (open && !selectedSlug && ingredients.length) {
       setSelectedSlug(ingredients[0].slug)
-      setStockMin(ingredients[0].stock_minimo_sugerido ?? 0)
+      setStockMin(Number(ingredients[0].stock_minimo ?? ingredients[0].stock_minimo_sugerido ?? 0))
     }
   }, [open, selectedSlug, ingredients])
 
@@ -102,6 +109,7 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
       setCurrentProductId(null)
       setStockMin(0)
       setControlStock(true)
+      setPermiteExtraEnCarrito(false)
       setNote('')
       setErrorMessage(null)
       setSearch('')
@@ -164,7 +172,10 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
       setCurrentProductId(productId)
 
       if (!productId) {
-        setCurrentStock(null)
+        setCurrentStock(Number(selectedIngredient.stock_actual ?? 0))
+        setStockMin(Number(selectedIngredient.stock_minimo ?? selectedIngredient.stock_minimo_sugerido ?? 0))
+        setControlStock(Boolean(selectedIngredient.controlar_stock ?? true))
+        setPermiteExtraEnCarrito(Boolean(selectedIngredient.permite_extra_en_carrito))
         setLoadingInventory(false)
         return
       }
@@ -181,11 +192,14 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
         setErrorMessage('No se pudo cargar la información del inventario.')
       } else if (data) {
         setCurrentStock(Number(data.stock_actual ?? 0))
-        setStockMin(Number(data.stock_minimo ?? selectedIngredient.stock_minimo_sugerido ?? 0))
+        setStockMin(Number(selectedIngredient.stock_minimo ?? data.stock_minimo ?? selectedIngredient.stock_minimo_sugerido ?? 0))
         setControlStock(Boolean(data.controlar_stock))
+        setPermiteExtraEnCarrito(Boolean(selectedIngredient.permite_extra_en_carrito))
       } else {
-        setCurrentStock(null)
-        setStockMin(selectedIngredient.stock_minimo_sugerido ?? 0)
+        setCurrentStock(Number(selectedIngredient.stock_actual ?? 0))
+        setStockMin(Number(selectedIngredient.stock_minimo ?? selectedIngredient.stock_minimo_sugerido ?? 0))
+        setControlStock(Boolean(selectedIngredient.controlar_stock ?? true))
+        setPermiteExtraEnCarrito(Boolean(selectedIngredient.permite_extra_en_carrito))
       }
 
       setLoadingInventory(false)
@@ -204,14 +218,41 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
       return
     }
 
-    if (quantity <= 0 && operation !== 'ajuste') {
-      setErrorMessage('La cantidad debe ser mayor a cero')
+    const ingredientConfigChanged =
+      Boolean(selectedIngredient.permite_extra_en_carrito) !== permiteExtraEnCarrito ||
+      Number(selectedIngredient.stock_minimo ?? selectedIngredient.stock_minimo_sugerido ?? 0) !== stockMin ||
+      Boolean(selectedIngredient.controlar_stock ?? true) !== controlStock
+    const hasStockMovement = operation === 'ajuste'
+      ? quantity !== (currentStock ?? 0)
+      : quantity > 0
+
+    if (!hasStockMovement && !ingredientConfigChanged) {
+      setErrorMessage('No hay cambios para guardar')
       return
     }
 
     setIsSaving(true)
 
     try {
+      const previousStock = Number(currentStock ?? selectedIngredient.stock_actual ?? 0)
+      if (!hasStockMovement) {
+        const { error: updateOnlyIngredientError } = await supabase
+          .from('ingredientes')
+          .update({
+            stock_minimo: stockMin,
+            stock_minimo_sugerido: stockMin,
+            controlar_stock: controlStock,
+            permite_extra_en_carrito: permiteExtraEnCarrito
+          })
+          .eq('id', selectedIngredient.id)
+          .eq('tenant_id', tenantId)
+
+        if (updateOnlyIngredientError) throw updateOnlyIngredientError
+        onSaved?.()
+        onClose()
+        return
+      }
+
       const ensuredProductId = await ensureIngredientProduct(selectedIngredient, {
         tenantId,
         createIfMissing: true
@@ -233,20 +274,34 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
       if (fetchError) throw fetchError
 
       let inventoryId = existing?.id ?? null
-      const previousStock = Number(existing?.stock_actual ?? 0)
+      const previousStockInventory = Number(currentStock ?? selectedIngredient.stock_actual ?? existing?.stock_actual ?? 0)
       let newStock = previousStock
 
       switch (operation) {
         case 'entrada':
-          newStock = previousStock + quantity
+          newStock = previousStockInventory + quantity
           break
         case 'salida':
-          newStock = Math.max(previousStock - quantity, 0)
+          newStock = Math.max(previousStockInventory - quantity, 0)
           break
         case 'ajuste':
           newStock = quantity
           break
       }
+
+      const { error: updateIngredientError } = await supabase
+        .from('ingredientes')
+        .update({
+          stock_actual: newStock,
+          stock_minimo: stockMin,
+          stock_minimo_sugerido: stockMin,
+          controlar_stock: controlStock,
+          permite_extra_en_carrito: permiteExtraEnCarrito
+        })
+        .eq('id', selectedIngredient.id)
+        .eq('tenant_id', tenantId)
+
+      if (updateIngredientError) throw updateIngredientError
 
       if (inventoryId) {
         const { error: updateError } = await supabase
@@ -282,7 +337,7 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
         inventario_id: inventoryId,
         tipo: operation,
         cantidad: operation === 'salida' ? -quantity : quantity,
-        stock_anterior: previousStock,
+        stock_anterior: previousStockInventory,
         stock_nuevo: newStock,
         motivo: note || `Carga manual de ${selectedIngredient.nombre}`,
         usuario_id: usuarioId ?? undefined
@@ -298,11 +353,11 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
     }
   }
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
   const noIngredientsAvailable = !loadingIngredients && ingredients.length === 0
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-[100] overflow-hidden">
       {/* Overlay: cubre todo el viewport, clic cierra */}
       <button
@@ -380,7 +435,7 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
                     key={ingredient.slug}
                     onClick={() => {
                       setSelectedSlug(ingredient.slug)
-                      setStockMin(ingredient.stock_minimo_sugerido ?? 0)
+                      setStockMin(Number(ingredient.stock_minimo ?? ingredient.stock_minimo_sugerido ?? 0))
                     }}
                     className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
                       selectedSlug === ingredient.slug
@@ -518,6 +573,19 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
             </label>
           </div>
 
+          <div className="flex items-center gap-3">
+            <input
+              id="permite-extra-carrito"
+              type="checkbox"
+              checked={permiteExtraEnCarrito}
+              onChange={(e) => setPermiteExtraEnCarrito(e.target.checked)}
+              className="h-5 w-5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+            />
+            <label htmlFor="permite-extra-carrito" className="text-sm text-gray-600 dark:text-gray-300">
+              Permitir esta materia prima como extra en carrito
+            </label>
+          </div>
+
           <div>
             <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">
               Nota / Referencia
@@ -623,6 +691,8 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
       )}
     </div>
   )
+
+  return createPortal(modalContent, document.body)
 }
 
 async function ensureIngredientProduct(

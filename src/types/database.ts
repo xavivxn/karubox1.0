@@ -70,6 +70,7 @@ export interface Ingrediente {
   icono?: string
   precio_publico?: number
   controlar_stock: boolean
+  permite_extra_en_carrito?: boolean
   descripcion?: string
   activo: boolean
   created_at: string

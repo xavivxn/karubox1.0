@@ -11,7 +11,7 @@
 
 **¿Qué hace?**
 - ✅ Crea todas las tablas (tenants, usuarios, productos, clientes, pedidos, etc.)
-- ✅ Configura sistema de puntos automático (1 punto = 100 GS)
+- ✅ Configura sistema de puntos automático (acumula 5% de la venta)
 - ✅ Configura inventario con control de stock
 - ✅ Crea tablas de ingredientes y recetas
 - ✅ Agrega índices para optimización
@@ -133,7 +133,7 @@
 
 ### **Sistema de Puntos**
 - **Automático:** Se acreditan cuando un pedido pasa a `entregado`
-- **Cálculo:** 1 punto por cada 100 GS de compra
+- **Cálculo:** 5% del total del pedido en puntos
 - **Historial:** Tabla `transacciones_puntos` guarda todo
 
 ### **Numeración de Pedidos**

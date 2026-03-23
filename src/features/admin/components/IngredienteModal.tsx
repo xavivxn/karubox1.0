@@ -28,6 +28,7 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
   const [stockMinimo, setStockMinimo] = useState('')
   const [precioPublico, setPrecioPublico] = useState('')
   const [controlarStock, setControlarStock] = useState(true)
+  const [permiteExtraEnCarrito, setPermiteExtraEnCarrito] = useState(false)
   const [icono, setIcono] = useState('')
 
   // Detectar cuando el componente está montado en el cliente
@@ -46,6 +47,7 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
       setStockMinimo('')
       setPrecioPublico('')
       setControlarStock(true)
+      setPermiteExtraEnCarrito(false)
       setIcono('')
       setSuccessMessage(null)
       setErrorMessage(null)
@@ -87,20 +89,9 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
     try {
       const supabase = createClient()
 
-      // Generar slug a partir del nombre
-      const generateSlug = (text: string): string => {
-        return text
-          .toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '') // Remover acentos
-          .replace(/[^a-z0-9]+/g, '-') // Reemplazar caracteres especiales con guiones
-          .replace(/^-+|-+$/g, '') // Remover guiones al inicio y final
-          .substring(0, 50) // Limitar longitud
-      }
-
       // Crear ingrediente (materia prima)
       const nombreFinal = toTitleCase(nombre.trim())
-      const slug = generateSlug(nombreFinal)
+      let slug = await generateUniqueIngredientSlug(supabase, tenantId, nombreFinal)
 
       const ingredienteData: Partial<Ingrediente> = {
         tenant_id: tenantId,
@@ -113,15 +104,28 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
         stock_minimo: parseFloat(stockMinimo) || 0,
         precio_publico: parseInt(precioPublico.replace(/\./g, ''), 10) || 0,
         controlar_stock: controlarStock,
+        permite_extra_en_carrito: permiteExtraEnCarrito,
         icono: icono.trim() || undefined,
         activo: true
       }
 
-      const { data: ingrediente, error } = await supabase
+      let { data: ingrediente, error } = await supabase
         .from('ingredientes')
         .insert(ingredienteData)
         .select()
         .single()
+
+      // Fallback defensivo: si existe un índice global por slug en BD, evitamos que reviente.
+      if (error?.code === '23505' && /slug/i.test(error.message ?? '')) {
+        slug = `${slug}-${tenantId.slice(0, 4)}-${Date.now().toString().slice(-4)}`
+        const retry = await supabase
+          .from('ingredientes')
+          .insert({ ...ingredienteData, slug })
+          .select()
+          .single()
+        ingrediente = retry.data
+        error = retry.error
+      }
 
       if (error) throw error
 
@@ -460,6 +464,29 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
                 </p>
               </div>
             </label>
+
+            {/* Toggle habilitar como extra en carrito */}
+            <label className="flex cursor-pointer items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 px-4 py-3.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={permiteExtraEnCarrito}
+                  onChange={(e) => setPermiteExtraEnCarrito(e.target.checked)}
+                  disabled={isSaving}
+                  className="sr-only peer"
+                />
+                <div className="h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 peer-checked:bg-orange-500 peer-disabled:opacity-50 transition-colors" />
+                <div className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  Permitir como extra en carrito
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                  Si est&aacute; activo, este ingrediente podr&aacute; agregarse manualmente en la personalizaci&oacute;n del pedido.
+                </p>
+              </div>
+            </label>
           </section>
         </div>
 
@@ -495,4 +522,39 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
   )
 
   return createPortal(modalContent, document.body)
+}
+
+function buildIngredientSlugBase(text: string): string {
+  const base = text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 50)
+
+  return base || 'ingrediente'
+}
+
+async function generateUniqueIngredientSlug(
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
+  nombre: string
+): Promise<string> {
+  const base = buildIngredientSlugBase(nombre)
+
+  const { data, error } = await supabase
+    .from('ingredientes')
+    .select('slug')
+    .eq('tenant_id', tenantId)
+    .like('slug', `${base}%`)
+
+  if (error) throw error
+
+  const used = new Set((data ?? []).map((row) => row.slug))
+  if (!used.has(base)) return base
+
+  let n = 2
+  while (used.has(`${base}-${n}`)) n += 1
+  return `${base}-${n}`
 }

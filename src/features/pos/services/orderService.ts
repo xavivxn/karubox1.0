@@ -115,18 +115,16 @@ export const orderService = {
       id: itemsInsertados?.[index]?.id || item.id
     }))
 
-    // Canje de puntos (resetea saldo a 0) antes de acreditar puntos ganados
+    // Canje de puntos: descontar solo el costo solicitado antes de acreditar puntos ganados
     let puntosSaldoConsumidos = 0
     if (cliente && canjeItems.length > 0) {
-      // Regla de negocio: al canjear, el saldo del cliente queda en 0.
-      // Por lo tanto consumimos TODO el saldo anterior.
-      puntosSaldoConsumidos = cliente.puntos_totales
+      puntosSaldoConsumidos = puntosCosteCanje
       await registrarCanjePuntos(
         tenantId,
         cliente.id,
         puntosSaldoConsumidos,
         pedido.id,
-        `Canje de puntos: costo solicitado ${puntosCosteCanje} pts; saldo consumido ${puntosSaldoConsumidos} pts`
+        `Canje de puntos: costo ${puntosCosteCanje} pts`
       )
     }
 
@@ -223,7 +221,7 @@ export const orderService = {
       const nombreCanjeado = canjeItems[0]?.nombre ?? '—'
       successDetails.push({
         label: 'Puntos canjeados',
-        value: `${puntosSaldoConsumidos} pts -> 0`
+        value: `${puntosSaldoConsumidos} pts`
       })
       successDetails.push({ label: 'Producto canjeado', value: nombreCanjeado })
     }

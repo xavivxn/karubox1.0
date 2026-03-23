@@ -4,16 +4,16 @@
 -- ============================================
 -- Agrega columna puntos_extra a productos.
 -- El admin puede definir puntos bonus adicionales
--- a la acumulación automática (1 pto / 100 Gs).
+-- a la acumulación automática (5% del total).
 --
 -- Fórmula completa de puntos por pedido:
---   puntos_auto  = FLOOR(total / 100)       → 1 pto cada 100 Gs
+--   puntos_auto  = FLOOR(total * 0.05)      → 5% del total en puntos
 --   puntos_extra = SUM(producto.puntos_extra × cantidad)
 --   total_puntos = puntos_auto + puntos_extra
 --
--- Valor de canje (sweet spot 5%):
---   1 punto = 5 Gs
---   Ejemplo: pedido 30.000 Gs → 300 puntos auto → 1.500 Gs de crédito
+-- Valor de canje:
+--   1 punto = 1 Gs
+--   Ejemplo: pedido 30.000 Gs → 1.500 puntos auto → 1.500 Gs de crédito
 -- ============================================
 
 ALTER TABLE productos
@@ -35,7 +35,7 @@ DO $$
 BEGIN
   RAISE NOTICE '✅ 10_puntos_extra_producto.sql ejecutado correctamente';
   RAISE NOTICE '  ✅ Columna puntos_extra agregada a productos (DEFAULT 0)';
-  RAISE NOTICE '  Fórmula: total_puntos = FLOOR(total/100) + SUM(puntos_extra × cant)';
-  RAISE NOTICE '  Valor de canje: 1 punto = 5 Gs (retorno del 5%%)';
+  RAISE NOTICE '  Fórmula: total_puntos = FLOOR(total * 0.05) + SUM(puntos_extra × cant)';
+  RAISE NOTICE '  Valor de canje: 1 punto = 1 Gs';
 END
 $$;

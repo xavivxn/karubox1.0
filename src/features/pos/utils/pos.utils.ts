@@ -7,15 +7,15 @@ export const formatTipoPedido = (value: TipoPedido): string => {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
-/** 1 punto se acumula por cada 100 Gs de compra */
-export const PUNTOS_POR_GS = 100
+/** Acumulación: 5% del monto de compra en puntos */
+export const PUNTOS_PORCENTAJE = 0.05
 
-/** Valor de canje: 1 punto equivale a 5 Gs de crédito (retorno del 5%) */
-export const VALOR_PUNTO_GS = 5
+/** Valor de canje: 1 punto equivale a 1 Gs de crédito */
+export const VALOR_PUNTO_GS = 1
 
 /** Puntos automáticos que genera una compra según el monto total */
 export const calcularPuntos = (total: number): number => {
-  return Math.floor(total / PUNTOS_POR_GS)
+  return Math.floor(total * PUNTOS_PORCENTAJE)
 }
 
 /**

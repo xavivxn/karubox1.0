@@ -29,7 +29,7 @@ interface Props {
 }
 
 function getPuntosNecesariosPorProducto(precioGs: number) {
-  // 1 punto = 5 Gs de crédito, redondeamos hacia arriba para cubrir el costo del producto.
+  // 1 punto = 1 Gs de crédito, redondeamos hacia arriba para cubrir el costo del producto.
   if (!precioGs || precioGs <= 0) return 0
   return Math.ceil(precioGs / VALOR_PUNTO_GS)
 }
@@ -829,7 +829,7 @@ export default function CanjePuntosModal({ open, onClose, darkMode, productos }:
                           Costo en puntos (producto): <span className="font-bold">{canjeCostoTotalPts}</span> pts
                         </p>
                         <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                          Puntos consumidos: <span className="font-bold">{saldoClientePts}</span> pts (queda en 0)
+                          Puntos consumidos: <span className="font-bold">{canjeCostoTotalPts}</span> pts
                         </p>
                       </div>
 
@@ -837,7 +837,7 @@ export default function CanjePuntosModal({ open, onClose, darkMode, productos }:
                         Solo se puede canjear 1 unidad por canje.
                       </p>
                       <p className={`text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Al confirmar, el saldo del cliente queda en 0.
+                        Al confirmar, se descuenta solo el costo del producto.
                       </p>
                     </div>
                   </div>

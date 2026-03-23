@@ -75,7 +75,7 @@ export const fetchTopClients = async (tenantId: string): Promise<ClientRanking[]
     telefono: cliente.telefono,
     puntos_totales: cliente.puntos_totales,
     total_pedidos: 0, // TODO: calcular desde pedidos
-    total_gastado: cliente.puntos_totales * 100 // 1 punto = 100 GS
+    total_gastado: cliente.puntos_totales * 20 // 5% de venta en puntos => venta aproximada = puntos / 0.05
   }))
 }
 
