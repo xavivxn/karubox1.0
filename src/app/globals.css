@@ -121,6 +121,104 @@
   66% { border-color: #FFD700; box-shadow: 0 0 10px #FFD70044; }
   100% { border-color: #FF3E3E; box-shadow: 0 0 8px #FF3E3E44; }
 }
+/* Cocina — fuego más pronunciado (columna + cards) */
+@keyframes fireShimmerStrong {
+  0% {
+    border-color: #ff2d2d;
+    box-shadow:
+      0 0 14px rgba(255, 62, 62, 0.55),
+      0 0 28px rgba(255, 107, 53, 0.35),
+      inset 0 0 14px rgba(255, 107, 53, 0.12);
+  }
+  33% {
+    border-color: #ff6b35;
+    box-shadow:
+      0 0 22px rgba(255, 107, 53, 0.7),
+      0 0 40px rgba(255, 140, 0, 0.28),
+      inset 0 0 18px rgba(255, 165, 0, 0.14);
+  }
+  66% {
+    border-color: #ffb020;
+    box-shadow:
+      0 0 18px rgba(255, 176, 32, 0.55),
+      0 0 32px rgba(255, 69, 0, 0.22),
+      inset 0 0 16px rgba(255, 62, 62, 0.1);
+  }
+  100% {
+    border-color: #ff2d2d;
+    box-shadow:
+      0 0 14px rgba(255, 62, 62, 0.55),
+      0 0 28px rgba(255, 107, 53, 0.35),
+      inset 0 0 14px rgba(255, 107, 53, 0.12);
+  }
+}
+@keyframes orderNuevoGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+  50% { box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35), 0 4px 14px -2px rgba(249, 115, 22, 0.2); }
+}
+@keyframes orderEmpacandoGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  50% { box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35), 0 4px 14px -2px rgba(34, 197, 94, 0.18); }
+}
+@keyframes cookingProgressPulse {
+  0%, 100% { filter: brightness(1); box-shadow: 0 0 0 0 rgba(255, 62, 62, 0); }
+  50% { filter: brightness(1.12); box-shadow: 0 0 10px 1px rgba(255, 62, 62, 0.35); }
+}
+@keyframes nuevoProgressPulse {
+  0%, 100% { filter: brightness(1); box-shadow: 0 0 0 0 rgba(255, 107, 53, 0); }
+  50% { filter: brightness(1.1); box-shadow: 0 0 8px 1px rgba(255, 107, 53, 0.38); }
+}
+@keyframes empacandoProgressPulse {
+  0%, 100% { filter: brightness(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  50% { filter: brightness(1.09); box-shadow: 0 0 8px 1px rgba(34, 197, 94, 0.34); }
+}
+/* Columnas kanban — solo con pedidos: resplandor acorde al stage */
+@keyframes columnNuevoPulse {
+  0%, 100% {
+    border-color: rgba(251, 146, 60, 0.42);
+    box-shadow: 0 0 0 0 rgba(255, 107, 53, 0), inset 0 0 28px rgba(255, 107, 53, 0.05);
+  }
+  50% {
+    border-color: rgba(249, 115, 22, 0.72);
+    box-shadow: 0 0 22px rgba(255, 107, 53, 0.2), inset 0 0 36px rgba(255, 107, 53, 0.09);
+  }
+}
+@keyframes columnEmpacandoPulse {
+  0%, 100% {
+    border-color: rgba(52, 211, 153, 0.4);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0), inset 0 0 26px rgba(34, 197, 94, 0.05);
+  }
+  50% {
+    border-color: rgba(34, 197, 94, 0.65);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.22), inset 0 0 34px rgba(34, 197, 94, 0.08);
+  }
+}
+@keyframes columnEntregadoPulse {
+  0%, 100% {
+    border-color: rgba(251, 191, 36, 0.42);
+    box-shadow: 0 0 0 0 rgba(255, 215, 0, 0), inset 0 0 26px rgba(255, 215, 0, 0.05);
+  }
+  50% {
+    border-color: rgba(245, 158, 11, 0.68);
+    box-shadow: 0 0 22px rgba(255, 215, 0, 0.2), inset 0 0 32px rgba(255, 193, 7, 0.07);
+  }
+}
+@keyframes orderEntregadoGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+  50% { box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.4), 0 4px 16px -2px rgba(255, 215, 0, 0.22); }
+}
+@keyframes pulseNuevo {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+  50% { transform: scale(1.12); filter: drop-shadow(0 0 6px rgba(255, 107, 53, 0.55)); }
+}
+@keyframes pulseEmpacando {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+  50% { transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.5)); }
+}
+@keyframes pulseGold {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+  50% { transform: scale(1.08); filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.5)); }
+}
 @keyframes goldPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255,215,0,0); }
   50% { box-shadow: 0 0 20px 4px rgba(255,215,0,0.35); }
@@ -184,6 +282,19 @@
 .animate-slam-in { animation: slamIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
 .animate-shake { animation: shakeColumn 0.4s ease-in-out; }
 .animate-fire-shimmer { animation: fireShimmer 2.8s ease-in-out infinite; border-width: 2px; border-style: solid; }
+.animate-fire-shimmer-strong { animation: fireShimmerStrong 1.85s ease-in-out infinite; border-width: 2px; border-style: solid; }
+.animate-order-nuevo { animation: orderNuevoGlow 2.4s ease-in-out infinite; }
+.animate-order-empacando { animation: orderEmpacandoGlow 2.4s ease-in-out infinite; }
+.animate-cooking-progress { animation: cookingProgressPulse 1.6s ease-in-out infinite; }
+.animate-nuevo-progress { animation: nuevoProgressPulse 2.2s ease-in-out infinite; }
+.animate-empacando-progress { animation: empacandoProgressPulse 2.2s ease-in-out infinite; }
+.animate-column-nuevo { animation: columnNuevoPulse 2.85s ease-in-out infinite; border-width: 2px; border-style: solid; }
+.animate-column-empacando { animation: columnEmpacandoPulse 2.85s ease-in-out infinite; border-width: 2px; border-style: solid; }
+.animate-column-entregado { animation: columnEntregadoPulse 2.75s ease-in-out infinite; border-width: 2px; border-style: solid; }
+.animate-order-entregado { animation: orderEntregadoGlow 2.65s ease-in-out infinite; }
+.animate-pulse-nuevo { animation: pulseNuevo 1.35s ease-in-out infinite; }
+.animate-pulse-empacando { animation: pulseEmpacando 1.45s ease-in-out infinite; }
+.animate-pulse-gold { animation: pulseGold 1.5s ease-in-out infinite; }
 .animate-gold-pulse { animation: goldPulse 1.8s ease-in-out infinite; }
 .animate-digit-roll { animation: digitRoll 0.4s ease-out both; }
 .animate-combo-pop { animation: comboPopIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
@@ -194,11 +305,31 @@
 .animate-celebrate { animation: celebratePop 0.35s ease-out; }
 .animate-pulse-red { animation: pulseRed 1.5s ease-in-out infinite; }
 
+@keyframes kpiPopFloat {
+  0% { opacity: 0; transform: translate(-50%, 6px) scale(0.92); }
+  12% { opacity: 1; transform: translate(-50%, 0) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -26px) scale(1.12); }
+}
+.animate-kpi-pop-float { animation: kpiPopFloat 0.78s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
 @media (prefers-reduced-motion: reduce) {
   .animate-ticker,
   .animate-worker-bounce,
   .animate-pulse-fire,
   .animate-fire-shimmer,
+  .animate-fire-shimmer-strong,
+  .animate-order-nuevo,
+  .animate-order-empacando,
+  .animate-order-entregado,
+  .animate-cooking-progress,
+  .animate-nuevo-progress,
+  .animate-empacando-progress,
+  .animate-column-nuevo,
+  .animate-column-empacando,
+  .animate-column-entregado,
+  .animate-pulse-nuevo,
+  .animate-pulse-empacando,
+  .animate-pulse-gold,
   .animate-gold-pulse,
   .animate-confetti-fall,
   .animate-ember,
@@ -206,7 +337,8 @@
   .animate-count-up,
   .animate-slam-in,
   .animate-shake,
-  .animate-combo-pop {
+  .animate-combo-pop,
+  .animate-kpi-pop-float {
     animation: none !important;
   }
 }

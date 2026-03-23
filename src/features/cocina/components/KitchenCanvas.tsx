@@ -15,6 +15,7 @@ import {
   type KitchenStage,
   type KitchenStats,
 } from '../utils/cocina.utils'
+import { createStimulusGate } from '../utils/eventDirector'
 
 /* ═══════════════ CONSTANTS ═══════════════ */
 
@@ -212,22 +213,23 @@ function ConfettiBurst({ onDone, intensity }: { onDone: () => void; intensity?: 
 function EmberParticles() {
   const embers = useMemo(
     () =>
-      Array.from({ length: 6 }).map((_, i) => ({
+      Array.from({ length: 11 }).map((_, i) => ({
         id: i,
-        left: 10 + Math.random() * 80,
-        delay: Math.random() * 2,
-        duration: 0.6 + Math.random() * 0.6,
-        ex: -15 + Math.random() * 30,
+        left: 8 + Math.random() * 84,
+        delay: Math.random() * 2.2,
+        duration: 0.55 + Math.random() * 0.75,
+        ex: -18 + Math.random() * 36,
+        size: Math.random() > 0.45 ? 'w-2 h-2' : 'w-1.5 h-1.5',
       })),
     []
   )
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[inherit]">
       {embers.map((e) => (
         <div
           key={e.id}
-          className="absolute w-1.5 h-1.5 rounded-full animate-ember"
+          className={`absolute ${e.size} rounded-full animate-ember`}
           style={{
             left: `${e.left}%`,
             bottom: '5px',
@@ -262,6 +264,8 @@ function OrderCard({
   const typeLabel = ORDER_TYPE_LABELS[order.tipo] ?? order.tipo
   const isDone = order.stage === 'entregado'
   const isCooking = order.stage === 'cocinando'
+  const isNuevo = order.stage === 'nuevo'
+  const isEmpacando = order.stage === 'empacando'
 
   return (
     <div
@@ -271,7 +275,10 @@ function OrderCard({
         relative h-fit bg-white dark:bg-gray-700/90 rounded-xl shadow-sm border ${compact ? 'p-2.5' : 'p-3'}
         ${isNew ? 'animate-slam-in' : 'animate-fade-in-up'}
         ${isDone ? 'opacity-75 scale-[0.97] border-yellow-200 dark:border-amber-700/50' : 'border-gray-100 dark:border-gray-600'}
-        ${isCooking ? 'animate-fire-shimmer' : ''}
+        ${isCooking ? 'animate-fire-shimmer-strong' : ''}
+        ${!isDone && isNuevo ? 'animate-order-nuevo' : ''}
+        ${!isDone && isEmpacando ? 'animate-order-empacando' : ''}
+        ${isDone ? 'animate-order-entregado' : ''}
         ${onClick ? 'cursor-pointer hover:shadow-md hover:border-blue-200 dark:hover:border-blue-500/40 active:scale-[0.98]' : 'hover:shadow-md'}
         dark:hover:shadow-black/20 transition-all duration-200
       `}
@@ -296,7 +303,9 @@ function OrderCard({
         <>
           <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-600 rounded-full overflow-hidden mb-1 relative z-[1]">
             <div
-              className="h-full rounded-full transition-all duration-1000 ease-linear"
+              className={`h-full rounded-full transition-all duration-1000 ease-linear ${
+                isCooking ? 'animate-cooking-progress' : isNuevo ? 'animate-nuevo-progress' : isEmpacando ? 'animate-empacando-progress' : ''
+              }`}
               style={{
                 width: `${Math.min(order.progress * 100, 100)}%`,
                 backgroundColor: STAGE_COLORS[order.stage],
@@ -335,6 +344,7 @@ function StageColumn({
   minHeight,
   orderCardMinHeight,
   targetVisibleCards,
+  showConfettiBurst = true,
   onConfettiDone,
   onOrderClick,
 }: {
@@ -346,11 +356,14 @@ function StageColumn({
   minHeight?: number
   orderCardMinHeight?: number
   targetVisibleCards?: number
+  /** Confetti pesado: el padre puede limitarlo por cooldown (evita saturación). */
+  showConfettiBurst?: boolean
   onConfettiDone: () => void
   onOrderClick?: (order: KitchenOrder) => void
 }) {
   const isCooking = stage === 'cocinando'
   const isDelivered = stage === 'entregado'
+  const hasOrders = orders.length > 0
   const effectiveVisibleCards = Math.max(1, Math.min(targetVisibleCards ?? 3, orders.length || 1))
   const dynamicCardMinHeight = useMemo(() => {
     if (!minHeight || !orderCardMinHeight) return orderCardMinHeight
@@ -363,26 +376,51 @@ function StageColumn({
   }, [compact, effectiveVisibleCards, minHeight, orderCardMinHeight])
   const shouldForceCardMinHeight = orders.length <= effectiveVisibleCards
 
+  const columnBorderAndAnim = useMemo(() => {
+    if (!hasOrders) return 'border-gray-100/80 dark:border-gray-600'
+    switch (stage) {
+      case 'nuevo':
+        return 'animate-column-nuevo border-orange-200/55 dark:border-orange-600/45'
+      case 'cocinando':
+        return 'animate-fire-shimmer-strong border-orange-200/60 dark:border-orange-600/50'
+      case 'empacando':
+        return 'animate-column-empacando border-emerald-200/55 dark:border-emerald-600/45'
+      case 'entregado':
+        return hasNewDelivery
+          ? 'animate-gold-pulse border-amber-200/60 dark:border-amber-600/50'
+          : 'animate-column-entregado border-amber-200/55 dark:border-amber-600/45'
+      default:
+        return 'border-gray-100/80 dark:border-gray-600'
+    }
+  }, [hasOrders, stage, hasNewDelivery])
+
+  const headerEmojiAnim = useMemo(() => {
+    if (!hasOrders) return ''
+    if (stage === 'nuevo') return 'animate-pulse-nuevo'
+    if (stage === 'cocinando') return 'animate-pulse-fire'
+    if (stage === 'empacando') return 'animate-pulse-empacando'
+    if (stage === 'entregado') return 'animate-pulse-gold'
+    return ''
+  }, [hasOrders, stage])
+
   return (
     <div
       style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
       className={`
         relative flex flex-col rounded-2xl bg-gradient-to-b ${STAGE_BG[stage]}
         border overflow-hidden h-full min-h-[300px] min-w-0
-        ${isCooking && orders.length > 0 ? 'animate-fire-shimmer border-gray-100/80 dark:border-gray-600' : 'border-gray-100/80 dark:border-gray-600'}
-        ${isDelivered && hasNewDelivery ? 'animate-gold-pulse' : ''}
-        ${hasNewOrder ? 'animate-shake' : ''}
+        ${columnBorderAndAnim}
       `}
     >
-      {hasNewDelivery && <ConfettiBurst onDone={onConfettiDone} />}
+      {hasNewDelivery && showConfettiBurst && <ConfettiBurst onDone={onConfettiDone} />}
 
-      {/* Header */}
+      {/* Header — shake aquí para no pisar la animación del borde de la columna */}
       <div
-        className={`${compact ? 'px-3 py-2' : 'px-4 py-3'} flex items-center justify-between border-b dark:border-gray-600`}
+        className={`${compact ? 'px-3 py-2' : 'px-4 py-3'} flex items-center justify-between border-b dark:border-gray-600 ${hasNewOrder && hasOrders ? 'animate-shake' : ''}`}
         style={{ borderColor: `${STAGE_COLORS[stage]}25` }}
       >
         <div className="flex items-center gap-2">
-          <span className={`${compact ? 'text-lg' : 'text-xl'} ${isCooking ? 'animate-pulse-fire' : ''}`}>
+          <span className={`${compact ? 'text-lg' : 'text-xl'} ${headerEmojiAnim}`}>
             {STAGE_EMOJIS[stage]}
           </span>
           <span className={`${compact ? 'text-xs' : 'text-sm'} font-bold text-gray-700 dark:text-gray-200`}>
@@ -587,6 +625,16 @@ export default function KitchenCanvas({
     entregados: false,
     ticket: false,
   })
+  const [kpiDeltaPop, setKpiDeltaPop] = useState({
+    pedidos: null as string | null,
+    facturado: null as string | null,
+    entregados: null as string | null,
+    ticket: null as string | null,
+  })
+  const [deliveryConfettiOk, setDeliveryConfettiOk] = useState(false)
+  const stimulusGateRef = useRef(createStimulusGate())
+  const ordersRef = useRef(orders)
+  ordersRef.current = orders
   const prevKpiRef = useRef({
     pedidos: stats.todayTotal,
     facturado: stats.todayRevenue,
@@ -594,6 +642,29 @@ export default function KitchenCanvas({
     ticket: 0,
   })
   const isDesktop = !isMobile && !isTablet
+
+  const newDeliveryIdsKey = newDeliveryIds.join(',')
+
+  useEffect(() => {
+    if (newDeliveryIds.length === 0) {
+      setDeliveryConfettiOk(false)
+      return
+    }
+    const list = ordersRef.current
+    const touchesEntregado = list.some(
+      (o) => o.stage === 'entregado' && newDeliveryIds.includes(o.id)
+    )
+    if (!touchesEntregado) {
+      setDeliveryConfettiOk(false)
+      return
+    }
+    const ok = stimulusGateRef.current.tryFire('confettiBurst')
+    setDeliveryConfettiOk(ok)
+    if (ok) {
+      const t = setTimeout(() => setDeliveryConfettiOk(false), 1700)
+      return () => clearTimeout(t)
+    }
+  }, [newDeliveryIdsKey])
 
   useEffect(() => {
     const updateViewportType = () => {
@@ -642,14 +713,18 @@ export default function KitchenCanvas({
       const diff = count - prevOrderCount.current
       const newOrders = orders.slice(0, diff)
 
-      playNewOrderSound()
+      if (stimulusGateRef.current.tryFire('newOrder')) {
+        playNewOrderSound()
+      }
 
       const now = Date.now()
       const COMBO_WINDOW = 5 * 60_000
       if (now - lastOrderTime.current < COMBO_WINDOW) {
         setStreak((s) => {
           const next = s + diff
-          if (next >= 5 && s < 5) playComboSound()
+          if (next >= 5 && s < 5 && stimulusGateRef.current.tryFire('comboSound')) {
+            playComboSound()
+          }
           return next
         })
       } else {
@@ -690,7 +765,9 @@ export default function KitchenCanvas({
             order.stage === 'entregado' && timeInEntregado <= RECENT_DELIVERY_WINDOW_MS
 
           if (isRecentDelivery) {
-            playCoinSound()
+            if (stimulusGateRef.current.tryFire('coin')) {
+              playCoinSound()
+            }
             setTickerEvents((prev) => [
               {
                 id: `del-${id}`,
@@ -800,12 +877,36 @@ export default function KitchenCanvas({
     }
     if (pulses.pedidos || pulses.facturado || pulses.entregados || pulses.ticket) {
       setKpiFlash(pulses)
-      const t = setTimeout(
+      setKpiDeltaPop({
+        pedidos: pulses.pedidos ? `+${next.pedidos - prev.pedidos}` : null,
+        facturado: pulses.facturado
+          ? `+Gs. ${(next.facturado - prev.facturado).toLocaleString('es-PY')}`
+          : null,
+        entregados: pulses.entregados ? `+${next.entregados - prev.entregados}` : null,
+        ticket:
+          pulses.ticket && next.ticket > prev.ticket
+            ? `▲ Gs. ${(next.ticket - prev.ticket).toLocaleString('es-PY')}`
+            : null,
+      })
+      const tFlash = setTimeout(
         () => setKpiFlash({ pedidos: false, facturado: false, entregados: false, ticket: false }),
         520
       )
+      const tPop = setTimeout(
+        () =>
+          setKpiDeltaPop({
+            pedidos: null,
+            facturado: null,
+            entregados: null,
+            ticket: null,
+          }),
+        820
+      )
       prevKpiRef.current = next
-      return () => clearTimeout(t)
+      return () => {
+        clearTimeout(tFlash)
+        clearTimeout(tPop)
+      }
     }
     prevKpiRef.current = next
   }, [stats.todayTotal, stats.todayRevenue, stats.deliveredCount, ticketPromedio])
@@ -908,6 +1009,11 @@ export default function KitchenCanvas({
         {isDesktop && (
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-1.5 mb-2">
             <div className={`relative overflow-hidden rounded-lg border border-orange-300/70 dark:border-orange-700/50 bg-gradient-to-br from-orange-50 via-orange-100/70 to-amber-50 dark:from-orange-900/30 dark:via-orange-900/20 dark:to-amber-900/20 px-2.5 py-1.5 shadow-[0_0_0_1px_rgba(251,146,60,0.15),0_8px_18px_-12px_rgba(251,146,60,0.65)] ${kpiFlash.pedidos ? 'animate-celebrate' : ''}`}>
+              {kpiDeltaPop.pedidos && (
+                <span className="absolute left-1/2 top-2 z-30 pointer-events-none text-[11px] font-black text-orange-600 dark:text-orange-300 drop-shadow-sm whitespace-nowrap animate-kpi-pop-float">
+                  {kpiDeltaPop.pedidos}
+                </span>
+              )}
               <div className="absolute right-1.5 top-1 text-sm opacity-80">📋</div>
               {kpiFlash.pedidos && <div className="absolute inset-0 bg-orange-300/20 animate-pulse pointer-events-none" />}
               <p className="text-[10px] font-bold tracking-wide text-orange-700 dark:text-orange-300">PEDIDOS DEL DÍA</p>
@@ -918,6 +1024,11 @@ export default function KitchenCanvas({
             </div>
 
             <div className={`relative overflow-hidden rounded-lg border border-emerald-300/70 dark:border-emerald-700/50 bg-gradient-to-br from-emerald-50 via-emerald-100/70 to-green-50 dark:from-emerald-900/30 dark:via-emerald-900/20 dark:to-green-900/20 px-2.5 py-1.5 shadow-[0_0_0_1px_rgba(16,185,129,0.15),0_8px_18px_-12px_rgba(16,185,129,0.65)] ${kpiFlash.facturado ? 'animate-celebrate' : ''}`}>
+              {kpiDeltaPop.facturado && (
+                <span className="absolute left-1/2 top-2 z-30 pointer-events-none text-[10px] font-black text-emerald-600 dark:text-emerald-300 drop-shadow-sm whitespace-nowrap animate-kpi-pop-float">
+                  {kpiDeltaPop.facturado}
+                </span>
+              )}
               <div className="absolute right-1.5 top-1 text-sm opacity-80">💰</div>
               {kpiFlash.facturado && <div className="absolute inset-0 bg-emerald-300/20 animate-pulse pointer-events-none" />}
               <p className="text-[10px] font-bold tracking-wide text-emerald-700 dark:text-emerald-300">FACTURADO</p>
@@ -928,6 +1039,11 @@ export default function KitchenCanvas({
             </div>
 
             <div className={`relative overflow-hidden rounded-lg border border-yellow-300/70 dark:border-yellow-700/50 bg-gradient-to-br from-yellow-50 via-yellow-100/70 to-amber-50 dark:from-yellow-900/30 dark:via-yellow-900/20 dark:to-amber-900/20 px-2.5 py-1.5 shadow-[0_0_0_1px_rgba(245,158,11,0.15),0_8px_18px_-12px_rgba(245,158,11,0.65)] ${kpiFlash.entregados ? 'animate-celebrate' : ''}`}>
+              {kpiDeltaPop.entregados && (
+                <span className="absolute left-1/2 top-2 z-30 pointer-events-none text-[11px] font-black text-yellow-700 dark:text-yellow-200 drop-shadow-sm whitespace-nowrap animate-kpi-pop-float">
+                  {kpiDeltaPop.entregados}
+                </span>
+              )}
               <div className="absolute right-1.5 top-1 text-sm opacity-80">✅</div>
               {kpiFlash.entregados && <div className="absolute inset-0 bg-yellow-300/20 animate-pulse pointer-events-none" />}
               <p className="text-[10px] font-bold tracking-wide text-yellow-700 dark:text-yellow-300">ENTREGADOS</p>
@@ -938,6 +1054,11 @@ export default function KitchenCanvas({
             </div>
 
             <div className={`relative overflow-hidden rounded-lg border border-violet-300/70 dark:border-violet-700/50 bg-gradient-to-br from-violet-50 via-violet-100/70 to-fuchsia-50 dark:from-violet-900/30 dark:via-violet-900/20 dark:to-fuchsia-900/20 px-2.5 py-1.5 shadow-[0_0_0_1px_rgba(139,92,246,0.15),0_8px_18px_-12px_rgba(139,92,246,0.65)] ${kpiFlash.ticket ? 'animate-celebrate' : ''}`}>
+              {kpiDeltaPop.ticket && (
+                <span className="absolute left-1/2 top-2 z-30 pointer-events-none text-[10px] font-black text-violet-600 dark:text-violet-200 drop-shadow-sm whitespace-nowrap animate-kpi-pop-float">
+                  {kpiDeltaPop.ticket}
+                </span>
+              )}
               <div className="absolute right-1.5 top-1 text-sm opacity-80">🧾</div>
               {kpiFlash.ticket && <div className="absolute inset-0 bg-violet-300/20 animate-pulse pointer-events-none" />}
               <p className="text-[10px] font-bold tracking-wide text-violet-700 dark:text-violet-300">TICKET PROM.</p>
@@ -1059,6 +1180,9 @@ export default function KitchenCanvas({
               orders={filteredGroups[activeStage]}
               hasNewDelivery={hasNewDeliveryInStage(activeStage)}
               hasNewOrder={newOrderStages.has(activeStage)}
+              showConfettiBurst={
+                !hasNewDeliveryInStage(activeStage) || activeStage !== 'entregado' || deliveryConfettiOk
+              }
               onConfettiDone={() => handleConfettiDone(activeStage)}
               onOrderClick={onOrderClick}
             />
@@ -1084,6 +1208,9 @@ export default function KitchenCanvas({
                         orders={filteredGroups[stageKey]}
                         hasNewDelivery={hasNewDeliveryInStage(stageKey)}
                         hasNewOrder={newOrderStages.has(stageKey)}
+                        showConfettiBurst={
+                          !hasNewDeliveryInStage(stageKey) || stageKey !== 'entregado' || deliveryConfettiOk
+                        }
                         onConfettiDone={() => handleConfettiDone(stageKey)}
                         onOrderClick={onOrderClick}
                       />
@@ -1113,6 +1240,9 @@ export default function KitchenCanvas({
                 orders={filteredGroups[stage]}
                 hasNewDelivery={hasNewDeliveryInStage(stage)}
                 hasNewOrder={newOrderStages.has(stage)}
+                showConfettiBurst={
+                  !hasNewDeliveryInStage(stage) || stage !== 'entregado' || deliveryConfettiOk
+                }
                 compact={desktopSizing.compact}
                 minHeight={desktopSizing.stageMinHeight}
                 orderCardMinHeight={desktopSizing.orderCardMinHeight}
