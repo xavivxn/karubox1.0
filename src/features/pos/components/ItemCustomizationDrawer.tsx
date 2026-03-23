@@ -131,7 +131,12 @@ function useIngredientEditor(
       .map((ing) => {
         const qty = quantities[ing.slug] ?? 1
         return {
-          slug: ing.slug, label: ing.label, unit: ing.unit,
+          // `ingredienteId` es opcional en `IngredientRequirement`, pero lo agregamos
+          // para mantener consistencia con `addableExtras`.
+          ingredienteId: ing.ingredienteId,
+          slug: ing.slug,
+          label: ing.label,
+          unit: ing.unit,
           quantityPerItem: qty - 1,
           unitPrice: priceBySlug[ing.slug] ?? 0
         }
@@ -400,20 +405,22 @@ export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: Ite
     open && Boolean(activeProductId)
   )
 
+  const { reset } = editor
+
   // Reset al cerrar
   useEffect(() => {
     if (!open) {
       setEditingComboProductId(null)
-      editor.reset()
+      reset()
     }
-  }, [open])
+  }, [open, reset])
 
   // Reset editor al cambiar de sub-producto en combo
   useEffect(() => {
     if (isCombo && editingComboProductId) {
-      editor.reset()
+      reset()
     }
-  }, [editingComboProductId])
+  }, [isCombo, editingComboProductId, reset])
 
   if (!open || !item) return null
 
