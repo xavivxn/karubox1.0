@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   motion,
   AnimatePresence,
@@ -98,12 +99,9 @@ function HoloCard({ achievement }: { achievement: Achievement }) {
         rotateX,
         rotateY,
         transformPerspective: 900,
-        // Ajuste responsivo: en mobile reduce el alto para que no tape el contenido.
-        width: 'clamp(170px, 28vw, 240px)',
-        // Mantener la relación rectangular sin depender de `vh` (evita que se dispare en notebooks).
+        width: 'clamp(180px, 30vw, 300px)',
         aspectRatio: '280 / 380',
-        // Limita por altura disponible para que no aparezca scrollbar en desktop/notebooks.
-        maxHeight: 'calc(100dvh - 280px)',
+        maxHeight: 'calc(var(--showcase-vh, 1vh) * 52)',
         border: '2px solid transparent',
         background: 'linear-gradient(#0f0c24, #0f0c24) padding-box, linear-gradient(135deg, #f43f5e, #a855f7, #3b82f6, #06b6d4, #10b981, #f59e0b, #f43f5e) border-box',
       }}
@@ -170,7 +168,7 @@ function HoloCard({ achievement }: { achievement: Achievement }) {
         <motion.div
           animate={{ y: [0, -6, 0] }}
           transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-          className="text-5xl sm:text-6xl md:text-6xl"
+          className="text-5xl sm:text-6xl"
           style={{ filter: 'drop-shadow(0 0 16px rgba(167,139,250,0.9))' }}
         >
           {achievement.emoji}
@@ -255,20 +253,74 @@ export default function DiamondTrophyShowcase({
   tenantNombre: string
   onClose: () => void
 }) {
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!achievement) return
+
+    const setViewportVars = () => {
+      const vv = window.visualViewport
+      const viewportHeight = vv?.height ?? window.innerHeight
+      const viewportWidth = vv?.width ?? window.innerWidth
+      document.documentElement.style.setProperty('--showcase-vh', `${viewportHeight * 0.01}px`)
+      document.documentElement.style.setProperty('--showcase-vw', `${viewportWidth * 0.01}px`)
+    }
+
+    setViewportVars()
+
+    window.addEventListener('resize', setViewportVars)
+    window.visualViewport?.addEventListener('resize', setViewportVars)
+    window.visualViewport?.addEventListener('scroll', setViewportVars)
+
+    return () => {
+      window.removeEventListener('resize', setViewportVars)
+      window.visualViewport?.removeEventListener('resize', setViewportVars)
+      window.visualViewport?.removeEventListener('scroll', setViewportVars)
+      document.documentElement.style.removeProperty('--showcase-vh')
+      document.documentElement.style.removeProperty('--showcase-vw')
+    }
+  }, [achievement])
+
+  useEffect(() => {
+    if (!achievement) return
+
+    const prevHtmlOverflow = document.documentElement.style.overflow
+    const prevBodyOverflow = document.body.style.overflow
+    const prevBodyTouchAction = document.body.style.touchAction
+
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+    document.body.style.touchAction = 'none'
+
+    return () => {
+      document.documentElement.style.overflow = prevHtmlOverflow
+      document.body.style.overflow = prevBodyOverflow
+      document.body.style.touchAction = prevBodyTouchAction
+    }
+  }, [achievement])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  return (
+  if (!isMounted) return null
+
+  return createPortal(
     <AnimatePresence>
       {achievement && (
         <motion.div
           key="showcase"
-          className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-3 sm:gap-5 overflow-y-auto overflow-x-hidden"
+          className="fixed inset-0 z-[2147483647] flex flex-col items-center justify-center gap-3 sm:gap-5 overflow-hidden"
           style={{
             background: 'radial-gradient(ellipse at 50% 30%, #1e0a3c 0%, #0a0618 50%, #000 100%)',
+            width: 'calc(var(--showcase-vw, 1vw) * 100)',
+            height: 'calc(var(--showcase-vh, 1vh) * 100)',
             paddingTop: 'env(safe-area-inset-top, 0px)',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
             paddingLeft: 'env(safe-area-inset-left, 0px)',
@@ -342,5 +394,5 @@ export default function DiamondTrophyShowcase({
         </motion.div>
       )}
     </AnimatePresence>
-  )
+  , document.body)
 }

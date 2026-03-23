@@ -218,27 +218,6 @@ export default function POSView() {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-                    <Link
-                      href={`${ROUTES.PROTECTED.PEDIDOS}?from=${ROUTES.PEDIDOS_FROM.POS}`}
-                      onClick={() => setNavigatingTo(ROUTES.PROTECTED.PEDIDOS)}
-                      title="Historial de pedidos"
-                      className={`inline-flex items-center justify-center rounded-lg border p-2 sm:rounded-xl sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-medium transition min-h-[40px] min-w-[40px] sm:min-h-0 sm:min-w-0 ${
-                        navigatingTo !== null && navigatingTo !== ROUTES.PROTECTED.PEDIDOS
-                          ? 'pointer-events-none cursor-not-allowed opacity-50'
-                          : ''
-                      } ${
-                        darkMode
-                          ? 'border-gray-600 text-gray-300 hover:bg-gray-700/50 hover:text-white'
-                          : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200'
-                      }`}
-                    >
-                      {navigatingTo === ROUTES.PROTECTED.PEDIDOS ? (
-                        <Loader2 className="h-4 w-4 animate-spin sm:h-4 sm:w-4" />
-                      ) : (
-                        <FileText className="h-4 w-4 sm:h-4 sm:w-4" />
-                      )}
-                      <span className="hidden sm:inline">Historial de pedidos</span>
-                    </Link>
                     {(isAdmin || isCajero) && (
                       <button
                         type="button"
@@ -248,16 +227,39 @@ export default function POSView() {
                         }}
                         title="Canje de puntos"
                         disabled={!sesionAbierta}
-                        className={`inline-flex items-center justify-center rounded-lg border p-2 sm:rounded-xl sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-medium transition min-h-[40px] min-w-[40px] sm:min-h-0 sm:min-w-0 ${
-                          darkMode
-                            ? 'border-gray-600 text-gray-300 hover:bg-gray-700/50 hover:text-white'
-                            : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200'
-                        } ${!sesionAbierta ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}`}
+                        className={`relative inline-flex items-center justify-center rounded-xl px-2.5 py-2 sm:gap-2 sm:px-3.5 sm:py-2.5 sm:text-sm sm:font-semibold transition-all min-h-[42px] min-w-[42px] sm:min-h-0 sm:min-w-0 ${
+                          sesionAbierta
+                            ? darkMode
+                              ? 'text-amber-100 border border-amber-400/40 bg-gradient-to-br from-amber-500/30 via-orange-500/20 to-pink-500/20 shadow-[0_8px_24px_-12px_rgba(251,191,36,0.75)] hover:from-amber-500/45 hover:to-pink-500/30 hover:border-amber-300/60 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70'
+                              : 'text-orange-800 border border-amber-300 bg-gradient-to-br from-amber-100 via-orange-50 to-pink-50 shadow-[0_8px_24px_-14px_rgba(234,88,12,0.55)] hover:from-amber-200 hover:to-pink-100 hover:border-orange-300 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300'
+                            : darkMode
+                              ? 'border-gray-600 text-gray-300 hover:bg-gray-700/50 hover:text-white opacity-50 cursor-not-allowed'
+                              : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200 opacity-50 cursor-not-allowed'
+                        }`}
                       >
-                        <Gift className="h-4 w-4 sm:h-4 sm:w-4" />
+                        <Gift className="h-4 w-4 sm:h-4 sm:w-4 shrink-0" />
                         <span className="hidden sm:inline">Canje de puntos</span>
                       </button>
                     )}
+                    <Link
+                      href={`${ROUTES.PROTECTED.PEDIDOS}?from=${ROUTES.PEDIDOS_FROM.POS}`}
+                      onClick={() => setNavigatingTo(ROUTES.PROTECTED.PEDIDOS)}
+                      title="Historial de pedidos"
+                      className={`inline-flex items-center justify-center rounded-lg border p-2 sm:rounded-xl sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-medium transition min-h-[40px] min-w-[40px] sm:min-h-0 sm:min-w-0 ${navigatingTo !== null && navigatingTo !== ROUTES.PROTECTED.PEDIDOS
+                          ? 'pointer-events-none cursor-not-allowed opacity-50'
+                          : ''
+                        } ${darkMode
+                          ? 'border-gray-600 text-gray-300 hover:bg-gray-700/50 hover:text-white'
+                          : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200'
+                        }`}
+                    >
+                      {navigatingTo === ROUTES.PROTECTED.PEDIDOS ? (
+                        <Loader2 className="h-4 w-4 animate-spin sm:h-4 sm:w-4" />
+                      ) : (
+                        <FileText className="h-4 w-4 sm:h-4 sm:w-4" />
+                      )}
+                      <span className="hidden sm:inline">Historial de pedidos</span>
+                    </Link>
                     {isAdmin && (
                       <Link
                         href={ROUTES.PROTECTED.ADMIN}

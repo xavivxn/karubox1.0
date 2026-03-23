@@ -81,6 +81,14 @@ const calculateSubtotal = (precioBase: number, extraCostPerUnit: number | undefi
   return (precioBase + extras) * cantidad
 }
 
+const isBaseSaleItem = (item: CartItem) => {
+  const hasCustomization =
+    Boolean(item.customization) ||
+    (item.extraCostPerUnit ?? 0) > 0
+
+  return item.tipo === 'producto' && item.modo !== 'canje' && !hasCustomization
+}
+
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   cliente: null,
@@ -89,12 +97,14 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   addItem: (producto) => {
     const items = get().items
-    const existingItem = items.find(item => item.producto_id === producto.id && item.tipo === 'producto')
+    const existingItem = items.find(
+      (item) => item.producto_id === producto.id && isBaseSaleItem(item)
+    )
 
     if (existingItem) {
       set({
         items: items.map(item =>
-          item.producto_id === producto.id && item.tipo === 'producto'
+          item.id === existingItem.id
             ? {
                 ...item,
                 cantidad: item.cantidad + 1,
