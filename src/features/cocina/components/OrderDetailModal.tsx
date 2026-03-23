@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import {
   KITCHEN_STAGES,
@@ -87,6 +88,26 @@ export default function OrderDetailModal({
   const [items, setItems] = useState<OrderItem[]>([])
   const [detail, setDetail] = useState<OrderDetail | null>(null)
   const [loading, setLoading] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const itemsScrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const updateViewportType = () => {
+      setIsMobile(window.innerWidth < 640)
+    }
+    updateViewportType()
+    window.addEventListener('resize', updateViewportType)
+    window.visualViewport?.addEventListener('resize', updateViewportType)
+    return () => {
+      window.removeEventListener('resize', updateViewportType)
+      window.visualViewport?.removeEventListener('resize', updateViewportType)
+    }
+  }, [])
 
   useEffect(() => {
     if (!order) {
@@ -101,6 +122,7 @@ export default function OrderDetailModal({
 
     const supabase = createClient()
 
+    const activeOrderId = order.id
     Promise.all([
       supabase
         .from('items_pedido')
@@ -113,6 +135,7 @@ export default function OrderDetailModal({
         .eq('id', order.id)
         .maybeSingle(),
     ]).then(([itemsRes, detailRes]) => {
+      if (!order || order.id !== activeOrderId) return
       setItems((itemsRes.data ?? []) as OrderItem[])
 
       const row = detailRes.data as Record<string, unknown> | null
@@ -126,6 +149,23 @@ export default function OrderDetailModal({
     })
   }, [order?.id])
 
+  useEffect(() => {
+    if (!order) return
+    itemsScrollRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+  }, [order?.id])
+
+  useEffect(() => {
+    if (!order) return
+    const prevHtmlOverflow = document.documentElement.style.overflow
+    const prevBodyOverflow = document.body.style.overflow
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.documentElement.style.overflow = prevHtmlOverflow
+      document.body.style.overflow = prevBodyOverflow
+    }
+  }, [order])
+
   // Close on Escape
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -138,7 +178,9 @@ export default function OrderDetailModal({
   const stageColor = order ? STAGE_COLORS[order.stage] : '#999'
   const typeColor = order ? getOrderColor(order.tipo) : '#999'
 
-  return (
+  if (!isMounted) return null
+
+  const modalContent = (
     <AnimatePresence>
       {order && (
         <>
@@ -156,19 +198,38 @@ export default function OrderDetailModal({
           {/* Panel */}
           <motion.div
             key="panel"
-            className="fixed right-0 z-50 w-full max-w-[90vw] sm:max-w-sm bg-white dark:bg-gray-900 shadow-2xl flex flex-col"
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
+            className={
+              isMobile
+                ? 'fixed inset-0 z-50 flex items-center justify-center p-3'
+                : 'fixed inset-y-0 right-0 z-50'
+            }
+            initial={isMobile ? { opacity: 0 } : { x: '100%' }}
+            animate={isMobile ? { opacity: 1 } : { x: 0 }}
+            exit={isMobile ? { opacity: 0 } : { x: '100%' }}
             transition={{ type: 'spring', bounce: 0.18, duration: 0.42 }}
-            style={{
-              top: 'env(safe-area-inset-top, 0px)',
-              bottom: 'env(safe-area-inset-bottom, 0px)',
-            }}
           >
+            <motion.div
+              className={
+                isMobile
+                  ? 'w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col overflow-hidden min-h-0'
+                  : 'h-full w-full max-w-[90vw] sm:max-w-sm bg-white dark:bg-gray-900 shadow-2xl flex flex-col overflow-hidden min-h-0'
+              }
+              initial={isMobile ? { opacity: 0, scale: 0.98, y: 14 } : { x: 0 }}
+              animate={isMobile ? { opacity: 1, scale: 1, y: 0 } : { x: 0 }}
+              exit={isMobile ? { opacity: 0, scale: 0.98, y: 10 } : { x: 0 }}
+              transition={{ type: 'spring', bounce: 0.18, duration: 0.42 }}
+              style={{
+                height: isMobile
+                  ? 'min(calc(var(--cocina-vh, 1vh) * 90), 720px)'
+                  : 'calc(var(--cocina-vh, 1vh) * 100 - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))',
+                marginTop: 'env(safe-area-inset-top, 0px)',
+                marginBottom: 'env(safe-area-inset-bottom, 0px)',
+                paddingBottom: isMobile ? 'env(safe-area-inset-bottom, 0px)' : undefined,
+              }}
+            >
             {/* ── Header ── */}
             <div
-              className="px-5 pt-5 pb-4 border-b flex items-start justify-between"
+              className="px-5 pt-4 pb-4 border-b flex items-start justify-between sticky top-0 bg-white dark:bg-gray-900 z-[1]"
               style={{ borderColor: `${stageColor}30` }}
             >
               <div>
@@ -250,7 +311,14 @@ export default function OrderDetailModal({
             </div>
 
             {/* ── Items list ── */}
-            <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2">
+            <div
+              key={`items-scroll-${order.id}`}
+              ref={itemsScrollRef}
+              className="flex-1 min-h-0 overflow-y-auto px-5 py-3 space-y-2"
+              style={{
+                overscrollBehavior: 'contain',
+              }}
+            >
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-300 mb-3">
                 📋 Ítems del pedido
               </p>
@@ -313,7 +381,7 @@ export default function OrderDetailModal({
                 <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-300 mb-2">
                   🔧 Mover etapa (admin)
                 </p>
-                <div className="grid grid-cols-4 gap-1.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                   {KITCHEN_STAGES.map((s) => {
                     const isActive = order.stage === s
                     return (
@@ -362,9 +430,12 @@ export default function OrderDetailModal({
                 </p>
               )}
             </div>
+            </motion.div>
           </motion.div>
         </>
       )}
     </AnimatePresence>
   )
+
+  return createPortal(modalContent, document.body)
 }

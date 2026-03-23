@@ -343,7 +343,7 @@ function StageColumn({
     <div
       className={`
         relative flex flex-col rounded-2xl bg-gradient-to-b ${STAGE_BG[stage]}
-        border overflow-hidden min-h-[300px] min-w-0
+        border overflow-hidden h-full min-h-[300px] min-w-0
         ${isCooking && orders.length > 0 ? 'animate-fire-shimmer border-gray-100/80 dark:border-gray-600' : 'border-gray-100/80 dark:border-gray-600'}
         ${isDelivered && hasNewDelivery ? 'animate-gold-pulse' : ''}
         ${hasNewOrder ? 'animate-shake' : ''}
@@ -537,6 +537,28 @@ export default function KitchenCanvas({
   const prevRevenueRef = useRef(stats.todayRevenue)
   const [record, setRecord] = useState<string | null>(null)
   const bestRevenueRef = useRef(0)
+  const [isMobile, setIsMobile] = useState(false)
+  const [isTablet, setIsTablet] = useState(false)
+  const [activeStage, setActiveStage] = useState<KitchenStage>('nuevo')
+  const [activeTypeFilter, setActiveTypeFilter] = useState<'all' | 'delivery' | 'local' | 'para_llevar'>('all')
+  const [isTickerCollapsed, setIsTickerCollapsed] = useState(false)
+  const [tabletPage, setTabletPage] = useState(0)
+  const tabletPagerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const updateViewportType = () => {
+      const width = window.innerWidth
+      setIsMobile(width < 768)
+      setIsTablet(width >= 768 && width < 1024)
+    }
+    updateViewportType()
+    window.addEventListener('resize', updateViewportType)
+    window.visualViewport?.addEventListener('resize', updateViewportType)
+    return () => {
+      window.removeEventListener('resize', updateViewportType)
+      window.visualViewport?.removeEventListener('resize', updateViewportType)
+    }
+  }, [])
 
   useEffect(() => {
     // Caja cerrada o sin sesión: nunca debe haber combo activo
@@ -719,6 +741,16 @@ export default function KitchenCanvas({
     return g
   }, [orders, stageOverrides])
 
+  const filteredGroups = useMemo(() => {
+    if (activeTypeFilter === 'all') return groups
+    return {
+      nuevo: groups.nuevo.filter((o) => o.tipo === activeTypeFilter),
+      cocinando: groups.cocinando.filter((o) => o.tipo === activeTypeFilter),
+      empacando: groups.empacando.filter((o) => o.tipo === activeTypeFilter),
+      entregado: groups.entregado.filter((o) => o.tipo === activeTypeFilter),
+    } satisfies Record<KitchenStage, KitchenOrder[]>
+  }, [activeTypeFilter, groups])
+
   const handleConfettiDone = useCallback(
     (stage: KitchenStage) => {
       groups[stage].forEach((o) => {
@@ -731,14 +763,29 @@ export default function KitchenCanvas({
   )
 
   const hasNewDeliveryInStage = (stage: KitchenStage) =>
-    groups[stage].some((o) => newDeliveryIds.includes(o.id))
+    filteredGroups[stage].some((o) => newDeliveryIds.includes(o.id))
+
+  useEffect(() => {
+    if (!isMobile) return
+    if (filteredGroups[activeStage].length > 0) return
+    const stageWithOrders = KITCHEN_STAGES.find((stage) => filteredGroups[stage].length > 0)
+    if (stageWithOrders) {
+      setActiveStage(stageWithOrders)
+    }
+  }, [activeStage, filteredGroups, isMobile])
+
+  const handleTabletScroll = useCallback(() => {
+    const node = tabletPagerRef.current
+    if (!node) return
+    const page = Math.round(node.scrollLeft / Math.max(node.clientWidth, 1))
+    setTabletPage(Math.min(1, Math.max(0, page)))
+  }, [])
 
   return (
     <div className="h-full w-full flex flex-col min-w-0">
       {/* ─── Top Bar: negocio (izq) + energía (der) ─── */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80 flex-wrap gap-2">
         <div className="flex items-center gap-4 flex-wrap">
-          <MoneyCounter value={stats.todayRevenue} label="Facturado hoy" icon="💰" />
           <div className="flex items-center gap-2">
             <span className="text-lg">🔥</span>
             <div className="flex flex-col">
@@ -768,29 +815,158 @@ export default function KitchenCanvas({
 
       {/* ─── Contenido: kanban + ticker ─── */}
       <div className="flex-1 min-h-0 min-w-0 w-full flex flex-col">
+        {isMobile && (
+          <div className="px-2.5 pb-2 sticky top-0 z-10">
+            <div className="rounded-2xl border border-gray-100 dark:border-gray-600 bg-white/90 dark:bg-gray-800/90 p-1.5 backdrop-blur overflow-hidden">
+              <div className="w-full overflow-x-auto custom-scrollbar">
+                <div className="inline-flex min-w-max gap-2">
+                  {KITCHEN_STAGES.map((stage) => {
+                    const isActive = activeStage === stage
+                    const count = filteredGroups[stage].length
+                    return (
+                      <button
+                        key={stage}
+                        onClick={() => setActiveStage(stage)}
+                        className={`
+                          min-w-[132px] rounded-xl px-3 py-2 text-xs font-bold transition-all border
+                          ${isActive
+                            ? 'text-white border-transparent shadow'
+                            : 'text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/60'}
+                        `}
+                        style={isActive ? { backgroundColor: STAGE_COLORS[stage] } : undefined}
+                      >
+                        <span className="inline-flex items-center gap-1.5">
+                          <span>{STAGE_EMOJIS[stage]}</span>
+                          <span>{STAGE_LABELS[stage]}</span>
+                          <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-white/25' : 'bg-gray-100 dark:bg-gray-600'}`}>
+                            {count}
+                          </span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {(isMobile || isTablet) && (
+          <div className="px-2.5 pb-2">
+            <div className="w-full overflow-x-auto custom-scrollbar">
+              <div className="inline-flex min-w-full gap-2">
+                {([
+                  { id: 'all', label: 'Todos' },
+                  { id: 'delivery', label: 'Delivery' },
+                  { id: 'local', label: 'Local' },
+                  { id: 'para_llevar', label: 'Para llevar' },
+                ] as const).map((opt) => {
+                  const active = activeTypeFilter === opt.id
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => setActiveTypeFilter(opt.id)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors whitespace-nowrap ${
+                        active
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {record && (
           <div className="px-4 pt-2 flex-shrink-0">
             <RecordBanner text={record} />
           </div>
         )}
 
-        <div className="flex-1 w-full min-w-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 lg:[grid-template-columns:repeat(4,minmax(0,1fr))] gap-3 p-3 overflow-x-auto overflow-y-hidden min-h-0">
-          {KITCHEN_STAGES.map((stage) => (
+        {isMobile ? (
+          <div className="flex-1 w-full min-w-0 p-2.5 overflow-hidden min-h-0">
             <StageColumn
-              key={stage}
-              stage={stage}
-              orders={groups[stage]}
-              hasNewDelivery={hasNewDeliveryInStage(stage)}
-              hasNewOrder={newOrderStages.has(stage)}
-              onConfettiDone={() => handleConfettiDone(stage)}
+              stage={activeStage}
+              orders={filteredGroups[activeStage]}
+              hasNewDelivery={hasNewDeliveryInStage(activeStage)}
+              hasNewOrder={newOrderStages.has(activeStage)}
+              onConfettiDone={() => handleConfettiDone(activeStage)}
               onOrderClick={onOrderClick}
             />
-          ))}
-        </div>
+          </div>
+        ) : isTablet ? (
+          <div className="flex-1 w-full min-w-0 overflow-hidden min-h-0 px-3 pb-2">
+            <div
+              ref={tabletPagerRef}
+              onScroll={handleTabletScroll}
+              className="flex w-full min-w-full gap-3 snap-x snap-mandatory overflow-x-auto overflow-y-hidden h-full"
+            >
+              {[['nuevo', 'cocinando'], ['empacando', 'entregado']].map((pair, i) => (
+                <div
+                  key={i}
+                  className="snap-start shrink-0 w-full min-w-full grid grid-cols-2 gap-3"
+                >
+                  {pair.map((stage) => {
+                    const stageKey = stage as KitchenStage
+                    return (
+                      <StageColumn
+                        key={stageKey}
+                        stage={stageKey}
+                        orders={filteredGroups[stageKey]}
+                        hasNewDelivery={hasNewDeliveryInStage(stageKey)}
+                        hasNewOrder={newOrderStages.has(stageKey)}
+                        onConfettiDone={() => handleConfettiDone(stageKey)}
+                        onOrderClick={onOrderClick}
+                      />
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-center gap-1.5 pt-2">
+              {[0, 1].map((dot) => (
+                <span
+                  key={dot}
+                  className={`h-1.5 rounded-full transition-all ${tabletPage === dot ? 'w-5 bg-gray-700 dark:bg-gray-200' : 'w-1.5 bg-gray-300 dark:bg-gray-600'}`}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 w-full min-w-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 lg:[grid-template-columns:repeat(4,minmax(0,1fr))] gap-3 p-3 overflow-x-auto overflow-y-hidden min-h-0">
+            {KITCHEN_STAGES.map((stage) => (
+              <StageColumn
+                key={stage}
+                stage={stage}
+                orders={filteredGroups[stage]}
+                hasNewDelivery={hasNewDeliveryInStage(stage)}
+                hasNewOrder={newOrderStages.has(stage)}
+                onConfettiDone={() => handleConfettiDone(stage)}
+                onOrderClick={onOrderClick}
+              />
+            ))}
+          </div>
+        )}
 
-        <div className="px-3 pb-3 flex-shrink-0">
-          <ActivityTicker events={tickerEvents} />
-        </div>
+        {isMobile ? (
+          <div className="px-3 pb-3 flex-shrink-0">
+            <button
+              onClick={() => setIsTickerCollapsed((prev) => !prev)}
+              className="w-full mb-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-300 py-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white/80 dark:bg-gray-800/80"
+            >
+              {isTickerCollapsed ? 'Mostrar actividad' : 'Ocultar actividad'}
+            </button>
+            {!isTickerCollapsed && <ActivityTicker events={tickerEvents} />}
+          </div>
+        ) : (
+          <div className="px-3 pb-3 flex-shrink-0">
+            <ActivityTicker events={tickerEvents} />
+          </div>
+        )}
       </div>
     </div>
   )
