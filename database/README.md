@@ -271,6 +271,12 @@ WHERE is_deleted = true
 
 ---
 
+## 🖨️ **Reimpresión cocina / factura (cola Realtime)**
+
+Ejecutá **`14_reprint_solicitud.sql`** y **`15_bump_factura_reprint_solicitud.sql`** (si usás RPC `bump_factura_reprint`). El agente debe escuchar **INSERT** en `reprint_solicitud` y ramificar por `tipo`. Ver **`docs/AGENTE_REPRINT_SOLICITUD.md`**.
+
+---
+
 ## 🔒 **Seguridad (RLS)**
 
 Por ahora, **RLS está deshabilitado** para facilitar el desarrollo.

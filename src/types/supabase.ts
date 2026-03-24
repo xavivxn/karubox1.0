@@ -441,6 +441,29 @@ export interface Database {
           anulada_por_id?: string | null
         }
       }
+      reprint_solicitud: {
+        Row: {
+          id: string
+          tenant_id: string
+          pedido_id: string
+          tipo: 'cocina' | 'factura'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          pedido_id: string
+          tipo: 'cocina' | 'factura'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          pedido_id?: string
+          tipo?: 'cocina' | 'factura'
+          created_at?: string
+        }
+      }
     }
     Views: {
       vista_productos_completos: {

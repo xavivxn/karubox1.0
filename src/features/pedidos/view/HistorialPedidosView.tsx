@@ -66,11 +66,12 @@ export function HistorialPedidosView() {
   }
 
   const handleReprint = async (pedidoId: string, tipo: 'cocina' | 'factura') => {
+    if (!tenant?.id) return
     const key = `${pedidoId}:${tipo}`
     setPrintingKey(key)
     setPrintFeedback(null)
     try {
-      const msg = await requestAgentPrint(pedidoId, tipo)
+      const msg = await requestAgentPrint(pedidoId, tipo, tenant.id)
       setPrintFeedback({ type: 'ok', text: msg })
     } catch (e) {
       setPrintFeedback({

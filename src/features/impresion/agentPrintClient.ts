@@ -1,19 +1,27 @@
+import { createClient } from '@/lib/supabase/client'
+import {
+  reprintCocinaViaPedidoBump,
+  reprintFacturaViaFacturaBump,
+} from './reprintViaRealtime'
+
 /**
- * Llama al Route Handler que reenvía POST /print al agente local.
+ * Reimpresión solo vía Supabase: INSERT en `reprint_solicitud` (cocina o factura).
+ * El agente escucha Realtime en esa tabla. No hay HTTP al PC del local.
  */
 export async function requestAgentPrint(
   pedidoId: string,
-  tipo: 'cocina' | 'factura'
+  tipo: 'cocina' | 'factura',
+  tenantId: string
 ): Promise<string> {
-  const res = await fetch('/api/agent/print', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'same-origin',
-    body: JSON.stringify({ pedidoId, tipo }),
-  })
-  const data = (await res.json()) as { success?: boolean; error?: string; message?: string }
-  if (!res.ok || data.success === false) {
-    throw new Error(data.error || `Error ${res.status}`)
+  const supabase = createClient()
+
+  if (tipo === 'cocina') {
+    const r = await reprintCocinaViaPedidoBump(supabase, pedidoId, tenantId)
+    if (!r.ok) throw new Error(r.error)
+    return 'Listo. Reimpresión cocina encolada (reprint_solicitud). El agente debe imprimir solo cocina.'
   }
-  return data.message ?? 'Listo'
+
+  const r = await reprintFacturaViaFacturaBump(supabase, pedidoId, tenantId)
+  if (!r.ok) throw new Error(r.error)
+  return 'Listo. Reimpresión factura encolada (reprint_solicitud). El agente debe imprimir solo factura (mismo listener que cocina, tipo=factura).'
 }
