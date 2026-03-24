@@ -19,7 +19,7 @@ const POSView = dynamic(() => import('@/features/pos/view/POSView'), {
   ssr: false,
 })
 
-const ALLOWED_POS_ROLES: UserRole[] = ['admin', 'cajero']
+const ALLOWED_POS_ROLES: UserRole[] = ['admin', 'cajero', 'repartidor']
 
 export default function POSPageClient() {
   const router = useRouter()

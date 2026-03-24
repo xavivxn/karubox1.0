@@ -9,6 +9,8 @@ import { useHistorialPedidos } from '../hooks/useHistorialPedidos'
 import { CancelarPedidoModal } from '../components/CancelarPedidoModal'
 import type { PedidoParaHistorial } from '../types/pedidos.types'
 import { formatGuaranies } from '@/lib/utils/format'
+import { requestAgentPrint } from '@/features/impresion/agentPrintClient'
+import { ReprintOrderActions } from '../components/ReprintOrderActions'
 
 const TIPO_LABEL: Record<string, string> = {
   local: 'Local',
@@ -28,7 +30,7 @@ function formatFecha(iso: string) {
 }
 
 export function HistorialPedidosView() {
-  const { tenant, darkMode, isAdmin } = useTenant()
+  const { tenant, darkMode, isAdmin, isCajero, isRepartidor } = useTenant()
   const {
     pedidos,
     loading,
@@ -41,6 +43,10 @@ export function HistorialPedidosView() {
 
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [pedidoToCancel, setPedidoToCancel] = useState<PedidoParaHistorial | null>(null)
+  const [printingKey, setPrintingKey] = useState<string | null>(null)
+  const [printFeedback, setPrintFeedback] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+
+  const canOpenPos = isAdmin || isCajero || isRepartidor
 
   useEffect(() => {
     if (tenant?.id) load(filters)
@@ -59,6 +65,23 @@ export function HistorialPedidosView() {
     load(filters)
   }
 
+  const handleReprint = async (pedidoId: string, tipo: 'cocina' | 'factura') => {
+    const key = `${pedidoId}:${tipo}`
+    setPrintingKey(key)
+    setPrintFeedback(null)
+    try {
+      const msg = await requestAgentPrint(pedidoId, tipo)
+      setPrintFeedback({ type: 'ok', text: msg })
+    } catch (e) {
+      setPrintFeedback({
+        type: 'err',
+        text: e instanceof Error ? e.message : 'No se pudo imprimir',
+      })
+    } finally {
+      setPrintingKey(null)
+    }
+  }
+
   if (!tenant) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -75,20 +98,22 @@ export function HistorialPedidosView() {
             Historial de pedidos
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Consultá y, si sos admin, anulá pedidos confirmados.
+            Reimprimí cocina o factura en pedidos confirmados. Los admin pueden anular.
           </p>
         </div>
-        <Link
-          href={ROUTES.PROTECTED.POS}
-          className={`inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition sm:w-auto ${
-            darkMode
-              ? 'border-gray-600 text-gray-300 hover:bg-gray-800'
-              : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200'
-          }`}
-        >
-          <ShoppingBag className="h-4 w-4" />
-          Ir al POS
-        </Link>
+        {canOpenPos && (
+          <Link
+            href={ROUTES.PROTECTED.POS}
+            className={`inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition sm:w-auto ${
+              darkMode
+                ? 'border-gray-600 text-gray-300 hover:bg-gray-800'
+                : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200'
+            }`}
+          >
+            <ShoppingBag className="h-4 w-4" />
+            Ir al POS
+          </Link>
+        )}
       </div>
 
       {/* Filtros */}
@@ -190,6 +215,18 @@ export function HistorialPedidosView() {
         </div>
       )}
 
+      {printFeedback && (
+        <div
+          className={`rounded-xl border p-4 text-sm ${
+            printFeedback.type === 'ok'
+              ? 'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300'
+              : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400'
+          }`}
+        >
+          {printFeedback.text}
+        </div>
+      )}
+
       {/* Lista en cards (móvil/tablet) */}
       <div className="space-y-3 md:hidden">
         {loading ? (
@@ -240,6 +277,20 @@ export function HistorialPedidosView() {
                   <dd className="font-medium text-gray-900 dark:text-white">{formatGuaranies(p.total)}</dd>
                 </div>
               </dl>
+              {p.estado_pedido === 'FACT' && (
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <p className={`mb-2 text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Impresión
+                  </p>
+                  <ReprintOrderActions
+                    pedido={p}
+                    darkMode={darkMode ?? false}
+                    printingKey={printingKey}
+                    onReprint={handleReprint}
+                    layout="stack"
+                  />
+                </div>
+              )}
               {isAdmin && p.estado_pedido === 'FACT' && (
                 <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                   <button
@@ -273,7 +324,7 @@ export function HistorialPedidosView() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
+            <table className="w-full min-w-[860px] text-left text-sm">
               <thead className={darkMode ? 'bg-gray-800/80 text-gray-400' : 'bg-gray-50 text-gray-600'}>
                 <tr>
                   <th className="px-4 py-3 font-medium">Nº</th>
@@ -282,6 +333,7 @@ export function HistorialPedidosView() {
                   <th className="px-4 py-3 font-medium">Tipo</th>
                   <th className="px-4 py-3 font-medium">Total</th>
                   <th className="px-4 py-3 font-medium">Estado</th>
+                  <th className="px-4 py-3 font-medium">Reimprimir</th>
                   {isAdmin && <th className="px-4 py-3 font-medium">Acción</th>}
                 </tr>
               </thead>
@@ -317,6 +369,15 @@ export function HistorialPedidosView() {
                           Confirmado
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <ReprintOrderActions
+                        pedido={p}
+                        darkMode={darkMode ?? false}
+                        printingKey={printingKey}
+                        onReprint={handleReprint}
+                        layout="stack"
+                      />
                     </td>
                     {isAdmin && (
                       <td className="px-4 py-3">

@@ -4,8 +4,7 @@
 
 import { ROUTES } from './routes'
 
-export type UserRole = 'owner' | 'admin' | 'cajero'
-// | 'cocinero' | 'repartidor'
+export type UserRole = 'owner' | 'admin' | 'cajero' | 'cocinero' | 'repartidor'
 
 /**
  * Configuración de acceso por rol
@@ -34,18 +33,14 @@ export const ROLE_ACCESS = {
       ROUTES.PROTECTED.PEDIDOS,
     ],
   },
-  // cocinero: {
-  //   defaultRoute: ROUTES.PROTECTED.KDS,
-  //   allowedRoutes: [
-  //     ROUTES.PROTECTED.KDS,
-  //   ],
-  // },
-  // repartidor: {
-  //   defaultRoute: ROUTES.PROTECTED.POS,
-  //   allowedRoutes: [
-  //     ROUTES.PROTECTED.POS,
-  //   ],
-  // },
+  cocinero: {
+    defaultRoute: ROUTES.PROTECTED.PEDIDOS,
+    allowedRoutes: [ROUTES.PROTECTED.PEDIDOS],
+  },
+  repartidor: {
+    defaultRoute: ROUTES.PROTECTED.POS,
+    allowedRoutes: [ROUTES.PROTECTED.POS, ROUTES.PROTECTED.PEDIDOS],
+  },
 } as const
 
 /**

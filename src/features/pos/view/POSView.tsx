@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, FileText, Loader2, ShoppingCart, Search, Gift } from 'lucide-react'
+import { LayoutDashboard, FileText, Loader2, ShoppingCart, Search, Gift, Printer } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
 import { useEstadoCaja } from '@/features/caja/hooks/useEstadoCaja'
@@ -23,6 +23,7 @@ import POSSearchBar from '../components/POSSearchBar'
 import { CartBottomBar } from '../components/CartBottomBar'
 import { CART_SECTION_ID, POS_PRODUCTS_SECTION_ID } from '../components/ScrollToCartFAB'
 import CanjePuntosModal from '../components/CanjePuntosModal'
+import { ReprintPOSModal } from '../components/ReprintPOSModal'
 import { AppFooter } from '@/components/layout/AppFooter'
 
 export default function POSView() {
@@ -34,6 +35,7 @@ export default function POSView() {
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
   const [showCajaCerradaModal, setShowCajaCerradaModal] = useState(false)
+  const [reprintModalOpen, setReprintModalOpen] = useState(false)
 
   const { usuario, tenant, loading: tenantLoading, darkMode, isAdmin, isCajero } = useTenant()
   const { items, addItem, addComboItem } = useCartStore()
@@ -241,6 +243,19 @@ export default function POSView() {
                         <span className="hidden sm:inline">Canje de puntos</span>
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setReprintModalOpen(true)}
+                      title="Reimprimir ticket de cocina o factura"
+                      className={`inline-flex items-center justify-center rounded-lg border p-2 sm:rounded-xl sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-medium transition min-h-[40px] min-w-[40px] sm:min-h-0 sm:min-w-0 ${
+                        darkMode
+                          ? 'border-gray-600 text-gray-300 hover:bg-gray-700/50 hover:text-white'
+                          : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200'
+                      }`}
+                    >
+                      <Printer className="h-4 w-4 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Reimprimir</span>
+                    </button>
                     <Link
                       href={`${ROUTES.PROTECTED.PEDIDOS}?from=${ROUTES.PEDIDOS_FROM.POS}`}
                       onClick={() => setNavigatingTo(ROUTES.PROTECTED.PEDIDOS)}
@@ -464,6 +479,11 @@ export default function POSView() {
       <CajaCerradaModal
         open={showCajaCerradaModal}
         onClose={() => setShowCajaCerradaModal(false)}
+        darkMode={darkMode}
+      />
+      <ReprintPOSModal
+        open={reprintModalOpen}
+        onClose={() => setReprintModalOpen(false)}
         darkMode={darkMode}
       />
     </div>

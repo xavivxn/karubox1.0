@@ -1,0 +1,15 @@
+diff --git a/node_modules/next/dist/trace/report/to-json.js b/node_modules/next/dist/trace/report/to-json.js
+index 65f9f4e..080e337 100644
+--- a/node_modules/next/dist/trace/report/to-json.js
++++ b/node_modules/next/dist/trace/report/to-json.js
+@@ -115,6 +115,10 @@ class RotatingWriteStream {
+     }
+ }
+ const reportToLocalHost = (event)=>{
++    // Karubox: evita EPERM en Windows (OneDrive, 2× next dev, antivirus) al abrir `trace`.
++    if (process.env.NEXT_DISABLE_TRACE_FILE === '1') {
++        return;
++    }
+     const distDir = _shared.traceGlobals.get('distDir');
+     const phase = _shared.traceGlobals.get('phase');
+     if (!distDir || !phase) {

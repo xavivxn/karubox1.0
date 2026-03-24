@@ -483,6 +483,18 @@ export interface Database {
           ultima_compra: string | null
         }
       }
+      vista_items_ticket_cocina: {
+        Row: {
+          pedido_id: string
+          item_pedido_id: string
+          producto_nombre: string
+          cantidad: number
+          precio_unitario: number
+          subtotal: number
+          notas_item: string | null
+          modificaciones: string | null
+        }
+      },
       vista_factura_impresion: {
         Row: {
           factura_id: string

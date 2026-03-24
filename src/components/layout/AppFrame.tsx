@@ -51,7 +51,7 @@ const PAGE_MAP: Array<{ test: (pathname: string) => boolean; info: PageInfo }> =
     test: (path) => path.startsWith('/home/pedidos'),
     info: {
       title: 'Historial de pedidos',
-      subtitle: 'Consultá y anulá pedidos (solo admin).'
+      subtitle: 'Reimprimí cocina o factura; anulación solo para administradores.'
     }
   },
   {

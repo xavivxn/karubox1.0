@@ -23,5 +23,13 @@ export interface PedidoParaHistorial {
   cancelado_at: string | null
   motivo_cancelacion: string | null
   cliente_nombre: string | null
+  cliente_telefono: string | null
+  cliente_direccion: string | null
   usuario_nombre: string | null
+  /** Notas generales del pedido (cocina / observaciones) */
+  notas: string | null
+  /** Texto corto tipo "3 líneas · Producto A ×2, B ×1" para identificar el pedido en listas */
+  items_preview: string
+  /** Hay factura no anulada → habilitar “Imprimir factura” */
+  factura_imprimible: boolean
 }
