@@ -1,74 +1,46 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTenant } from '@/contexts/TenantContext'
-import { posService } from '../services/posService'
 import type { Categoria, Producto, FeedbackState } from '../types/pos.types'
 import { buildUnexpectedErrorState } from '../utils/error.utils'
-import { getCachedCatalog, setCachedCatalog } from '../lib/catalogCache'
+import { loadCatalogWithCache } from '../lib/catalogCache'
+import { useQuery } from '@tanstack/react-query'
+import { measureEnd, measureStart } from '@/lib/perf/metrics'
 
 export function usePOSData() {
-  const [categorias, setCategorias] = useState<Categoria[]>([])
-  const [productos, setProductos] = useState<Producto[]>([])
-  const [loading, setLoading] = useState(true)
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
 
   const { tenant, loading: tenantLoading } = useTenant()
 
-  // Catálogo se carga solo al iniciar sesión (prefetch en TenantContext).
-  // Aquí solo leemos de cache; si no hay cache (ej. prefetch aún no terminó), hacemos un único fetch de fallback.
+  const tenantId = tenant?.id
+  const posCatalog = useQuery({
+    queryKey: ['pos-catalog', tenantId],
+    enabled: Boolean(tenantId) && !tenantLoading,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const startedAt = measureStart()
+      const data = await loadCatalogWithCache(tenantId as string)
+      measureEnd('pos.catalog.load', startedAt, {
+        tenant_id: tenantId,
+        categorias: data.categorias.length,
+        productos: data.productos.length
+      })
+      return data
+    }
+  })
+
+  const categorias = useMemo<Categoria[]>(() => posCatalog.data?.categorias ?? [], [posCatalog.data])
+  const productos = useMemo<Producto[]>(() => posCatalog.data?.productos ?? [], [posCatalog.data])
+
   useEffect(() => {
-    if (tenantLoading || !tenant) return
-
-    const tenantId = tenant.id
-    const cached = getCachedCatalog(tenantId)
-
-    if (cached) {
-      setCategorias(cached.categorias)
-      setProductos(cached.productos)
-      setLoading(false)
-      return
+    if (posCatalog.error) {
+      setFeedback(buildUnexpectedErrorState('No pudimos cargar el catálogo', posCatalog.error))
     }
-
-    let cancelled = false
-    setLoading(true)
-
-    async function loadData() {
-      try {
-        const [cats, prods, comboMap] = await Promise.all([
-          posService.loadCategorias(tenantId),
-          posService.loadProductos(tenantId),
-          posService.loadComboItems(tenantId)
-        ])
-        if (cancelled) return
-
-        // Inyectar combo_items en los productos que son combos
-        const productosConCombos = prods.map((p) => {
-          const items = comboMap.get(p.id)
-          return items && items.length > 0 ? { ...p, combo_items: items } : p
-        })
-
-        setCachedCatalog(tenantId, cats, productosConCombos)
-        setCategorias(cats)
-        setProductos(productosConCombos)
-      } catch (error) {
-        if (!cancelled) {
-          console.error('Error cargando datos:', error)
-          setFeedback(buildUnexpectedErrorState('No pudimos cargar el catálogo', error))
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    loadData()
-    return () => {
-      cancelled = true
-    }
-  }, [tenant, tenantLoading])
+  }, [posCatalog.error])
 
   return {
     categorias,
     productos,
-    loading,
+    loading: tenantLoading || posCatalog.isLoading,
     feedback,
     setFeedback
   }

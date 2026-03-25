@@ -10,6 +10,7 @@ export type CatalogEntry = {
 }
 
 const cache = new Map<string, CatalogEntry>()
+const inflightLoads = new Map<string, Promise<CatalogEntry>>()
 
 export function getCachedCatalog(tenantId: string): CatalogEntry | undefined {
   return cache.get(tenantId)
@@ -28,7 +29,19 @@ export function setCachedCatalog(
  * el tenant para que la primera entrada al POS tenga datos en caché.
  */
 export function prefetchPOSCatalog(tenantId: string): void {
-  Promise.all([
+  void loadCatalogWithCache(tenantId)
+}
+
+export async function loadCatalogWithCache(tenantId: string): Promise<CatalogEntry> {
+  const cached = getCachedCatalog(tenantId)
+  if (cached && Date.now() - cached.at <= CACHE_TTL_MS) {
+    return cached
+  }
+
+  const inflight = inflightLoads.get(tenantId)
+  if (inflight) return inflight
+
+  const promise = Promise.all([
     posService.loadCategorias(tenantId),
     posService.loadProductos(tenantId),
     posService.loadComboItems(tenantId)
@@ -38,7 +51,14 @@ export function prefetchPOSCatalog(tenantId: string): void {
         const items = comboMap.get(p.id)
         return items && items.length > 0 ? { ...p, combo_items: items } : p
       })
-      setCachedCatalog(tenantId, categorias, productosConCombos)
+      const next = { categorias, productos: productosConCombos, at: Date.now() }
+      cache.set(tenantId, next)
+      return next
     })
-    .catch(() => {})
+    .finally(() => {
+      inflightLoads.delete(tenantId)
+    })
+
+  inflightLoads.set(tenantId, promise)
+  return promise
 }

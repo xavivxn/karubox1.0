@@ -113,6 +113,69 @@ Para configurar auto-deploy con Vercel (cada `git push` despliega automáticamen
 
 ---
 
+## Preproducción (Supabase + Vercel)
+
+Objetivo: **producción** (`tu-dominio.com.py`) usa el proyecto Supabase actual; **previews** de Vercel (`*.vercel.app`) usan un **segundo proyecto Supabase** con el mismo esquema.
+
+### 1. Crear el proyecto Supabase de staging
+
+1. [Supabase Dashboard](https://supabase.com/dashboard) → **New project** (misma región que producción si podés).
+2. Anotá en un gestor seguro: **Project URL**, **anon** y **service_role** (Settings → API).
+
+### 2. Copiar el esquema (y opcionalmente datos)
+
+**Esquema automático desde tu máquina** (requiere [PostgreSQL client](https://www.postgresql.org/download/) / `psql` en el PATH):
+
+1. En el proyecto **staging**: Settings → Database → **Connection string** → URI (modo session o transaction).
+2. En la raíz del repo:
+
+```bash
+set DATABASE_URL=postgresql://postgres.[ref]:[PASSWORD]@aws-0-....pooler.supabase.com:6543/postgres
+npm run db:apply-staging
+```
+
+(PowerShell: `$env:DATABASE_URL="..."` antes del comando.)
+
+El orden de archivos está en [`database/staging_schema_order.txt`](./database/staging_schema_order.txt). Si preferís, ejecutá el mismo orden en el **SQL Editor** de Supabase a mano.
+
+**Datos**
+
+- **Solo esquema**: no cargues seeds; creá usuarios de prueba en Auth del proyecto staging.
+- **Demo**: tras el esquema, ejecutá [`seeds/atlas-burger.sql`](./seeds/atlas-burger.sql) en el SQL Editor del proyecto staging.
+- **Copia de producción**: usá backup/`pg_dump` sabiendo el riesgo de **datos personales** y el desalineamiento con Auth (usuarios no se copian igual que en prod).
+
+Replicá en staging lo que uses en prod: **Storage** (bucket `logos`, etc.), **webhooks** y **Edge Functions** si aplican.
+
+### 3. Auth en el proyecto staging
+
+Authentication → **URL Configuration**:
+
+- **Site URL**: una URL estable de preview, por ejemplo `https://<nombre>-git-main-<equipo>.vercel.app`, o tu subdominio de staging.
+- **Redirect URLs**: `http://localhost:3000/**`, las URLs `https://*.vercel.app/**` que Supabase permita listar, y cualquier dominio de staging dedicado.
+
+Los usuarios **no** se comparten entre dos proyectos Supabase: en staging usá cuentas de prueba.
+
+### 4. Variables en Vercel
+
+En el proyecto de Vercel → Settings → Environment Variables:
+
+| Variable | Production | Preview (y Development si querés) |
+|----------|------------|-------------------------------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto **prod** | URL del proyecto **staging** |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon de **prod** | anon de **staging** |
+| `SUPABASE_SERVICE_ROLE_KEY` | service_role **prod** | service_role **staging** |
+
+Claves de terceros (pagos, Resend producción, etc.): dejalas solo en **Production** o usá keys de sandbox en Preview.
+
+### 5. Dominios
+
+- El dominio **`.com.py`** debe estar asignado al entorno **Production** (rama que definas como producción, p. ej. `main`).
+- Los **deployments de Preview** seguirán en `*.vercel.app` y tomarán las variables marcadas para **Preview** → apuntan a la base de staging.
+
+Comprobación: abrí un preview en Vercel, iniciá sesión con un usuario creado en Auth del proyecto staging y recorré un flujo crítico (login + POS o admin).
+
+---
+
 ## 📁 **Estructura del Proyecto**
 
 ```

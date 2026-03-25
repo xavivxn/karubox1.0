@@ -7,6 +7,7 @@ import {
   type KitchenOrder,
   type KitchenStats,
 } from '../utils/cocina.utils'
+import { measureEnd, measureStart } from '@/lib/perf/metrics'
 
 interface UseRealtimeOrdersParams {
   tenantId: string | undefined
@@ -23,6 +24,26 @@ interface RawPedido {
   created_at: string
   tipo: string | null
   estado_pedido: string
+}
+
+interface PedidoRealtimePayload {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE'
+  new: RawPedido | null
+  old: RawPedido | null
+}
+
+function toRealtimePayload(payload: unknown): PedidoRealtimePayload {
+  const raw = payload as {
+    eventType?: 'INSERT' | 'UPDATE' | 'DELETE'
+    new?: Partial<RawPedido> | null
+    old?: Partial<RawPedido> | null
+  }
+
+  return {
+    eventType: raw.eventType ?? 'UPDATE',
+    new: (raw.new as RawPedido | null) ?? null,
+    old: (raw.old as RawPedido | null) ?? null
+  }
 }
 
 export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersParams) {
@@ -86,6 +107,7 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
       setInitialLoad(false)
       return
     }
+    const startedAt = measureStart()
     const supabase = createClient()
     const fromDate = desde
       ? new Date(desde)
@@ -119,8 +141,60 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
       setOrders(processed)
       setStats(computeStats(processed))
     }
+    measureEnd('kitchen.orders.snapshot', startedAt, {
+      tenant_id: tenantId,
+      rows: data?.length ?? 0
+    })
     setInitialLoad(false)
   }, [tenantId, desde, hasta, processRawOrders, computeStats])
+
+  const applyRealtimeDelta = useCallback(
+    (payload: PedidoRealtimePayload) => {
+      const candidate = payload.new ?? payload.old
+      if (!candidate) return
+
+      const fromDate = desde
+        ? new Date(desde)
+        : (() => {
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            return today
+          })()
+      const createdAt = new Date(candidate.created_at)
+      if (createdAt < fromDate) return
+      if (hasta && createdAt > new Date(hasta)) return
+
+      setOrders((prev) => {
+        let next = [...prev]
+        const index = next.findIndex((o) => o.id === candidate.id)
+        const shouldExist = payload.eventType !== 'DELETE' && candidate.estado_pedido === 'FACT'
+
+        if (!shouldExist) {
+          if (index >= 0) next.splice(index, 1)
+        } else {
+          const { stage, elapsed, progress } = getOrderStage(candidate.created_at)
+          const mapped: KitchenOrder = {
+            id: candidate.id,
+            numero_pedido: candidate.numero_pedido,
+            total: Number(candidate.total) || 0,
+            created_at: candidate.created_at,
+            tipo: candidate.tipo || 'local',
+            stage,
+            elapsed,
+            progress
+          }
+          if (index >= 0) next[index] = mapped
+          else next.unshift(mapped)
+        }
+
+        next.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
+        ordersRef.current = next
+        setStats(computeStats(next))
+        return next
+      })
+    },
+    [computeStats, desde, hasta]
+  )
 
   // Mantener ref en sync con orders para el intervalo (evitar setState dentro de setState)
   useEffect(() => {
@@ -172,8 +246,14 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
           table: 'pedidos',
           filter: `tenant_id=eq.${tenantId}`,
         },
-        () => {
-          fetchOrders()
+        (payload) => {
+          const startedAt = measureStart()
+          const normalizedPayload = toRealtimePayload(payload)
+          applyRealtimeDelta(normalizedPayload)
+          measureEnd('kitchen.orders.realtime_delta', startedAt, {
+            tenant_id: tenantId,
+            event: normalizedPayload.eventType
+          })
         }
       )
       .subscribe()
@@ -181,7 +261,7 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [tenantId, fetchOrders])
+  }, [tenantId, applyRealtimeDelta])
 
   const clearDelivery = useCallback((id: string) => {
     setNewDeliveryIds((prev) => prev.filter((d) => d !== id))

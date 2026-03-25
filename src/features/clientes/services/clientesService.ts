@@ -16,8 +16,11 @@ import { limpiarFormData } from '../utils/clientes.utils'
 /**
  * Carga todos los clientes de un tenant
  */
-export const loadClientes = async (tenantId: string): Promise<ClienteLocal[]> => {
-  const data = await getClientesPorTenant(tenantId)
+export const loadClientes = async (
+  tenantId: string,
+  options?: { page?: number; pageSize?: number }
+): Promise<ClienteLocal[]> => {
+  const data = await getClientesPorTenant(tenantId, options)
   return (data || []) as ClienteLocal[]
 }
 
@@ -26,13 +29,14 @@ export const loadClientes = async (tenantId: string): Promise<ClienteLocal[]> =>
  */
 export const searchClientes = async (
   searchTerm: string,
-  tenantId: string
+  tenantId: string,
+  options?: { page?: number; pageSize?: number }
 ): Promise<ClienteLocal[]> => {
   if (!searchTerm.trim()) {
-    return loadClientes(tenantId)
+    return loadClientes(tenantId, options)
   }
 
-  const resultados = await buscarClientes(searchTerm.trim(), tenantId)
+  const resultados = await buscarClientes(searchTerm.trim(), tenantId, options)
   return (resultados || []) as ClienteLocal[]
 }
 

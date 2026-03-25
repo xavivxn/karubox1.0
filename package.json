@@ -8,7 +8,8 @@
     "dev:no-open": "node scripts/clear-next-trace.cjs && cross-env NEXT_DISABLE_TRACE_FILE=1 next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:apply-staging": "node scripts/apply-staging-schema.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

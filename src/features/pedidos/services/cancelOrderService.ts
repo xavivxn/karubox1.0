@@ -1,10 +1,51 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { measureEnd, measureStart } from '@/lib/perf/metrics'
 
 /**
  * Revierte puntos, inventario e ingredientes de un pedido y lo marca como anulado.
  * Solo debe ser llamado después de validar que el usuario es admin del tenant.
  */
 export async function cancelOrder(
+  supabase: SupabaseClient,
+  params: {
+    pedidoId: string
+    tenantId: string
+    usuarioId: string
+    motivo?: string | null
+  }
+): Promise<{ success: boolean; error: string | null }> {
+  const startedAt = measureStart()
+  const rpcResult = await supabase.rpc('cancel_order_transactional', {
+    p_pedido_id: params.pedidoId,
+    p_tenant_id: params.tenantId,
+    p_usuario_id: params.usuarioId,
+    p_motivo: params.motivo?.trim() || null
+  })
+
+  if (!rpcResult.error) {
+    const result = Array.isArray(rpcResult.data) ? rpcResult.data[0] : rpcResult.data
+    const success = Boolean(result?.success)
+    measureEnd('pedidos.cancel_order.rpc', startedAt, {
+      tenant_id: params.tenantId,
+      pedido_id: params.pedidoId,
+      success
+    })
+    if (success) return { success: true, error: null }
+    return { success: false, error: result?.error ?? 'No se pudo anular el pedido.' }
+  }
+
+  // Fallback temporal para ambientes donde la migración SQL aún no fue aplicada.
+  console.warn('RPC cancel_order_transactional no disponible, usando flujo legacy:', rpcResult.error.message)
+  const fallback = await cancelOrderLegacy(supabase, params)
+  measureEnd('pedidos.cancel_order.legacy', startedAt, {
+    tenant_id: params.tenantId,
+    pedido_id: params.pedidoId,
+    success: fallback.success
+  })
+  return fallback
+}
+
+async function cancelOrderLegacy(
   supabase: SupabaseClient,
   params: {
     pedidoId: string

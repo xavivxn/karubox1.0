@@ -27,7 +27,16 @@ export async function buscarClientePorTelefono(telefono: string, tenantId: strin
 /**
  * Buscar clientes por nombre, CI o teléfono (filtrado por tenant), ordenados por puntos totales (mayor a menor)
  */
-export async function buscarClientes(termino: string, tenantId: string) {
+export async function buscarClientes(
+  termino: string,
+  tenantId: string,
+  options?: { page?: number; pageSize?: number }
+) {
+  const page = Math.max(1, options?.page ?? 1)
+  const pageSize = Math.max(1, Math.min(100, options?.pageSize ?? 20))
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
   const { data, error } = await supabase
     .from('clientes')
     .select('*')
@@ -35,7 +44,7 @@ export async function buscarClientes(termino: string, tenantId: string) {
     .eq('is_deleted', false)
     .or(`nombre.ilike.%${termino}%,telefono.ilike.%${termino}%,ci.ilike.%${termino}%`)
     .order('puntos_totales', { ascending: false })
-    .limit(20)
+    .range(from, to)
   
   if (error) throw error
   return data as Cliente[]
@@ -44,14 +53,22 @@ export async function buscarClientes(termino: string, tenantId: string) {
 /**
  * Obtener todos los clientes de un tenant, ordenados por puntos totales (mayor a menor)
  */
-export async function getClientesPorTenant(tenantId: string, limite: number = 100) {
+export async function getClientesPorTenant(
+  tenantId: string,
+  options?: { page?: number; pageSize?: number }
+) {
+  const page = Math.max(1, options?.page ?? 1)
+  const pageSize = Math.max(1, Math.min(200, options?.pageSize ?? 100))
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
   const { data, error } = await supabase
     .from('clientes')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('is_deleted', false)
     .order('puntos_totales', { ascending: false })
-    .limit(limite)
+    .range(from, to)
   
   if (error) throw error
   return data as Cliente[]

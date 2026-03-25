@@ -3,7 +3,7 @@
  * Hook para gestionar el estado y carga de datos del dashboard
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import type {
   DashboardStats,
   ClientRanking,
@@ -13,6 +13,8 @@ import type {
 } from '../types/admin.types'
 import { fetchDashboardData } from '../services/adminService'
 import { buildWeekLabels } from '../utils/admin.utils'
+import { useQuery } from '@tanstack/react-query'
+import { measureEnd, measureStart } from '@/lib/perf/metrics'
 
 interface UseAdminDashboardReturn {
   loading: boolean
@@ -24,6 +26,27 @@ interface UseAdminDashboardReturn {
   lowStockItems: InventoryRecord[]
   totalInventoryItems: number
   refetch: () => Promise<void>
+}
+
+const EMPTY_STATS: DashboardStats = {
+  todayOrders: 0,
+  todayRevenue: 0,
+  todayCost: 0,
+  todayProfit: 0,
+  monthRevenue: 0,
+  monthCost: 0,
+  monthProfit: 0,
+  avgTicket: 0,
+  itemsPerOrder: 0,
+  loyaltyRate: 0,
+  activeClients: 0,
+  loyaltyPoints: 0,
+  weeklyTrend: buildWeekLabels().map((item) => ({ label: item.label, value: 0 })),
+  channelSplit: {
+    local: 0,
+    delivery: 0,
+    para_llevar: 0
+  }
 }
 
 export interface UseAdminDashboardOptions {
@@ -39,75 +62,40 @@ export const useAdminDashboard = (
   options?: UseAdminDashboardOptions
 ): UseAdminDashboardReturn => {
   const desde = options?.desde ?? null
-  const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState<DashboardStats>({
-    todayOrders: 0,
-    todayRevenue: 0,
-    todayCost: 0,
-    todayProfit: 0,
-    monthRevenue: 0,
-    monthCost: 0,
-    monthProfit: 0,
-    avgTicket: 0,
-    itemsPerOrder: 0,
-    loyaltyRate: 0,
-    activeClients: 0,
-    loyaltyPoints: 0,
-    weeklyTrend: buildWeekLabels().map((item) => ({ label: item.label, value: 0 })),
-    channelSplit: {
-      local: 0,
-      delivery: 0,
-      para_llevar: 0
+  const dashboardQuery = useQuery({
+    queryKey: ['admin-dashboard', tenantId, desde],
+    enabled: Boolean(tenantId),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const startedAt = measureStart()
+      const data = await fetchDashboardData(tenantId as string, { desde })
+      measureEnd('admin.dashboard.load', startedAt, {
+        tenant_id: tenantId,
+        pedidos: data.stats.todayOrders,
+        inventory: data.inventory.length,
+        products: data.topProducts.length
+      })
+      return data
     }
   })
-  const [topClients, setTopClients] = useState<ClientRanking[]>([])
-  const [topProducts, setTopProducts] = useState<ProductRanking[]>([])
-  const [inventory, setInventory] = useState<InventoryRecord[]>([])
-  const [ingredientsUsage, setIngredientsUsage] = useState<IngredientUsage[]>([])
 
-  const fetchDashboard = useCallback(async () => {
-    if (!tenantId) {
-      console.warn('⚠️ fetchDashboard: tenantId es null')
-      setLoading(false)
-      return
-    }
-    
-    console.log('🔍 Iniciando carga de dashboard para tenant:', tenantId, desde ? `desde ${desde}` : '')
-    setLoading(true)
-
-    try {
-      console.log('📡 Llamando fetchDashboardData...')
-      const data = await fetchDashboardData(tenantId, { desde })
-      
-      console.log('✅ Datos recibidos:', {
-        stats: data.stats ? '✓' : '✗',
-        topClients: data.topClients?.length ?? 0,
-        topProducts: data.topProducts?.length ?? 0,
-        inventory: data.inventory?.length ?? 0,
-        ingredientsUsage: data.ingredientsUsage?.length ?? 0
-      })
-      
-      setStats(data.stats)
-      setTopClients(data.topClients)
-      setTopProducts(data.topProducts)
-      setInventory(data.inventory)
-      setIngredientsUsage(data.ingredientsUsage)
-    } catch (error) {
-      console.error('❌ Error cargando dashboard:', error)
-      console.error('📋 Detalles del error:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : JSON.stringify(error),
-        stack: error instanceof Error ? error.stack : 'No stack trace',
-        tenantId
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [tenantId, desde])
-
-  useEffect(() => {
-    fetchDashboard()
-  }, [fetchDashboard])
+  const stats = useMemo(() => dashboardQuery.data?.stats ?? EMPTY_STATS, [dashboardQuery.data])
+  const topClients = useMemo(
+    () => dashboardQuery.data?.topClients ?? ([] as ClientRanking[]),
+    [dashboardQuery.data]
+  )
+  const topProducts = useMemo(
+    () => dashboardQuery.data?.topProducts ?? ([] as ProductRanking[]),
+    [dashboardQuery.data]
+  )
+  const inventory = useMemo(
+    () => dashboardQuery.data?.inventory ?? ([] as InventoryRecord[]),
+    [dashboardQuery.data]
+  )
+  const ingredientsUsage = useMemo(
+    () => dashboardQuery.data?.ingredientsUsage ?? ([] as IngredientUsage[]),
+    [dashboardQuery.data]
+  )
 
   const lowStockItems = useMemo(
     () => inventory.filter((item) => item.stock_actual <= item.stock_minimo),
@@ -117,7 +105,7 @@ export const useAdminDashboard = (
   const totalInventoryItems = inventory.length
 
   return {
-    loading,
+    loading: dashboardQuery.isLoading || dashboardQuery.isFetching,
     stats,
     topClients,
     topProducts,
@@ -125,6 +113,8 @@ export const useAdminDashboard = (
     ingredientsUsage,
     lowStockItems,
     totalInventoryItems,
-    refetch: fetchDashboard
+    refetch: async () => {
+      await dashboardQuery.refetch()
+    }
   }
 }

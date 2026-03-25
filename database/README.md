@@ -1,5 +1,7 @@
 # 🗄️ DATABASE - Sistema POS Multi-Tenant
 
+Para **clonar el esquema en un proyecto Supabase de preproducción**, usá la lista ordenada [`staging_schema_order.txt`](./staging_schema_order.txt) y el comando `npm run db:apply-staging` desde la raíz del repo (requiere `DATABASE_URL` y `psql` en el PATH). Detalles en el README principal, sección *Preproducción (Supabase + Vercel)*.
+
 ## 📋 **Orden de Ejecución (Setup Inicial)**
 
 ### **1️⃣ Crear Schema Base (v1.1 - Ultra Profesional)**

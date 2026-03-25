@@ -3,15 +3,18 @@
  * Hook para gestionar el estado y operaciones de clientes
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import type { ClienteLocal, ClienteFormData } from '../types/clientes.types'
 import { INITIAL_FORM_DATA } from '../types/clientes.types'
-import { validarFormulario, normalizarParaBusqueda } from '../utils/clientes.utils'
+import { validarFormulario } from '../utils/clientes.utils'
 import {
   loadClientes,
+  searchClientes,
   crearCliente,
   actualizarCliente
 } from '../services/clientesService'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { measureEnd, measureStart } from '@/lib/perf/metrics'
 
 interface UseClientesReturn {
   // Estado
@@ -39,71 +42,50 @@ interface UseClientesReturn {
  * Hook principal para la gestión de clientes
  */
 export const useClientes = (tenantId: string | undefined): UseClientesReturn => {
-  const [clientes, setClientes] = useState<ClienteLocal[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingCliente, setEditingCliente] = useState<ClienteLocal | null>(null)
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState<ClienteFormData>(INITIAL_FORM_DATA)
-
-  // Cargar clientes
-  const fetchClientes = useCallback(async () => {
-    if (!tenantId) return
-
-    try {
-      setLoading(true)
-      const data = await loadClientes(tenantId)
-      setClientes(data)
-    } catch (error) {
-      console.error('Error cargando clientes:', error)
-      alert('Error al cargar clientes')
-    } finally {
-      setLoading(false)
-    }
-  }, [tenantId])
+  const queryClient = useQueryClient()
+  const normalizedSearch = debouncedSearch.trim()
 
   useEffect(() => {
-    fetchClientes()
-  }, [fetchClientes])
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(searchTerm)
+    }, 350)
+    return () => clearTimeout(timeout)
+  }, [searchTerm])
+
+  const clientesQuery = useQuery({
+    queryKey: ['clientes', tenantId, normalizedSearch],
+    enabled: Boolean(tenantId),
+    staleTime: 60_000,
+    queryFn: async () => {
+      const startedAt = measureStart()
+      const data = normalizedSearch
+        ? await searchClientes(normalizedSearch, tenantId as string, { page: 1, pageSize: 100 })
+        : await loadClientes(tenantId as string, { page: 1, pageSize: 100 })
+      measureEnd('clientes.list.load', startedAt, {
+        tenant_id: tenantId,
+        search: normalizedSearch || null,
+        rows: data.length
+      })
+      return data
+    }
+  })
 
   // Buscar clientes (filtro en memoria para ignorar tildes)
   const handleSearch = async () => {
-    if (!tenantId) return
-
-    try {
-      setLoading(true)
-      const todos = await loadClientes(tenantId)
-      if (!searchTerm.trim()) {
-        setClientes(todos)
-        return
-      }
-      const termino = normalizarParaBusqueda(searchTerm)
-      const filtrados = todos.filter((c) => {
-        const nombre = normalizarParaBusqueda(c.nombre ?? '')
-        const telefono = normalizarParaBusqueda(c.telefono ?? '')
-        const email = normalizarParaBusqueda(c.email ?? '')
-        const ci = normalizarParaBusqueda(c.ci ?? '')
-        return (
-          nombre.includes(termino) ||
-          telefono.includes(termino) ||
-          email.includes(termino) ||
-          ci.includes(termino)
-        )
-      })
-      setClientes(filtrados)
-    } catch (error) {
-      console.error('Error buscando clientes:', error)
-      alert('Error al buscar clientes')
-    } finally {
-      setLoading(false)
-    }
+    setDebouncedSearch(searchTerm)
+    await clientesQuery.refetch()
   }
 
   // Limpiar búsqueda
   const handleClearSearch = () => {
     setSearchTerm('')
-    fetchClientes()
+    setDebouncedSearch('')
   }
 
   // Abrir modal para nuevo cliente
@@ -164,7 +146,7 @@ export const useClientes = (tenantId: string | undefined): UseClientesReturn => 
       }
 
       handleCloseModal()
-      fetchClientes()
+      await queryClient.invalidateQueries({ queryKey: ['clientes', tenantId] })
     } catch (error: any) {
       console.error('Error guardando cliente:', error)
       alert(`Error: ${error.message || 'Error al guardar cliente'}`)
@@ -174,8 +156,8 @@ export const useClientes = (tenantId: string | undefined): UseClientesReturn => 
   }
 
   return {
-    clientes,
-    loading,
+    clientes: clientesQuery.data ?? [],
+    loading: clientesQuery.isLoading || clientesQuery.isFetching,
     searchTerm,
     showModal,
     editingCliente,
@@ -189,6 +171,8 @@ export const useClientes = (tenantId: string | undefined): UseClientesReturn => 
     handleCloseModal,
     handleFormChange,
     handleGuardar,
-    refetch: fetchClientes
+    refetch: async () => {
+      await clientesQuery.refetch()
+    }
   }
 }

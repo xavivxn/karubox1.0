@@ -30,8 +30,10 @@ import { TopProducts } from './TopProducts'
 import { IngredientConsumption } from './IngredientConsumption'
 import { InventoryGrid } from './InventoryGrid'
 import { InventoryDrawer } from './InventoryDrawer'
+import { useQueryClient } from '@tanstack/react-query'
 
 export const AdminView = () => {
+  const queryClient = useQueryClient()
   const { tenant, usuario, darkMode } = useTenant()
   const [showIngredienteModal, setShowIngredienteModal] = useState(false)
   const [showOwnerProductModal, setShowOwnerProductModal] = useState(false)
@@ -62,7 +64,7 @@ export const AdminView = () => {
     } else {
       setErrorEmpezar(result.error)
     }
-  }, [handleEmpezarDia, refetchCaja])
+  }, [handleEmpezarDia, refetchCaja, tenant?.id])
 
   const onConfirmCerrarCaja = useCallback(async () => {
     setShowConfirmCerrar(false)
@@ -100,17 +102,17 @@ export const AdminView = () => {
 
   const handleIngredienteSaved = () => {
     setShowIngredienteModal(false)
-    refetch()
+    void queryClient.invalidateQueries({ queryKey: ['admin-dashboard', tenant?.id] })
   }
 
   const handleOwnerProductSaved = () => {
     setShowOwnerProductModal(false)
-    refetch()
+    void queryClient.invalidateQueries({ queryKey: ['admin-dashboard', tenant?.id] })
   }
 
   const handleStockDrawerSaved = () => {
     setShowStockDrawer(false)
-    refetch()
+    void queryClient.invalidateQueries({ queryKey: ['admin-dashboard', tenant?.id] })
   }
 
   // Resumen: si caja abierta = stats del turno actual; si cerrada = último cierre (registrado hasta que se abra de nuevo)

@@ -21,6 +21,7 @@ import {
   buildWeekLabels
 } from '../utils/admin.utils'
 import { getTodayStart, getMonthStart } from '../utils/date.utils'
+import { measureEnd, measureStart } from '@/lib/perf/metrics'
 
 /**
  * Obtiene todos los pedidos del mes actual
@@ -319,12 +320,14 @@ export const fetchDashboardData = async (
   inventory: InventoryRecord[]
   ingredientsUsage: IngredientUsage[]
 }> => {
+  const totalStart = measureStart()
   const desde = options?.desde ?? null
   console.log('🔄 fetchDashboardData - tenantId:', tenantId, desde ? `desde ${desde}` : 'día calendario')
   
   // Fetch paralelo de todos los datos
   try {
     console.log('📊 Iniciando queries paralelas...')
+    const queryStart = measureStart()
     const [pedidos, activeClients, topClients, inventory, items] = await Promise.all([
       fetchPedidos(tenantId).catch(e => { console.error('❌ Error en fetchPedidos:', e); throw e; }),
       fetchActiveClientsCount(tenantId).catch(e => { console.error('❌ Error en fetchActiveClientsCount:', e); throw e; }),
@@ -332,6 +335,12 @@ export const fetchDashboardData = async (
       fetchInventory(tenantId).catch(e => { console.error('❌ Error en fetchInventory:', e); throw e; }),
       fetchOrderItems(tenantId).catch(e => { console.error('❌ Error en fetchOrderItems:', e); throw e; })
     ])
+    measureEnd('admin.dashboard.parallel_queries', queryStart, {
+      tenant_id: tenantId,
+      pedidos: pedidos.length,
+      items: items.length,
+      inventory: inventory.length
+    })
     
     console.log('✅ Queries completadas:', {
       pedidos: pedidos.length,
@@ -343,6 +352,7 @@ export const fetchDashboardData = async (
 
     // Procesar estadísticas (desde = apertura del turno si caja abierta)
     console.log('🧮 Procesando estadísticas...')
+    const processStart = measureStart()
     const dailyStats = processDailyStats(pedidos, desde)
     const monthlyStats = processMonthlyStats(pedidos)
     const weeklyTrend = processWeeklyTrend(pedidos)
@@ -350,6 +360,10 @@ export const fetchDashboardData = async (
     const topProducts = processTopProducts(items)
     const itemsMetrics = processItemsMetrics(items, pedidos, desde)
     const ingredientsUsage = await fetchIngredientUsage(tenantId, itemsMetrics.todayItems)
+    measureEnd('admin.dashboard.processing', processStart, {
+      tenant_id: tenantId,
+      ingredients: ingredientsUsage.length
+    })
 
     // Calcular ganancias
     const todayProfit = dailyStats.todayRevenue - itemsMetrics.estimatedTodayCost
@@ -373,6 +387,11 @@ export const fetchDashboardData = async (
     }
 
     console.log('✅ Dashboard procesado exitosamente')
+    measureEnd('admin.dashboard.total', totalStart, {
+      tenant_id: tenantId,
+      pedidos: pedidos.length,
+      items: items.length
+    })
     return {
       stats,
       topClients,
@@ -382,6 +401,10 @@ export const fetchDashboardData = async (
     }
   } catch (error) {
     console.error('❌ Error fatal en fetchDashboardData:', error)
+    measureEnd('admin.dashboard.total', totalStart, {
+      tenant_id: tenantId,
+      error: true
+    })
     throw error
   }
 }

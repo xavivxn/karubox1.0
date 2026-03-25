@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { TenantProvider } from "@/contexts/TenantContext";
 import { AppFrame } from "@/components/layout/AppFrame";
+import { Providers } from "@/app/providers";
 
 // Favicon temporal (emoji hamburguesa) para que el sitio tenga ícono en pestañas.
 // En el futuro, reemplazá esta URL por tu favicon personalizado (idealmente un archivo en `public/`):
@@ -36,9 +37,11 @@ export default function RootLayout({
   return (
     <html lang="es" className="h-full">
       <body className="h-full">
-        <TenantProvider>
-          <AppFrame>{children}</AppFrame>
-        </TenantProvider>
+        <Providers>
+          <TenantProvider>
+            <AppFrame>{children}</AppFrame>
+          </TenantProvider>
+        </Providers>
       </body>
     </html>
   );

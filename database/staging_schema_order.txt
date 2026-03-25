@@ -1,0 +1,39 @@
+# Orden sugerido para clonar el esquema en un proyecto Supabase nuevo (staging/preprod).
+# Uso: desde la raíz del repo, con psql en PATH y DATABASE_URL apuntando al proyecto staging:
+#   npm run db:apply-staging
+# Ver README.md sección "Preproducción (Supabase + Vercel)".
+#
+# Opcional tras el esquema: seeds/atlas-burger.sql (datos demo) y seeds según tu tenant.
+
+database/00_initial_schema.sql
+database/fix_productos_permissions.sql
+database/01_impresion_automatica.sql
+database/02_printer_config.sql
+database/fix_printer_config_permissions.sql
+database/03_inventory_system_upgrade.sql
+database/03b_mark_products_without_recipe.sql
+database/04_combo_system.sql
+database/fix_combo_items_rls.sql
+database/05_owner_role.sql
+database/06_inventario_nombre.sql
+database/07_facturacion.sql
+database/08_vista_factura_impresion.sql
+database/09_cancelacion_pedidos.sql
+database/09_campanas_clientes.sql
+database/10_puntos_extra_producto.sql
+database/11_sesiones_caja.sql
+database/fix_sesiones_caja_permissions.sql
+database/12_cumpleanos_clientes.sql
+database/12_vista_items_ticket_notas.sql
+database/13_gastos_extra_sesiones_caja.sql
+database/13_bump_reprint_realtime.sql
+database/14_owner_caja.sql
+database/14_reprint_solicitud.sql
+database/15_owner_monthly_expenses.sql
+database/15_bump_factura_reprint_solicitud.sql
+database/16_campanas_nivel_oro_top10.sql
+database/17_pos_orden_por_ventas.sql
+database/18_ingredientes_extras_carrito.sql
+database/19_api_performance_optimizations.sql
+database/fix_rls_definitivo.sql
+database/fix_all_permissions.sql

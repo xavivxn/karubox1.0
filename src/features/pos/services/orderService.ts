@@ -8,6 +8,7 @@ import { calcularPuntos, formatTipoPedido, formatItemModificacionesForTicket } f
 import { formatGuaranies } from '@/lib/utils/format'
 import { printService } from './printService'
 import { registrarCanjePuntos, registrarPuntosGanados } from '@/lib/db/puntos'
+import { measureEnd, measureStart } from '@/lib/perf/metrics'
 
 /** Convierte error de Supabase en Error con mensaje legible para el usuario y la consola */
 function toError(err: PostgrestError | Error, context: string): Error {
@@ -33,6 +34,7 @@ interface ConfirmOrderParams {
 
 export const orderService = {
   async confirmOrder(params: ConfirmOrderParams) {
+    const totalStart = measureStart()
     const supabase = createClient()
     const { tenantId, usuarioId, tenantNombre, usuarioNombre, cliente, tipo, items, total, conFactura } = params
 
@@ -64,6 +66,7 @@ export const orderService = {
     }
 
     // Crear pedido
+    const createPedidoStart = measureStart()
     const { data: pedido, error: errorPedido } = await supabase
       .from('pedidos')
       .insert({
@@ -79,6 +82,10 @@ export const orderService = {
       .single()
 
     if (errorPedido) throw toError(errorPedido, 'Error al crear el pedido')
+    measureEnd('pos.confirm_order.create_pedido', createPedidoStart, {
+      tenant_id: tenantId,
+      pedido_id: pedido.id
+    })
 
     // Insertar items del pedido (notas = texto de modificaciones para el ticket de cocina)
     const itemsToInsert = items.map((item) => ({
@@ -102,12 +109,18 @@ export const orderService = {
       })()
     }))
 
+    const createItemsStart = measureStart()
     const { data: itemsInsertados, error: errorItems } = await supabase
       .from('items_pedido')
       .insert(itemsToInsert)
       .select()
 
     if (errorItems) throw toError(errorItems, 'Error al guardar los ítems del pedido')
+    measureEnd('pos.confirm_order.create_items', createItemsStart, {
+      tenant_id: tenantId,
+      pedido_id: pedido.id,
+      rows: itemsToInsert.length
+    })
 
     // Mapear los CartItems con sus IDs reales de items_pedido para la customización
     const cartItemsConId = items.map((item, index) => ({
@@ -140,6 +153,7 @@ export const orderService = {
     }
 
     // Descontar ingredientes o inventario según tipo de producto
+    const inventoryStart = measureStart()
     const resultadoInventario = await descontarIngredientesPorPedido({
       tenantId,
       items: cartItemsConId,
@@ -149,6 +163,11 @@ export const orderService = {
     }).catch((consumptionError) => {
       console.warn('Error al descontar inventario:', consumptionError)
       return { success: false, errores: ['Error al procesar inventario'] }
+    })
+    measureEnd('pos.confirm_order.inventory', inventoryStart, {
+      tenant_id: tenantId,
+      pedido_id: pedido.id,
+      success: resultadoInventario.success
     })
 
     // Si hubo errores de stock, registrar advertencia
@@ -234,6 +253,12 @@ export const orderService = {
       successDetails.push({ label: 'Factura', value: 'Emitida' })
     }
 
+    measureEnd('pos.confirm_order.total', totalStart, {
+      tenant_id: tenantId,
+      pedido_id: pedido.id,
+      items: items.length,
+      total
+    })
     return {
       pedido,
       successDetails
