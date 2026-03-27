@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -28,8 +28,11 @@ import { InventoryAlerts } from './InventoryAlerts'
 import { TopClients } from './TopClients'
 import { TopProducts } from './TopProducts'
 import { IngredientConsumption } from './IngredientConsumption'
+import { ChannelPieChart } from './ChannelPieChart'
 import { InventoryGrid } from './InventoryGrid'
 import { InventoryDrawer } from './InventoryDrawer'
+import type { AdminDatePreset } from '../types/admin.types'
+import { resolveAdminDateRange } from '../utils/date.utils'
 
 export const AdminView = () => {
   const { tenant, usuario, darkMode } = useTenant()
@@ -42,6 +45,7 @@ export const AdminView = () => {
   const [showConfirmCerrar, setShowConfirmCerrar] = useState(false)
   const [isEmpezando, setIsEmpezando] = useState(false)
   const [errorEmpezar, setErrorEmpezar] = useState<string | null>(null)
+  const [selectedPreset, setSelectedPreset] = useState<AdminDatePreset>('turno_actual')
 
   const { sesionAbierta, ultimaSesionCerrada, loading: loadingCaja, refetch: refetchCaja } = useEstadoCaja(tenant?.id ?? null)
 
@@ -62,7 +66,7 @@ export const AdminView = () => {
     } else {
       setErrorEmpezar(result.error)
     }
-  }, [handleEmpezarDia, refetchCaja])
+  }, [handleEmpezarDia, refetchCaja, tenant?.id])
 
   const onConfirmCerrarCaja = useCallback(async () => {
     setShowConfirmCerrar(false)
@@ -71,6 +75,14 @@ export const AdminView = () => {
 
   // Admin puede crear productos a partir de materias primas (recetas, combos, sin receta)
   const canManageProducts = usuario?.rol === 'admin'
+
+  const dateRange = useMemo(
+    () =>
+      resolveAdminDateRange(selectedPreset, {
+        turnStartAt: sesionAbierta?.apertura_at ?? null
+      }),
+    [selectedPreset, sesionAbierta?.apertura_at]
+  )
 
   const {
     loading,
@@ -82,7 +94,7 @@ export const AdminView = () => {
     lowStockItems,
     totalInventoryItems,
     refetch
-  } = useAdminDashboard(tenant?.id ?? null, { desde: sesionAbierta?.apertura_at ?? null })
+  } = useAdminDashboard(tenant?.id ?? null, { dateRange })
 
   // Si no hay tenant, mostrar loader
   if (!tenant) {
@@ -113,10 +125,8 @@ export const AdminView = () => {
     refetch()
   }
 
-  // Resumen: si caja abierta = stats del turno actual; si cerrada = último cierre (registrado hasta que se abra de nuevo)
-  const displayStats = sesionAbierta
-    ? stats
-    : ultimaSesionCerrada
+  const displayStats =
+    selectedPreset === 'turno_actual' && !sesionAbierta && ultimaSesionCerrada
       ? {
           ...stats,
           todayOrders: ultimaSesionCerrada.cantidad_pedidos,
@@ -129,11 +139,12 @@ export const AdminView = () => {
         }
       : stats
 
-  const resumenLabel = sesionAbierta
-    ? `Turno actual (desde ${new Date(sesionAbierta.apertura_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })})`
-    : ultimaSesionCerrada
-      ? `Último cierre (${new Date(ultimaSesionCerrada.cierre_at!).toLocaleDateString('es-PY', { day: 'numeric', month: 'short', year: 'numeric' })})`
-      : 'Resumen diario'
+  const resumenLabel =
+    selectedPreset === 'turno_actual' && sesionAbierta
+      ? `Turno actual (desde ${new Date(sesionAbierta.apertura_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })})`
+      : selectedPreset === 'turno_actual' && ultimaSesionCerrada
+        ? `Último cierre (${new Date(ultimaSesionCerrada.cierre_at!).toLocaleDateString('es-PY', { day: 'numeric', month: 'short', year: 'numeric' })})`
+        : dateRange.label
 
   return (
     <>
@@ -150,6 +161,8 @@ export const AdminView = () => {
         loadingCaja={loadingCaja}
         onEmpezarDia={() => setShowConfirmEmpezar(true)}
         onAbrirModalCerrarCaja={() => setShowConfirmCerrar(true)}
+        selectedPreset={selectedPreset}
+        onPresetChange={setSelectedPreset}
       />
 
       {/* KPI Cards principales (mismo criterio: turno actual o último cierre) */}
@@ -157,6 +170,8 @@ export const AdminView = () => {
         stats={displayStats}
         totalInventoryItems={totalInventoryItems}
         lowStockCount={lowStockItems.length}
+        periodLabel={dateRange.label}
+        animationKey={selectedPreset}
         darkMode={darkMode}
       />
 
@@ -171,16 +186,20 @@ export const AdminView = () => {
 
       {/* Tendencia semanal y alertas de inventario */}
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
-        <WeeklyTrend stats={stats} />
+        <WeeklyTrend stats={displayStats} animationKey={selectedPreset} />
         <InventoryAlerts
           lowStockItems={lowStockItems}
           onOpenStockDrawer={() => setShowStockDrawer(true)}
         />
       </section>
 
-      {/* Top clientes, productos y consumo de ingredientes */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <TopClients topClients={topClients} />
+      {/* Distribución por canal + Top clientes, productos y consumo */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+        <div className="rounded-3xl border border-white/60 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 backdrop-blur p-6">
+          <h3 className="text-lg font-bold mb-4">Distribución por canal</h3>
+          <ChannelPieChart channelSplit={displayStats.channelSplit} animationKey={selectedPreset} />
+        </div>
+        <TopClients topClients={topClients} periodLabel={dateRange.label} />
         <TopProducts topProducts={topProducts} />
         <IngredientConsumption ingredientsUsage={ingredientsUsage} />
       </section>

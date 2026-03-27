@@ -73,7 +73,9 @@ export const orderService = {
         tipo,
         total,
         puntos_generados: cliente ? puntosGenerados : 0,
-        estado_pedido: 'FACT' // ← Dispara impresión automática vía Realtime
+        // Crear primero en EDIT para completar items/customizaciones antes
+        // de disparar la impresión automática (FACT).
+        estado_pedido: 'EDIT'
       })
       .select()
       .single()
@@ -197,6 +199,19 @@ export const orderService = {
         console.warn('No se pudo emitir factura (config puede no existir):', facturaErr)
       }
     }
+
+    // Confirmar recién al final para que el agente Realtime lea el pedido
+    // con items y customizaciones ya persistidos.
+    const { error: errorConfirmacion } = await supabase
+      .from('pedidos')
+      .update({
+        estado_pedido: 'FACT',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', pedido.id)
+      .eq('tenant_id', tenantId)
+
+    if (errorConfirmacion) throw toError(errorConfirmacion, 'Error al confirmar el pedido para impresión')
 
     // Imprimir ticket de cocina (no crítico - si falla, el pedido se guarda igual)
     printService

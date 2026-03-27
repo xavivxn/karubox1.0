@@ -13,27 +13,51 @@ import type {
   IngredientUsage,
   DashboardStats,
   ChannelSplit,
-  WeeklyTrendItem
+  WeeklyTrendItem,
+  AdminDateRange
 } from '../types/admin.types'
 import {
   normalizeNumber,
-  estimateCostFromAmount,
-  buildWeekLabels
+  estimateCostFromAmount
 } from '../utils/admin.utils'
-import { getTodayStart, getMonthStart } from '../utils/date.utils'
+import { buildTrendContextLabel, resolveAdminDateRange } from '../utils/date.utils'
 
 /**
- * Obtiene todos los pedidos del mes actual
+ * Aplica el rango temporal a consultas de pedidos.
  */
-export const fetchPedidos = async (tenantId: string): Promise<PedidoRecord[]> => {
+const applyDateRangeToPedidosQuery = <T>(query: T, dateRange: AdminDateRange): T => {
+  let nextQuery = query as any
+  if (dateRange.from) nextQuery = nextQuery.gte('created_at', dateRange.from)
+  if (dateRange.to) nextQuery = nextQuery.lt('created_at', dateRange.to)
+  return nextQuery as T
+}
+
+/**
+ * Aplica el rango temporal a consultas con join a pedidos.
+ */
+const applyDateRangeToJoinedPedidosQuery = <T>(query: T, dateRange: AdminDateRange): T => {
+  let nextQuery = query as any
+  if (dateRange.from) nextQuery = nextQuery.gte('pedidos.created_at', dateRange.from)
+  if (dateRange.to) nextQuery = nextQuery.lt('pedidos.created_at', dateRange.to)
+  return nextQuery as T
+}
+
+/**
+ * Obtiene todos los pedidos dentro del rango seleccionado.
+ */
+export const fetchPedidos = async (
+  tenantId: string,
+  dateRange: AdminDateRange
+): Promise<PedidoRecord[]> => {
   const supabase = createClient()
-  const monthStart = getMonthStart()
-  
-  const { data, error } = await supabase
-    .from('pedidos')
-    .select('id,total,created_at,tipo,puntos_generados')
-    .eq('tenant_id', tenantId)
-    .gte('created_at', monthStart.toISOString())
+  const query = applyDateRangeToPedidosQuery(
+    supabase
+      .from('pedidos')
+      .select('id,total,created_at,tipo,puntos_generados,cliente_id')
+      .eq('tenant_id', tenantId),
+    dateRange
+  )
+  const { data, error } = await query
 
   if (error) throw error
   return (data as PedidoRecord[]) ?? []
@@ -54,29 +78,61 @@ export const fetchActiveClientsCount = async (tenantId: string): Promise<number>
 }
 
 /**
- * Obtiene el top 5 de clientes ordenados por puntos
+ * Obtiene el top 5 de clientes según gasto en el rango seleccionado.
  */
-export const fetchTopClients = async (tenantId: string): Promise<ClientRanking[]> => {
+export const fetchTopClients = async (
+  tenantId: string,
+  dateRange: AdminDateRange
+): Promise<ClientRanking[]> => {
   const supabase = createClient()
-  const { data, error } = await supabase
+  const ordersQuery = applyDateRangeToPedidosQuery(
+    supabase
+      .from('pedidos')
+      .select('cliente_id,total')
+      .eq('tenant_id', tenantId)
+      .not('cliente_id', 'is', null),
+    dateRange
+  )
+  const { data: orders, error: ordersError } = await ordersQuery
+  if (ordersError) throw ordersError
+
+  const totalsByClient = new Map<string, { total_gastado: number; total_pedidos: number }>()
+  for (const order of orders ?? []) {
+    const clientId = (order as { cliente_id?: string | null }).cliente_id
+    if (!clientId) continue
+    const current = totalsByClient.get(clientId) ?? { total_gastado: 0, total_pedidos: 0 }
+    current.total_gastado += normalizeNumber((order as { total?: number | null }).total)
+    current.total_pedidos += 1
+    totalsByClient.set(clientId, current)
+  }
+
+  const clientIds = Array.from(totalsByClient.keys())
+  if (!clientIds.length) return []
+
+  const { data: clients, error: clientsError } = await supabase
     .from('clientes')
-    .select('id, nombre, telefono, puntos_totales')
+    .select('id,nombre,telefono,puntos_totales')
     .eq('tenant_id', tenantId)
     .eq('is_deleted', false)
-    .order('puntos_totales', { ascending: false })
-    .limit(5)
+    .in('id', clientIds)
+  if (clientsError) throw clientsError
 
-  if (error) throw error
-  
-  // Transformar a formato ClientRanking con valores calculados
-  return (data ?? []).map(cliente => ({
-    id: cliente.id,
-    nombre: cliente.nombre,
-    telefono: cliente.telefono,
-    puntos_totales: cliente.puntos_totales,
-    total_pedidos: 0, // TODO: calcular desde pedidos
-    total_gastado: cliente.puntos_totales * 20 // 5% de venta en puntos => venta aproximada = puntos / 0.05
-  }))
+  return (clients ?? [])
+    .map((client) => {
+      const totals = totalsByClient.get(client.id)
+      if (!totals) return null
+      return {
+        id: client.id,
+        nombre: client.nombre,
+        telefono: client.telefono,
+        puntos_totales: normalizeNumber(client.puntos_totales),
+        total_pedidos: totals.total_pedidos,
+        total_gastado: totals.total_gastado
+      } as ClientRanking
+    })
+    .filter((client): client is ClientRanking => client !== null)
+    .sort((a, b) => b.total_gastado - a.total_gastado)
+    .slice(0, 5)
 }
 
 /**
@@ -121,44 +177,44 @@ export const fetchInventory = async (tenantId: string): Promise<InventoryRecord[
 }
 
 /**
- * Obtiene los items de pedidos del mes
+ * Obtiene los items de pedidos dentro del rango seleccionado.
  */
-export const fetchOrderItems = async (tenantId: string): Promise<any[]> => {
+export const fetchOrderItems = async (
+  tenantId: string,
+  dateRange: AdminDateRange
+): Promise<any[]> => {
   const supabase = createClient()
-  const monthStart = getMonthStart()
-  
-  const { data, error } = await supabase
-    .from('items_pedido')
-    .select(
-      'cantidad,subtotal,producto_id,producto_nombre,pedidos!inner(tenant_id,created_at)'
-    )
-    .eq('pedidos.tenant_id', tenantId)
-    .gte('pedidos.created_at', monthStart.toISOString())
+  const query = applyDateRangeToJoinedPedidosQuery(
+    supabase
+      .from('items_pedido')
+      .select(
+        'cantidad,subtotal,producto_id,producto_nombre,pedidos!inner(tenant_id,created_at)'
+      )
+      .eq('pedidos.tenant_id', tenantId),
+    dateRange
+  )
+  const { data, error } = await query
 
   if (error) throw error
   return (data as any[]) ?? []
 }
 
 /**
- * Procesa los pedidos para calcular estadísticas del día (o del turno si se pasa desde).
- * @param desde - Si se pasa (ej. apertura_at de la sesión), los totales son desde esa fecha/hora.
+ * Procesa los pedidos para calcular estadísticas del período seleccionado.
  */
-export const processDailyStats = (pedidos: PedidoRecord[], desde?: string | null) => {
-  const inicio = desde ? new Date(desde) : getTodayStart()
-  const todayOrders = pedidos.filter((pedido) => new Date(pedido.created_at) >= inicio)
-  
-  const todayRevenue = todayOrders.reduce(
+export const processDailyStats = (pedidos: PedidoRecord[]) => {
+  const periodRevenue = pedidos.reduce(
     (acc, pedido) => acc + normalizeNumber(pedido.total),
     0
   )
   
-  const avgTicket = todayOrders.length > 0 
-    ? Math.round(todayRevenue / todayOrders.length) 
+  const avgTicket = pedidos.length > 0
+    ? Math.round(periodRevenue / pedidos.length)
     : 0
 
   return {
-    todayOrders: todayOrders.length,
-    todayRevenue,
+    todayOrders: pedidos.length,
+    todayRevenue: periodRevenue,
     avgTicket
   }
 }
@@ -186,8 +242,40 @@ export const processMonthlyStats = (pedidos: PedidoRecord[]) => {
 /**
  * Procesa la tendencia semanal de ventas
  */
-export const processWeeklyTrend = (pedidos: PedidoRecord[]): WeeklyTrendItem[] => {
-  const weeklyLabels = buildWeekLabels()
+const buildTrendLabelsForRange = (dateRange: AdminDateRange): Array<{ label: string; date: string }> => {
+  const labels: Array<{ label: string; date: string }> = []
+  const now = new Date()
+  const endDate = dateRange.to
+    ? (() => {
+        const toExclusive = new Date(dateRange.to)
+        toExclusive.setDate(toExclusive.getDate() - 1)
+        toExclusive.setHours(0, 0, 0, 0)
+        return toExclusive
+      })()
+    : (() => {
+        const current = new Date(now)
+        current.setHours(0, 0, 0, 0)
+        return current
+      })()
+
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(endDate)
+    date.setDate(endDate.getDate() - i)
+    date.setHours(0, 0, 0, 0)
+    labels.push({
+      label: date.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase(),
+      date: date.toISOString()
+    })
+  }
+
+  return labels
+}
+
+export const processWeeklyTrend = (
+  pedidos: PedidoRecord[],
+  dateRange: AdminDateRange
+): WeeklyTrendItem[] => {
+  const weeklyLabels = buildTrendLabelsForRange(dateRange)
   
   return weeklyLabels.map((slot) => {
     const value = pedidos
@@ -253,17 +341,8 @@ export const processTopProducts = (items: any[]): ProductRanking[] => {
 
 /**
  * Procesa los items para calcular métricas adicionales.
- * @param desde - Si se pasa (ej. apertura_at del turno), el costo "del día" es desde esa fecha/hora.
  */
-export const processItemsMetrics = (items: any[], pedidos: PedidoRecord[], desde?: string | null) => {
-  const inicio = desde ? new Date(desde) : getTodayStart()
-  
-  const todayItems = items.filter((item) => {
-    const createdAt = item.pedidos?.created_at
-    if (!createdAt) return false
-    return new Date(createdAt) >= inicio
-  })
-
+export const processItemsMetrics = (items: any[], pedidos: PedidoRecord[]) => {
   const totalItemsCount = items.reduce((sum, item) => sum + (item.cantidad ?? 0), 0)
   const itemsPerOrder = pedidos.length ? totalItemsCount / pedidos.length : 0
 
@@ -277,17 +356,17 @@ export const processItemsMetrics = (items: any[], pedidos: PedidoRecord[], desde
     0
   )
   
-  const estimatedTodayCost = todayItems.reduce(
+  const estimatedPeriodCost = items.reduce(
     (sum, item) => sum + estimateCostFromAmount(item.subtotal),
     0
   )
 
   return {
-    todayItems,
+    periodItems: items,
     itemsPerOrder,
     loyaltyRate,
     estimatedMonthCost,
-    estimatedTodayCost
+    estimatedTodayCost: estimatedPeriodCost
   }
 }
 
@@ -302,8 +381,7 @@ export const fetchIngredientUsage = async (
 }
 
 export interface FetchDashboardOptions {
-  /** Si se pasa (ej. apertura_at del turno), Ingresos/Costo/Ganancia "del día" se calculan desde esa fecha/hora. */
-  desde?: string | null
+  dateRange?: AdminDateRange
 }
 
 /**
@@ -319,18 +397,18 @@ export const fetchDashboardData = async (
   inventory: InventoryRecord[]
   ingredientsUsage: IngredientUsage[]
 }> => {
-  const desde = options?.desde ?? null
-  console.log('🔄 fetchDashboardData - tenantId:', tenantId, desde ? `desde ${desde}` : 'día calendario')
+  const dateRange = options?.dateRange ?? resolveAdminDateRange('hoy')
+  console.log('🔄 fetchDashboardData - tenantId:', tenantId, dateRange)
   
   // Fetch paralelo de todos los datos
   try {
     console.log('📊 Iniciando queries paralelas...')
     const [pedidos, activeClients, topClients, inventory, items] = await Promise.all([
-      fetchPedidos(tenantId).catch(e => { console.error('❌ Error en fetchPedidos:', e); throw e; }),
+      fetchPedidos(tenantId, dateRange).catch(e => { console.error('❌ Error en fetchPedidos:', e); throw e; }),
       fetchActiveClientsCount(tenantId).catch(e => { console.error('❌ Error en fetchActiveClientsCount:', e); throw e; }),
-      fetchTopClients(tenantId).catch(e => { console.error('❌ Error en fetchTopClients:', e); throw e; }),
+      fetchTopClients(tenantId, dateRange).catch(e => { console.error('❌ Error en fetchTopClients:', e); throw e; }),
       fetchInventory(tenantId).catch(e => { console.error('❌ Error en fetchInventory:', e); throw e; }),
-      fetchOrderItems(tenantId).catch(e => { console.error('❌ Error en fetchOrderItems:', e); throw e; })
+      fetchOrderItems(tenantId, dateRange).catch(e => { console.error('❌ Error en fetchOrderItems:', e); throw e; })
     ])
     
     console.log('✅ Queries completadas:', {
@@ -341,15 +419,15 @@ export const fetchDashboardData = async (
       items: items.length
     })
 
-    // Procesar estadísticas (desde = apertura del turno si caja abierta)
+    // Procesar estadísticas sobre el rango seleccionado
     console.log('🧮 Procesando estadísticas...')
-    const dailyStats = processDailyStats(pedidos, desde)
+    const dailyStats = processDailyStats(pedidos)
     const monthlyStats = processMonthlyStats(pedidos)
-    const weeklyTrend = processWeeklyTrend(pedidos)
+    const weeklyTrend = processWeeklyTrend(pedidos, dateRange)
     const channelSplit = processChannelSplit(pedidos)
     const topProducts = processTopProducts(items)
-    const itemsMetrics = processItemsMetrics(items, pedidos, desde)
-    const ingredientsUsage = await fetchIngredientUsage(tenantId, itemsMetrics.todayItems)
+    const itemsMetrics = processItemsMetrics(items, pedidos)
+    const ingredientsUsage = await fetchIngredientUsage(tenantId, itemsMetrics.periodItems)
 
     // Calcular ganancias
     const todayProfit = dailyStats.todayRevenue - itemsMetrics.estimatedTodayCost
@@ -369,7 +447,8 @@ export const fetchDashboardData = async (
       activeClients,
       loyaltyPoints: monthlyStats.loyaltyPoints,
       weeklyTrend,
-      channelSplit
+      channelSplit,
+      trendContextLabel: buildTrendContextLabel(dateRange)
     }
 
     console.log('✅ Dashboard procesado exitosamente')

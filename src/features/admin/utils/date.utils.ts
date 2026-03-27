@@ -3,6 +3,8 @@
  * Funciones para manejo de fechas en el dashboard
  */
 
+import type { AdminDatePreset, AdminDateRange } from '../types/admin.types'
+
 /**
  * Obtiene el inicio del día actual
  */
@@ -29,4 +31,143 @@ export const getWeekStart = (): Date => {
   weekStart.setDate(now.getDate() - 6)
   weekStart.setHours(0, 0, 0, 0)
   return weekStart
+}
+
+const getDayStart = (date: Date): Date => {
+  const value = new Date(date)
+  value.setHours(0, 0, 0, 0)
+  return value
+}
+
+const addDays = (date: Date, days: number): Date => {
+  const value = new Date(date)
+  value.setDate(value.getDate() + days)
+  return value
+}
+
+const getMonthStartFromDate = (date: Date): Date => {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+const formatShortDate = (date: Date): string => {
+  return date.toLocaleDateString('es-PY', { day: '2-digit', month: 'short' })
+}
+
+export const getDateRangeLabel = (preset: AdminDatePreset): string => {
+  switch (preset) {
+    case 'turno_actual':
+      return 'Turno actual'
+    case 'hoy':
+      return 'Hoy'
+    case 'ayer':
+      return 'Ayer'
+    case 'ultimos_7_dias':
+      return 'Últimos 7 días'
+    case 'este_mes':
+      return 'Este mes'
+    case 'mes_pasado':
+      return 'Mes pasado'
+    case 'historico':
+      return 'Histórico completo'
+    default:
+      return 'Período'
+  }
+}
+
+export const resolveAdminDateRange = (
+  preset: AdminDatePreset,
+  options?: { turnStartAt?: string | null; now?: Date }
+): AdminDateRange => {
+  const now = options?.now ? new Date(options.now) : new Date()
+  const todayStart = getDayStart(now)
+
+  switch (preset) {
+    case 'turno_actual': {
+      const turnStartAt = options?.turnStartAt ?? null
+      return {
+        preset,
+        label: getDateRangeLabel(preset),
+        from: turnStartAt ?? todayStart.toISOString(),
+        to: null
+      }
+    }
+    case 'hoy':
+      return {
+        preset,
+        label: getDateRangeLabel(preset),
+        from: todayStart.toISOString(),
+        to: null
+      }
+    case 'ayer': {
+      const yesterdayStart = addDays(todayStart, -1)
+      return {
+        preset,
+        label: getDateRangeLabel(preset),
+        from: yesterdayStart.toISOString(),
+        to: todayStart.toISOString()
+      }
+    }
+    case 'ultimos_7_dias': {
+      const weekStart = addDays(todayStart, -6)
+      return {
+        preset,
+        label: getDateRangeLabel(preset),
+        from: weekStart.toISOString(),
+        to: null
+      }
+    }
+    case 'este_mes': {
+      const monthStart = getMonthStartFromDate(now)
+      return {
+        preset,
+        label: getDateRangeLabel(preset),
+        from: monthStart.toISOString(),
+        to: null
+      }
+    }
+    case 'mes_pasado': {
+      const currentMonthStart = getMonthStartFromDate(now)
+      const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      return {
+        preset,
+        label: getDateRangeLabel(preset),
+        from: previousMonthStart.toISOString(),
+        to: currentMonthStart.toISOString()
+      }
+    }
+    case 'historico':
+      return {
+        preset,
+        label: getDateRangeLabel(preset),
+        from: null,
+        to: null
+      }
+    default:
+      return {
+        preset: 'hoy',
+        label: getDateRangeLabel('hoy'),
+        from: todayStart.toISOString(),
+        to: null
+      }
+  }
+}
+
+export const buildTrendContextLabel = (
+  range: AdminDateRange,
+  options?: { now?: Date }
+): string => {
+  const now = options?.now ? new Date(options.now) : new Date()
+
+  if (!range.from && !range.to) {
+    return 'Muestra reciente del histórico'
+  }
+  if (range.from && !range.to) {
+    return `Desde ${formatShortDate(new Date(range.from))} hasta hoy`
+  }
+  if (range.from && range.to) {
+    const toDateExclusive = new Date(range.to)
+    const toDateInclusive = addDays(getDayStart(toDateExclusive), -1)
+    return `${formatShortDate(new Date(range.from))} - ${formatShortDate(toDateInclusive)}`
+  }
+  return `Actualizado al ${formatShortDate(now)}`
 }

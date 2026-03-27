@@ -9,10 +9,12 @@ import type {
   ClientRanking,
   ProductRanking,
   InventoryRecord,
-  IngredientUsage
+  IngredientUsage,
+  AdminDateRange
 } from '../types/admin.types'
 import { fetchDashboardData } from '../services/adminService'
 import { buildWeekLabels } from '../utils/admin.utils'
+import { resolveAdminDateRange } from '../utils/date.utils'
 
 interface UseAdminDashboardReturn {
   loading: boolean
@@ -27,8 +29,7 @@ interface UseAdminDashboardReturn {
 }
 
 export interface UseAdminDashboardOptions {
-  /** Si se pasa (ej. apertura_at del turno), Ingresos/Costo/Ganancia se calculan desde esa fecha/hora. */
-  desde?: string | null
+  dateRange?: AdminDateRange
 }
 
 /**
@@ -38,7 +39,10 @@ export const useAdminDashboard = (
   tenantId: string | null,
   options?: UseAdminDashboardOptions
 ): UseAdminDashboardReturn => {
-  const desde = options?.desde ?? null
+  const dateRange = useMemo(
+    () => options?.dateRange ?? resolveAdminDateRange('hoy'),
+    [options?.dateRange]
+  )
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
     todayOrders: 0,
@@ -58,7 +62,8 @@ export const useAdminDashboard = (
       local: 0,
       delivery: 0,
       para_llevar: 0
-    }
+    },
+    trendContextLabel: 'Últimos 7 días'
   })
   const [topClients, setTopClients] = useState<ClientRanking[]>([])
   const [topProducts, setTopProducts] = useState<ProductRanking[]>([])
@@ -72,12 +77,12 @@ export const useAdminDashboard = (
       return
     }
     
-    console.log('🔍 Iniciando carga de dashboard para tenant:', tenantId, desde ? `desde ${desde}` : '')
+    console.log('🔍 Iniciando carga de dashboard para tenant:', tenantId, dateRange)
     setLoading(true)
 
     try {
       console.log('📡 Llamando fetchDashboardData...')
-      const data = await fetchDashboardData(tenantId, { desde })
+      const data = await fetchDashboardData(tenantId, { dateRange })
       
       console.log('✅ Datos recibidos:', {
         stats: data.stats ? '✓' : '✗',
@@ -103,7 +108,7 @@ export const useAdminDashboard = (
     } finally {
       setLoading(false)
     }
-  }, [tenantId, desde])
+  }, [tenantId, dateRange])
 
   useEffect(() => {
     fetchDashboard()
