@@ -37,6 +37,7 @@ CONTRATO DE IMPRESIÓN:
 - Factura: mismo pipeline que al emitir factura la primera vez (timbrado, ítems, totales IVA).
 
 EMISIÓN INICIAL (listener de pedido FACT — NO es reprint_solicitud):
+- El POS hace INSERT del pedido con estado_pedido EDIT y luego UPDATE a FACT cuando ya están ítems + items_pedido_customizacion + factura (si aplica). Suscribite a pedidos con event INSERT+UPDATE (o '*'), y dispará emisión inicial en UPDATE cuando new.estado_pedido === 'FACT' y antes no lo estaba (evitar doble impresión).
 - Cuando un pedido pasa a FACT y existe factura para ese pedido_id (vista_factura_impresion / tabla facturas), además de cocina: imprimí la factura **DOS veces** (copia cliente + copia local/archivo). Mismo contenido o con leyenda opcional en cada copia.
 - Si NO hay factura (ej. canje de puntos): solo cocina, **cero** facturas.
 - Reimpresión (reprint_solicitud) NO debe duplicar: ahí va **una** factura por INSERT.

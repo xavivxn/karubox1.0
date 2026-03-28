@@ -560,6 +560,10 @@ export interface Database {
       }
     }
     Functions: {
+      aplicar_salidas_ingredientes_pedido: {
+        Args: { p_movs: Json }
+        Returns: null
+      }
       calcular_puntos: {
         Args: { monto: number; dia_semana: number }
         Returns: { puntos: number }

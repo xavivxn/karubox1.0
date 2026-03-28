@@ -2,6 +2,8 @@
 
 Este documento es la **especificación de implementación** para el **agente de impresión** (repo aparte). El código del agente **no** vive en el monorepo web; la app solo persiste pedido/factura y dispara Realtime.
 
+**Disparo de emisión inicial:** el web guarda el pedido como `estado_pedido = 'EDIT'` y al cerrar el flujo (ítems, customización en BD, factura si aplica) hace **`UPDATE` a `FACT`**. El listener del agente debe incluir **`UPDATE`** en `pedidos`, no asumir solo `INSERT` con `FACT`.
+
 ## Contrato resumido
 
 | Origen del trabajo | Ticket cocina | Ticket factura |

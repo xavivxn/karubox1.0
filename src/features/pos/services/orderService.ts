@@ -90,7 +90,8 @@ export const orderService = {
       }
     }
 
-    // Crear pedido
+    // Crear pedido en EDIT: impresión/cocina vía Realtime solo tras UPDATE a FACT al final
+    // (ítems + customización + factura ya persistidos; evita carrera con vista_items_ticket_cocina).
     const { data: pedido, error: errorPedido } = await supabase
       .from('pedidos')
       .insert({
@@ -100,7 +101,7 @@ export const orderService = {
         tipo,
         total,
         puntos_generados: cliente ? puntosGenerados : 0,
-        estado_pedido: 'FACT' // ← Dispara impresión automática vía Realtime
+        estado_pedido: 'EDIT',
       })
       .select()
       .single()
@@ -254,9 +255,21 @@ export const orderService = {
       }
     }
 
+    const { error: errorFact } = await supabase
+      .from('pedidos')
+      .update({ estado_pedido: 'FACT' })
+      .eq('id', pedido.id)
+      .eq('tenant_id', tenantId)
+
+    if (errorFact) {
+      throw toError(errorFact, 'No se pudo finalizar el pedido (estado FACT)')
+    }
+
+    const pedidoFacturado = { ...pedido, estado_pedido: 'FACT' as const }
+
     // Imprimir ticket de cocina (no crítico - si falla, el pedido se guarda igual)
     printService
-      .printKitchenTicket(tenantId, pedido, items, tenantNombre)
+      .printKitchenTicket(tenantId, pedidoFacturado, items, tenantNombre)
       .catch((printError) => {
         console.warn('No se pudo imprimir el ticket de cocina', printError)
       })
@@ -293,7 +306,7 @@ export const orderService = {
     }
 
     return {
-      pedido,
+      pedido: pedidoFacturado,
       successDetails
     }
   }
