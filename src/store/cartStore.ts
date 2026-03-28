@@ -53,8 +53,6 @@ interface CartState {
   items: CartItem[]
   cliente: Cliente | null
   tipo: 'delivery' | 'local' | 'para_llevar' | null
-  /** Si el cliente quiere factura fiscal (solo aplica cuando hay cliente) */
-  conFactura: boolean
 
   // Acciones
   addItem: (producto: { id: string; nombre: string; descripcion?: string; precio: number; tiene_receta?: boolean; puntos_extra?: number }) => void
@@ -67,7 +65,6 @@ interface CartState {
   clearCart: () => void
   setCliente: (cliente: Cliente | null) => void
   setTipo: (tipo: 'delivery' | 'local' | 'para_llevar') => void
-  setConFactura: (conFactura: boolean) => void
 
   // Computed
   getTotal: () => number
@@ -93,7 +90,6 @@ export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   cliente: null,
   tipo: null,
-  conFactura: false,
 
   addItem: (producto) => {
     const items = get().items
@@ -207,13 +203,12 @@ export const useCartStore = create<CartState>((set, get) => ({
     const nextItems = get().items.filter(item => item.id !== itemId)
 
     // Si el carrito queda vacío, limpiamos también el resto de estado relacionado
-    // (cliente, tipo de pedido y emisión de factura) para evitar "estado fantasma".
+    // (cliente y tipo de pedido) para evitar "estado fantasma".
     if (nextItems.length === 0) {
       set({
         items: [],
         cliente: null,
         tipo: null,
-        conFactura: false
       })
       return
     }
@@ -230,7 +225,6 @@ export const useCartStore = create<CartState>((set, get) => ({
           items: [],
           cliente: null,
           tipo: null,
-          conFactura: false
         })
         return
       }
@@ -310,7 +304,6 @@ export const useCartStore = create<CartState>((set, get) => ({
       items: [],
       cliente: null,
       tipo: null,
-      conFactura: false
     })
   },
 
@@ -320,10 +313,6 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   setTipo: (tipo) => {
     set({ tipo })
-  },
-
-  setConFactura: (conFactura) => {
-    set({ conFactura })
   },
 
   getTotal: () => {

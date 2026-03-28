@@ -4,7 +4,15 @@ import { descontarIngredientesPorPedido } from '@/lib/inventory/consumption'
 import type { CartItem } from '@/store/cartStore'
 import type { Cliente } from '@/types/supabase'
 import type { TipoPedido, FeedbackDetail } from '../types/pos.types'
-import { calcularPuntos, formatTipoPedido, formatItemModificacionesForTicket } from '../utils/pos.utils'
+import {
+  calcularPuntos,
+  formatTipoPedido,
+  formatItemModificacionesForTicket,
+  clienteTieneRucParaFactura,
+  RECEPTOR_FACTURA_GENERICO_NOMBRE,
+  RECEPTOR_FACTURA_GENERICO_RUC,
+  RECEPTOR_FACTURA_GENERICO_CI,
+} from '../utils/pos.utils'
 import { formatGuaranies } from '@/lib/utils/format'
 import { printService } from './printService'
 import { registrarCanjePuntos, registrarPuntosGanados } from '@/lib/db/puntos'
@@ -27,14 +35,33 @@ interface ConfirmOrderParams {
   tipo: TipoPedido
   items: CartItem[]
   total: number
-  /** Si se debe emitir factura fiscal (requiere cliente y config de facturación) */
-  conFactura?: boolean
+  /** Ventas: true. Canje: false (solo ticket cocina). */
+  emitirFactura?: boolean
+  /** Modal “¿Desea factura?” Sí: factura a nombre del cliente (RUC si existe; si no, nombre+CI). */
+  facturaALNombreDelCliente: boolean
+  /**
+   * Modal “No”: comprobante genérico Nombre “Cliente” / RUC “0” (false) o nombre+CI del cliente (true).
+   * Ignorado si `facturaALNombreDelCliente` es true.
+   */
+  facturaMostrarNombreYCI?: boolean
 }
 
 export const orderService = {
   async confirmOrder(params: ConfirmOrderParams) {
     const supabase = createClient()
-    const { tenantId, usuarioId, tenantNombre, usuarioNombre, cliente, tipo, items, total, conFactura } = params
+    const {
+      tenantId,
+      usuarioId,
+      tenantNombre,
+      usuarioNombre,
+      cliente,
+      tipo,
+      items,
+      total,
+      emitirFactura = true,
+      facturaALNombreDelCliente,
+      facturaMostrarNombreYCI = false,
+    } = params
 
     if (!tipo) {
       throw new Error('El tipo de pedido es requerido')
@@ -63,7 +90,8 @@ export const orderService = {
       }
     }
 
-    // Crear pedido
+    // Crear pedido en EDIT: impresión/cocina vía Realtime solo tras UPDATE a FACT al final
+    // (ítems + customización + factura ya persistidos; evita carrera con vista_items_ticket_cocina).
     const { data: pedido, error: errorPedido } = await supabase
       .from('pedidos')
       .insert({
@@ -160,7 +188,7 @@ export const orderService = {
     }
 
     let facturaEmitida = false
-    if (conFactura && cliente) {
+    if (emitirFactura) {
       try {
         const { data: config } = await supabase
           .from('tenant_facturacion')
@@ -175,16 +203,45 @@ export const orderService = {
           const totalIva10 = Math.round((total / 1.1) * 0.1 * 100) / 100
           const totalExento = Math.round((total - totalIva10) * 100) / 100
 
+          const tieneRuc = clienteTieneRucParaFactura(cliente)
+          let clienteIdFactura: string | null = null
+          let receptor_nombre_impresion: string | null = null
+          let receptor_ruc_impresion: string | null = null
+          let receptor_ci_impresion: string | null = null
+
+          if (facturaALNombreDelCliente) {
+            if (cliente && tieneRuc) {
+              clienteIdFactura = cliente.id
+            } else if (cliente) {
+              receptor_nombre_impresion = cliente.nombre?.trim() || RECEPTOR_FACTURA_GENERICO_NOMBRE
+              receptor_ci_impresion = cliente.ci?.trim() || RECEPTOR_FACTURA_GENERICO_CI
+            } else {
+              receptor_nombre_impresion = RECEPTOR_FACTURA_GENERICO_NOMBRE
+              receptor_ruc_impresion = RECEPTOR_FACTURA_GENERICO_RUC
+              receptor_ci_impresion = null
+            }
+          } else if (facturaMostrarNombreYCI && cliente) {
+            receptor_nombre_impresion = cliente.nombre?.trim() || RECEPTOR_FACTURA_GENERICO_NOMBRE
+            receptor_ci_impresion = cliente.ci?.trim() || RECEPTOR_FACTURA_GENERICO_CI
+          } else {
+            receptor_nombre_impresion = RECEPTOR_FACTURA_GENERICO_NOMBRE
+            receptor_ruc_impresion = RECEPTOR_FACTURA_GENERICO_RUC
+            receptor_ci_impresion = null
+          }
+
           const { error: errFactura } = await supabase.from('facturas').insert({
             tenant_id: tenantId,
             pedido_id: pedido.id,
             numero_factura: numeroFactura,
             timbrado: config.timbrado,
-            cliente_id: cliente.id,
+            cliente_id: clienteIdFactura,
+            receptor_nombre_impresion,
+            receptor_ruc_impresion,
+            receptor_ci_impresion,
             total,
             total_iva_10: totalIva10,
             total_iva_5: 0,
-            total_exento: totalExento
+            total_exento: totalExento,
           })
 
           if (!errFactura) {
@@ -212,10 +269,12 @@ export const orderService = {
       .eq('tenant_id', tenantId)
 
     if (errorConfirmacion) throw toError(errorConfirmacion, 'Error al confirmar el pedido para impresión')
+    
+    const pedidoFacturado = { ...pedido, estado_pedido: 'FACT' as const }
 
     // Imprimir ticket de cocina (no crítico - si falla, el pedido se guarda igual)
     printService
-      .printKitchenTicket(tenantId, pedido, items, tenantNombre)
+      .printKitchenTicket(tenantId, pedidoFacturado, items, tenantNombre)
       .catch((printError) => {
         console.warn('No se pudo imprimir el ticket de cocina', printError)
       })
@@ -245,12 +304,14 @@ export const orderService = {
       successDetails.push({ label: 'Puntos sumados', value: `${puntosGenerados} ⭐` })
     }
 
-    if (facturaEmitida) {
+    if (canjeItems.length > 0) {
+      successDetails.push({ label: 'Factura', value: 'No emitida (canje — solo cocina)' })
+    } else if (facturaEmitida) {
       successDetails.push({ label: 'Factura', value: 'Emitida' })
     }
 
     return {
-      pedido,
+      pedido: pedidoFacturado,
       successDetails
     }
   }

@@ -1,18 +1,18 @@
 -- ============================================
--- VISTA: Factura completa para impresión / servicio
+-- Receptor en factura: snapshot para consumidor genérico / nombre+CI
+-- (sin fila "cliente 0" por tenant; datos persistidos en facturas)
 -- ============================================
--- Expone una sola fila por factura con todos los datos que debe tener
--- una factura fiscal: emisor, receptor, timbrado, numeración, detalle con IVA, total.
--- La impresora (agente) o el servicio de facturación pueden consultar por
--- factura_id o pedido_id.
---
--- Receptor: columnas snapshot en facturas (ver también database/16_facturas_receptor_impresion.sql).
+-- Idempotente: seguro si ya aplicaste columnas/vista vía 08 actualizado.
 -- ============================================
 
 ALTER TABLE public.facturas
   ADD COLUMN IF NOT EXISTS receptor_nombre_impresion TEXT,
   ADD COLUMN IF NOT EXISTS receptor_ruc_impresion TEXT,
   ADD COLUMN IF NOT EXISTS receptor_ci_impresion TEXT;
+
+COMMENT ON COLUMN public.facturas.receptor_nombre_impresion IS 'Nombre impreso como receptor; si NULL se usa cliente vinculado (join)';
+COMMENT ON COLUMN public.facturas.receptor_ruc_impresion IS 'RUC impreso; si NULL se usa cliente vinculado';
+COMMENT ON COLUMN public.facturas.receptor_ci_impresion IS 'CI impreso; si NULL se usa cliente vinculado';
 
 DROP VIEW IF EXISTS public.vista_factura_impresion;
 
@@ -23,7 +23,6 @@ SELECT
   f.tenant_id,
   p.numero_pedido,
 
-  -- EMISOR (local/tenant)
   t.ruc AS emisor_ruc,
   COALESCE(t.razon_social, t.nombre) AS emisor_razon_social,
   t.direccion AS emisor_direccion,
@@ -31,7 +30,6 @@ SELECT
   t.email AS emisor_email,
   t.actividad_economica AS emisor_actividad_economica,
 
-  -- RECEPTOR: snapshot en factura o datos del cliente vinculado
   COALESCE(f.receptor_ruc_impresion, c.ruc) AS receptor_ruc,
   COALESCE(f.receptor_ci_impresion, c.ci) AS receptor_ci,
   COALESCE(f.receptor_nombre_impresion, c.nombre) AS receptor_nombre,
@@ -39,21 +37,18 @@ SELECT
   c.telefono AS receptor_telefono,
   c.email AS receptor_email,
 
-  -- DOCUMENTO (timbrado vigente, numeración, fecha)
   f.numero_factura,
   f.timbrado,
   tf.vigencia_inicio AS timbrado_vigencia_inicio,
   tf.vigencia_fin AS timbrado_vigencia_fin,
   f.fecha_emision,
 
-  -- TOTALES
   f.total_iva_10,
   f.total_iva_5,
   f.total_exento,
   f.total AS total_a_pagar,
   f.total_letras,
 
-  -- DETALLE (productos/servicios con IVA discriminado) como JSONB
   (
     SELECT COALESCE(
       jsonb_agg(
@@ -79,22 +74,7 @@ JOIN public.pedidos p ON p.id = f.pedido_id
 LEFT JOIN public.clientes c ON c.id = f.cliente_id AND (c.is_deleted = false OR c.is_deleted IS NULL)
 LEFT JOIN public.tenant_facturacion tf ON tf.tenant_id = f.tenant_id;
 
-COMMENT ON VIEW public.vista_factura_impresion IS 'Factura completa para impresión: emisor (RUC, razón social, dirección), receptor, timbrado vigente, numeración, fecha, detalle con IVA 5%/10%, total a pagar. Consultar por factura_id o pedido_id.';
+COMMENT ON VIEW public.vista_factura_impresion IS 'Factura para impresión: receptor = COALESCE(snapshot en facturas, datos del cliente vinculado).';
 
 GRANT SELECT ON public.vista_factura_impresion TO anon;
 GRANT SELECT ON public.vista_factura_impresion TO authenticated;
-
--- ============================================
--- USO POR LA IMPRESORA / AGENTE
--- ============================================
--- La impresora puede consultar esta vista igual que pedidos:
---
---   Por pedido (cuando Realtime notifica un pedido facturado):
---   SELECT * FROM vista_factura_impresion WHERE pedido_id = 'uuid-del-pedido';
---
---   Por factura (si el agente escucha la tabla facturas):
---   SELECT * FROM vista_factura_impresion WHERE factura_id = 'uuid-de-la-factura';
---
--- Una sola fila trae: emisor (RUC, razón social, dirección), receptor,
--- timbrado vigente, numeración, fecha, detalle (JSONB con IVA por línea), total.
--- ============================================

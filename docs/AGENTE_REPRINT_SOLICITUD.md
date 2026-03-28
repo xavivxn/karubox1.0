@@ -1,5 +1,9 @@
 # Agente: reimpresión solo cocina / solo factura (`reprint_solicitud`)
 
+**Importante:** en la **emisión inicial** (pedido que pasa a `FACT` con factura), el negocio requiere **dos** copias de factura (cliente + local). Eso se implementa en el listener de **pedidos**, no duplicando filas en `reprint_solicitud`. En **`reprint_solicitud`** con `tipo = 'factura'`, cada **INSERT = una sola** impresión de factura (reimpresión desde POS/historial).
+
+Detalle: [`AGENTE_FACTURA_EMISION_DOS_COPIAS.md`](AGENTE_FACTURA_EMISION_DOS_COPIAS.md).
+
 La app ya **no** hace `UPDATE pedidos.updated_at` para “Reimprimir cocina”, porque varios agentes tratan ese evento como **pedido FACT completo** y vuelven a imprimir **cocina y factura**.
 
 En su lugar inserta filas en **`public.reprint_solicitud`** (`tipo` = `'cocina'` | `'factura'`). El agente debe reaccionar a **INSERT** en esa tabla y respetar el tipo.

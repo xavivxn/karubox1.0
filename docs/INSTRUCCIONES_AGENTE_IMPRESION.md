@@ -25,6 +25,26 @@ Estamos implementando un sistema POS (Point of Sale) para lomiterías (restauran
 - ✅ Cuando un usuario confirma un pedido en el POS, automáticamente se intenta imprimir el ticket de cocina
 - ✅ La impresión es **no crítica**: si falla, el pedido se guarda igual
 
+### 3b. Realtime y factura (emisión vs reimpresión)
+
+En el flujo **Realtime** (agente escuchando Supabase), no solo HTTP:
+
+- **Emisión inicial** (pedido en `FACT` con factura emitida): además del ticket de cocina, la factura debe imprimirse **dos veces** (entrega al cliente y archivo del local). Ver especificación: [`AGENTE_FACTURA_EMISION_DOS_COPIAS.md`](AGENTE_FACTURA_EMISION_DOS_COPIAS.md).
+- **Reimpresión** desde la app: un `INSERT` en `reprint_solicitud` con `tipo = 'factura'` implica **una sola** copia. Ver [`AGENTE_REPRINT_SOLICITUD.md`](AGENTE_REPRINT_SOLICITUD.md).
+
+### 3c. Emisión inicial: `UPDATE` de `pedidos` (EDIT → FACT), no solo `INSERT`
+
+El POS crea el pedido con `estado_pedido = 'EDIT'` y, cuando ya están guardados los ítems, la customización en BD (`items_pedido_customizacion`) y la factura (si corresponde), hace **un único** `UPDATE` a `estado_pedido = 'FACT'`. Así la vista `vista_items_ticket_cocina` y la factura están listas cuando dispara Realtime.
+
+**Requisito para el agente:** en `public.pedidos`, suscribirse a **`postgres_changes` con `event: '*'`** (o al menos incluir **`UPDATE`**, no solo `INSERT`). Tratar **emisión inicial** cuando el registro pasa a `FACT`, por ejemplo:
+
+- `payload.eventType === 'UPDATE'` y `new.estado_pedido === 'FACT'` y `old.estado_pedido !== 'FACT'`, o
+- equivalente según el SDK.
+
+Evitar imprimir dos veces la misma emisión si también reaccionás a otros campos del mismo `UPDATE`. La **reimpresión** sigue siendo solo vía `reprint_solicitud`.
+
+Guía autocontenida para el repo del agente: [`AGENTE_AJUSTE_EMISION_EDIT_A_FACT.md`](AGENTE_AJUSTE_EMISION_EDIT_A_FACT.md).
+
 ## 📡 Formato de Request que Envía la App Web
 
 La app web envía un `POST` a tu agente en:

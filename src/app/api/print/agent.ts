@@ -17,8 +17,8 @@ interface PrintResponse {
  * de impresión automática vía Supabase Realtime.
  * 
  * NUEVO FLUJO (Realtime):
- * 1. Frontend guarda pedido con estado_pedido = 'FACT'
- * 2. Agente escucha cambios en Supabase Realtime
+ * 1. Frontend guarda pedido en EDIT y luego UPDATE a estado_pedido = 'FACT'
+ * 2. Agente escucha cambios en Supabase Realtime (incl. UPDATE en pedidos)
  * 3. Agente detecta e imprime automáticamente
  * 
  * VENTAJAS:

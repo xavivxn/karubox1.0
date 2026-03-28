@@ -237,7 +237,9 @@ export default function CanjePuntosModal({ open, onClose, darkMode, productos }:
         tipo,
         items: canjeItems,
         total,
-        conFactura: false
+        emitirFactura: false,
+        facturaALNombreDelCliente: false,
+        facturaMostrarNombreYCI: false,
       })
 
       const details: FeedbackDetail[] = result.successDetails ?? []
@@ -838,6 +840,9 @@ export default function CanjePuntosModal({ open, onClose, darkMode, productos }:
                       </p>
                       <p className={`text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         Al confirmar, se descuenta solo el costo del producto.
+                      </p>
+                      <p className={`text-[11px] ${darkMode ? 'text-amber-200/90' : 'text-amber-800'}`}>
+                        Canje: solo ticket de cocina (no se emite factura).
                       </p>
                     </div>
                   </div>

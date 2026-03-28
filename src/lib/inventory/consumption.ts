@@ -260,8 +260,7 @@ type RecetaRow = {
  * Ahora:
  *   1 SELECT productos
  *   1 SELECT recetas_producto (todos los productos, con JOIN a ingredientes)
- *   N PATCH ingredientes   (uno por ingrediente único; no hay batch UPDATE en Supabase sin RPC)
- *   1 INSERT movimientos_ingredientes  (batch)
+ *   1 RPC aplicar_salidas_ingredientes_pedido (batch stock + movimientos), o fallback N PATCH + INSERT movimientos
  *   1 INSERT items_pedido_customizacion (batch)
  *   1 SELECT inventario    (solo productos sin receta)
  *   N PATCH inventario     (uno por producto sin receta)
@@ -483,51 +482,90 @@ export async function descontarIngredientesPorPedido({
       }
     }
 
-    // ── QUERIES 3..N: 1 PATCH por ingrediente único ───────────────────────
-    // Stock ya viene del JOIN → no se necesita GET previo por ingrediente
-    const movimientosBatch: Array<{
-      tenant_id: string
-      ingrediente_id: string
-      tipo: string
-      cantidad: number
-      stock_anterior: number
-      stock_nuevo: number
-      motivo: string
-      pedido_id: string
-      usuario_id?: string
-    }> = []
+    // ── Salidas de ingredientes: 1 RPC (DB) o fallback N PATCH + INSERT batch ─
+    type MovPlan = {
+      ingId: string
+      ing: RecetaIngrediente
+      cantidadTotal: number
+      stockAnterior: number
+      nuevoStock: number
+    }
 
+    const movimientosPlan: MovPlan[] = []
     for (const [ingId, { ing, cantidadTotal, stockAnterior }] of ingredienteTotals) {
-      const nuevoStock = Math.max(stockAnterior - cantidadTotal, 0)
-
-      const { error: updateError } = await supabase
-        .from('ingredientes')
-        .update({ stock_actual: nuevoStock, updated_at: new Date().toISOString() })
-        .eq('id', ingId)
-
-      if (updateError) {
-        console.error(`Error al descontar ${ing.nombre}:`, updateError)
-        errores.push(`Error al descontar ${ing.nombre}`)
-        continue
-      }
-
-      movimientosBatch.push({
-        tenant_id: ing.tenant_id,
-        ingrediente_id: ingId,
-        tipo: 'salida',
-        cantidad: cantidadTotal,
-        stock_anterior: stockAnterior,
-        stock_nuevo: nuevoStock,
-        motivo: `Venta pedido #${pedidoNumero}`,
-        pedido_id: pedidoId,
-        ...(usuarioId ? { usuario_id: usuarioId } : {})
+      movimientosPlan.push({
+        ingId,
+        ing,
+        cantidadTotal,
+        stockAnterior,
+        nuevoStock: Math.max(stockAnterior - cantidadTotal, 0),
       })
     }
 
-    // ── 1 INSERT batch para todos los movimientos de ingredientes ─────────
-    if (movimientosBatch.length > 0) {
-      const { error } = await supabase.from('movimientos_ingredientes').insert(movimientosBatch)
-      if (error) console.error('Error al insertar movimientos de ingredientes:', error)
+    if (movimientosPlan.length > 0) {
+      const p_movs = movimientosPlan.map((row) => ({
+        tenant_id: row.ing.tenant_id,
+        ingrediente_id: row.ingId,
+        pedido_id: pedidoId,
+        cantidad: row.cantidadTotal,
+        stock_anterior: row.stockAnterior,
+        stock_nuevo: row.nuevoStock,
+        motivo: `Venta pedido #${pedidoNumero}`,
+        ...(usuarioId ? { usuario_id: usuarioId } : {}),
+      }))
+
+      const { error: rpcError } = await supabase.rpc('aplicar_salidas_ingredientes_pedido', {
+        p_movs: p_movs,
+      })
+
+      if (rpcError) {
+        console.warn(
+          '[Inventario] RPC aplicar_salidas_ingredientes_pedido no disponible o falló; modo por fila:',
+          rpcError
+        )
+        const movimientosBatch: Array<{
+          tenant_id: string
+          ingrediente_id: string
+          tipo: string
+          cantidad: number
+          stock_anterior: number
+          stock_nuevo: number
+          motivo: string
+          pedido_id: string
+          usuario_id?: string
+        }> = []
+
+        for (const row of movimientosPlan) {
+          const { ing, ingId, cantidadTotal, stockAnterior, nuevoStock } = row
+          const { error: updateError } = await supabase
+            .from('ingredientes')
+            .update({ stock_actual: nuevoStock, updated_at: new Date().toISOString() })
+            .eq('id', ingId)
+
+          if (updateError) {
+            console.error(`Error al descontar ${ing.nombre}:`, updateError)
+            errores.push(`Error al descontar ${ing.nombre}`)
+            continue
+          }
+
+          movimientosBatch.push({
+            tenant_id: ing.tenant_id,
+            ingrediente_id: ingId,
+            tipo: 'salida',
+            cantidad: cantidadTotal,
+            stock_anterior: stockAnterior,
+            stock_nuevo: nuevoStock,
+            motivo: `Venta pedido #${pedidoNumero}`,
+            pedido_id: pedidoId,
+            ...(usuarioId ? { usuario_id: usuarioId } : {}),
+          })
+        }
+
+        if (movimientosBatch.length > 0) {
+          const { error } = await supabase.from('movimientos_ingredientes').insert(movimientosBatch)
+          if (error) console.error('Error al insertar movimientos de ingredientes:', error)
+        }
+      }
     }
 
     // ── 1 INSERT batch para todas las customizaciones ─────────────────────

@@ -101,6 +101,8 @@
 
 **Resultado**: Pedido guardado en base de datos, proceso de impresión iniciado
 
+**Factura (agente Realtime):** si el pedido tiene factura (`vista_factura_impresion` / tabla `facturas`), en la **primera emisión** el agente debe imprimir **dos** copias del comprobante fiscal (cliente + local). En **reimpresión** vía `reprint_solicitud` (`tipo = 'factura'`), **una** copia por solicitud. Canje sin factura: solo cocina. Especificación: [`AGENTE_FACTURA_EMISION_DOS_COPIAS.md`](AGENTE_FACTURA_EMISION_DOS_COPIAS.md).
+
 ---
 
 ### 3. Consulta de Configuración de Impresora

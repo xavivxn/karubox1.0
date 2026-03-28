@@ -1,5 +1,16 @@
 import type { TipoPedido } from '../types/pos.types'
 import type { CartItem } from '@/store/cartStore'
+import type { Cliente } from '@/types/supabase'
+
+/** Comprobante genérico multitenant (impresión tipo “Nombre: Cliente”, “RUC: 0”). */
+export const RECEPTOR_FACTURA_GENERICO_NOMBRE = 'Cliente'
+export const RECEPTOR_FACTURA_GENERICO_RUC = '0'
+/** Fallback en rutas nombre+CI cuando falta CI en el cliente. */
+export const RECEPTOR_FACTURA_GENERICO_CI = '0'
+
+export function clienteTieneRucParaFactura(cliente: Pick<Cliente, 'ruc'> | null): boolean {
+  return Boolean(cliente?.ruc?.trim())
+}
 
 export const formatTipoPedido = (value: TipoPedido): string => {
   if (!value) return 'Sin definir'

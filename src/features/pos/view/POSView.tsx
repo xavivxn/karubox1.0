@@ -16,6 +16,7 @@ import { FeedbackModal } from '@/components/ui/FeedbackModal'
 import type { FeedbackState, Producto } from '../types/pos.types'
 import { ItemCustomizationDrawer } from '../components/ItemCustomizationDrawer'
 import Cart from '../components/Cart'
+import { DeseaFacturaModal } from '../components/DeseaFacturaModal'
 import ClientModal from '../components/ClientModal'
 import CategoryList from '../components/CategoryList'
 import ProductGrid from '../components/ProductGrid'
@@ -41,7 +42,13 @@ export default function POSView() {
   const { items, addItem, addComboItem } = useCartStore()
   const { sesionAbierta, loading: loadingCaja } = useEstadoCaja(tenant?.id ?? null)
   const { categorias, productos, loading, feedback: dataFeedback } = usePOSData()
-  const { handleConfirmOrder, isProcessing } = useOrderConfirmation()
+  const {
+    prepareConfirmOrder,
+    confirmOrderWithFacturaChoice,
+    cancelFacturaModal,
+    facturaPrefModalOpen,
+    isProcessing,
+  } = useOrderConfirmation()
   const initialCategorySet = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const searchSentinelRef = useRef<HTMLDivElement>(null)
@@ -145,13 +152,21 @@ export default function POSView() {
       ? categorias.slice(selectedIndex + 1, selectedIndex + 3)
       : categorias.slice(0, 2)
 
-  const onConfirmOrder = async () => {
+  const onConfirmOrder = () => {
     if (loadingCaja) return
     if (!sesionAbierta) {
       setShowCajaCerradaModal(true)
       return
     }
-    const result = await handleConfirmOrder()
+    if (facturaPrefModalOpen) return
+    const result = prepareConfirmOrder()
+    if (result) {
+      setFeedback(result)
+    }
+  }
+
+  const onFacturaModalConfirm = async (facturaALNombreDelCliente: boolean, comprobanteNombreYCI: boolean) => {
+    const result = await confirmOrderWithFacturaChoice(facturaALNombreDelCliente, comprobanteNombreYCI)
     if (result) {
       setFeedback(result)
     }
@@ -430,7 +445,7 @@ export default function POSView() {
                 <Cart
                   onOpenClientModal={() => setIsClientModalOpen(true)}
                   onConfirmOrder={onConfirmOrder}
-                  isProcessing={isProcessing}
+                  isProcessing={isProcessing || facturaPrefModalOpen}
                   darkMode={darkMode}
                   onEditItem={(itemId) => setEditingItemId(itemId)}
                 />
@@ -444,6 +459,14 @@ export default function POSView() {
       </div>
       </div>
       </div>
+
+      <DeseaFacturaModal
+        open={facturaPrefModalOpen}
+        darkMode={darkMode}
+        onClose={cancelFacturaModal}
+        onConfirm={onFacturaModalConfirm}
+        isProcessing={isProcessing}
+      />
 
       <ClientModal
         isOpen={isClientModalOpen}

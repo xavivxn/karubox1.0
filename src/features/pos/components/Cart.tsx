@@ -53,7 +53,7 @@ export default function Cart({
   darkMode,
   onEditItem
 }: Props) {
-  const { items, cliente, tipo, conFactura, removeItem, updateQuantity, getTotal, getTotalPuntos, setTipo, setConFactura } = useCartStore()
+  const { items, cliente, tipo, removeItem, updateQuantity, getTotal, getTotalPuntos, setTipo } = useCartStore()
   const orderTypeInactiveClasses = darkMode
     ? 'bg-gray-700/60 text-gray-200 border-gray-600 hover:bg-gray-600'
     : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
@@ -65,14 +65,9 @@ export default function Cart({
   const itemCount = items.reduce((sum, item) => sum + item.cantidad, 0)
   const puntos = getTotalPuntos()
 
-  // En mobile/tablet el `CartBottomBar` es `fixed` y puede solapar el botón de confirmar.
-  // Solo reservamos espacio extra cuando existe `cliente` (porque al seleccionar cliente aparece
-  // la sección "¿Emitir factura?" y el bloque inferior crece).
-  const bottomBarPaddingClass = cliente ? 'pb-20 lg:pb-0' : ''
-
   return (
     <div
-      className={`rounded-2xl shadow-2xl flex flex-col h-full overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'} ${bottomBarPaddingClass}`}
+      className={`rounded-2xl shadow-2xl flex flex-col h-full overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
     >
       {/* Header fijo */}
       <div className="flex items-center gap-3 p-3 border-b flex-shrink-0">
@@ -239,43 +234,6 @@ export default function Cart({
               </div>
             )}
           </button>
-
-          {/* ¿Emitir factura? - solo cuando hay cliente */}
-          {cliente && (
-            <div className="space-y-1">
-              <div className={`text-[10px] font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                ¿Emitir factura?
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setConFactura(true)}
-                  className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
-                    conFactura
-                      ? 'bg-emerald-600 text-white border-emerald-600'
-                      : darkMode
-                        ? 'bg-gray-700/50 border-gray-600 text-gray-400 hover:border-emerald-500'
-                        : 'bg-gray-100 border-gray-200 text-gray-600 hover:border-emerald-400'
-                  }`}
-                >
-                  Sí
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConFactura(false)}
-                  className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
-                    !conFactura
-                      ? 'bg-gray-600 text-white border-gray-600 dark:bg-gray-500 dark:border-gray-500'
-                      : darkMode
-                        ? 'bg-gray-700/50 border-gray-600 text-gray-400'
-                        : 'bg-gray-100 border-gray-200 text-gray-600'
-                  }`}
-                >
-                  No
-                </button>
-              </div>
-            </div>
-          )}
 
       {/* Total */}
           <div className={`flex justify-between items-center py-1 ${darkMode ? 'border-b border-gray-700' : 'border-b border-gray-200'}`}>

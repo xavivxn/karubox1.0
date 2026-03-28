@@ -165,7 +165,7 @@ END $$;
 -- ============================================
 --
 -- 🔧 FLUJO DE IMPRESIÓN AUTOMÁTICA:
---    1. Vendedor confirma pedido → estado_pedido = 'FACT' (o estado = 'confirmado')
+--    1. Vendedor confirma pedido → pedido en EDIT; al persistir ítems/customización/factura → UPDATE estado_pedido = 'FACT' (Realtime: preferir listener UPDATE)
 --    2. Supabase Realtime detecta cambio → notifica al agente vía WebSocket
 --    3. Agente consulta printer_config por tenant_id
 --    4. Agente obtiene items desde vista_items_ticket_cocina (incluye modificaciones: sin X, extra Y)
