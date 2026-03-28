@@ -25,6 +25,13 @@ Estamos implementando un sistema POS (Point of Sale) para lomiterías (restauran
 - ✅ Cuando un usuario confirma un pedido en el POS, automáticamente se intenta imprimir el ticket de cocina
 - ✅ La impresión es **no crítica**: si falla, el pedido se guarda igual
 
+### 3b. Realtime y factura (emisión vs reimpresión)
+
+En el flujo **Realtime** (agente escuchando Supabase), no solo HTTP:
+
+- **Emisión inicial** (pedido en `FACT` con factura emitida): además del ticket de cocina, la factura debe imprimirse **dos veces** (entrega al cliente y archivo del local). Ver especificación: [`AGENTE_FACTURA_EMISION_DOS_COPIAS.md`](AGENTE_FACTURA_EMISION_DOS_COPIAS.md).
+- **Reimpresión** desde la app: un `INSERT` en `reprint_solicitud` con `tipo = 'factura'` implica **una sola** copia. Ver [`AGENTE_REPRINT_SOLICITUD.md`](AGENTE_REPRINT_SOLICITUD.md).
+
 ## 📡 Formato de Request que Envía la App Web
 
 La app web envía un `POST` a tu agente en:

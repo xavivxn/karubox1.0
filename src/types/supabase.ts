@@ -401,6 +401,9 @@ export interface Database {
           anulada: boolean
           anulada_at: string | null
           anulada_por_id: string | null
+          receptor_nombre_impresion: string | null
+          receptor_ruc_impresion: string | null
+          receptor_ci_impresion: string | null
         }
         Insert: {
           id?: string
@@ -420,6 +423,9 @@ export interface Database {
           anulada?: boolean
           anulada_at?: string | null
           anulada_por_id?: string | null
+          receptor_nombre_impresion?: string | null
+          receptor_ruc_impresion?: string | null
+          receptor_ci_impresion?: string | null
         }
         Update: {
           id?: string
@@ -439,6 +445,9 @@ export interface Database {
           anulada?: boolean
           anulada_at?: string | null
           anulada_por_id?: string | null
+          receptor_nombre_impresion?: string | null
+          receptor_ruc_impresion?: string | null
+          receptor_ci_impresion?: string | null
         }
       }
       reprint_solicitud: {

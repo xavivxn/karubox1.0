@@ -36,14 +36,21 @@ CONTRATO DE IMPRESIÓN:
 - Cocina: mismo formato interno que ya usás (printerId desde printer_config, data con numeroPedido, items, etc. — ver INSTRUCCIONES_AGENTE_IMPRESION en el repo web).
 - Factura: mismo pipeline que al emitir factura la primera vez (timbrado, ítems, totales IVA).
 
+EMISIÓN INICIAL (listener de pedido FACT — NO es reprint_solicitud):
+- Cuando un pedido pasa a FACT y existe factura para ese pedido_id (vista_factura_impresion / tabla facturas), además de cocina: imprimí la factura **DOS veces** (copia cliente + copia local/archivo). Mismo contenido o con leyenda opcional en cada copia.
+- Si NO hay factura (ej. canje de puntos): solo cocina, **cero** facturas.
+- Reimpresión (reprint_solicitud) NO debe duplicar: ahí va **una** factura por INSERT.
+
 RESUMEN:
 Sin manejar ambos tipos en el listener de reprint_solicitud, la reimpresión desde la app no imprimirá lo esperado.
+Especificación detallada emisión 2 copias: docs/AGENTE_FACTURA_EMISION_DOS_COPIAS.md en el repo web.
 ```
 
 ---
 
 ## Referencias en este repo
 
+- Emisión inicial 2× factura vs reimpresión 1×: [`AGENTE_FACTURA_EMISION_DOS_COPIAS.md`](AGENTE_FACTURA_EMISION_DOS_COPIAS.md)
 - Tabla + trigger: [`database/14_reprint_solicitud.sql`](../database/14_reprint_solicitud.sql)
 - RPC factura alineado a cola: [`database/15_bump_factura_reprint_solicitud.sql`](../database/15_bump_factura_reprint_solicitud.sql)
 - Resumen: [`AGENTE_REPRINT_SOLICITUD.md`](AGENTE_REPRINT_SOLICITUD.md)
