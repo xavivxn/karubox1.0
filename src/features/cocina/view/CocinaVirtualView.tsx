@@ -14,6 +14,7 @@ import AchievementToastStack from '../components/AchievementToast'
 import AchievementsPanel from '../components/AchievementsPanel'
 import DiamondTrophyShowcase from '../components/DiamondTrophyShowcase'
 import OrderDetailModal from '../components/OrderDetailModal'
+import { isCocinaCompactShellWidth, isCocinaMobileWidth } from '../utils/cocina-layout'
 
 const STAGES: KitchenStage[] = ['nuevo', 'cocinando', 'empacando', 'entregado']
 
@@ -232,7 +233,6 @@ export default function CocinaVirtualView() {
   const [isCompactViewport, setIsCompactViewport] = useState(false)
   const [isMobileViewport, setIsMobileViewport] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
-  const [mobileStatsExpanded, setMobileStatsExpanded] = useState(false)
   const [showTabletStageSummary, setShowTabletStageSummary] = useState(false)
 
   useEffect(() => {
@@ -242,8 +242,8 @@ export default function CocinaVirtualView() {
   useEffect(() => {
     const updateViewportType = () => {
       const width = window.innerWidth
-      setIsCompactViewport(width < 1024)
-      setIsMobileViewport(width < 768)
+      setIsCompactViewport(isCocinaCompactShellWidth(width))
+      setIsMobileViewport(isCocinaMobileWidth(width))
     }
     updateViewportType()
     window.addEventListener('resize', updateViewportType)
@@ -346,23 +346,27 @@ export default function CocinaVirtualView() {
     return <CocinaSkeleton />
   }
 
+  const fabReserveBottom =
+    isMounted && isCompactViewport
+      ? 'calc(0.75rem + env(safe-area-inset-bottom, 0px) + 4.5rem)'
+      : 'calc(0.75rem + env(safe-area-inset-bottom, 0px))'
+
   return (
     <div
-      className={`flex flex-col gap-3 text-gray-900 dark:text-gray-100 px-2.5 sm:px-3 lg:px-2.5 animate-in fade-in duration-500 fill-mode-forwards ${isDesktopViewport ? 'h-full min-h-0 overflow-hidden' : ''}`}
+      className="flex flex-col gap-3 text-gray-900 dark:text-gray-100 px-2.5 sm:px-3 lg:px-2.5 animate-in fade-in duration-500 fill-mode-forwards h-full min-h-0 overflow-hidden"
       style={{
-        minHeight: isDesktopViewport ? undefined : 'calc(var(--cocina-vh, 1vh) * 100)',
-        height: isDesktopViewport ? '100%' : undefined,
+        height: '100%',
         paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))',
-        paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+        paddingBottom: fabReserveBottom,
         paddingLeft: 'calc(0.75rem + env(safe-area-inset-left, 0px))',
         paddingRight: 'calc(0.75rem + env(safe-area-inset-right, 0px))',
       }}
     >
       {/* Stats bar (solo mobile/tablet compact) */}
       {(isMobileViewport || isCompactViewport) && (
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-forwards" style={{ animationDelay: '0ms' }}>
+        <div className="flex-shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-forwards" style={{ animationDelay: '0ms' }}>
           {isMobileViewport ? (
-          <div className="rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 p-3 space-y-2.5">
+          <div className="rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 p-3">
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800/40 px-2.5 py-2">
                 <p className="text-[10px] font-semibold text-orange-600 dark:text-orange-300">Pedidos</p>
@@ -377,24 +381,6 @@ export default function CocinaVirtualView() {
                 <p className="text-lg font-black text-yellow-700 dark:text-yellow-200 tabular-nums">{stats.deliveredCount}</p>
               </div>
             </div>
-            <button
-              onClick={() => setMobileStatsExpanded((prev) => !prev)}
-              className="w-full h-9 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/70 text-xs font-bold text-gray-600 dark:text-gray-200"
-            >
-              {mobileStatsExpanded ? 'Ver menos métricas' : 'Ver más métricas'}
-            </button>
-            {mobileStatsExpanded && (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/40 px-2.5 py-2">
-                  <p className="text-[10px] font-semibold text-red-600 dark:text-red-300">En cocina</p>
-                  <p className="text-lg font-black text-red-700 dark:text-red-200 tabular-nums">{stats.activeCount}</p>
-                </div>
-                <div className="rounded-xl bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800/40 px-2.5 py-2">
-                  <p className="text-[10px] font-semibold text-violet-600 dark:text-violet-300">Ticket prom.</p>
-                  <p className="text-sm font-black text-violet-700 dark:text-violet-200 tabular-nums truncate">{formatCompactGs(ticketPromedio)}</p>
-                </div>
-              </div>
-            )}
           </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -425,19 +411,6 @@ export default function CocinaVirtualView() {
                 accent="#9B59B6"
                 isGs
               />
-              <div className="rounded-2xl border border-amber-200 dark:border-amber-700/60 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/60 dark:to-yellow-950/40 px-4 py-3 flex items-center">
-                {store?.lifetimeStats?.bestDailyOrders != null &&
-                store.lifetimeStats.bestDailyOrders > 0 &&
-                stats.todayTotal < store.lifetimeStats.bestDailyOrders ? (
-                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                    A {store.lifetimeStats.bestDailyOrders - stats.todayTotal} de tu récord
-                  </span>
-                ) : (
-                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                    Rendimiento estable
-                  </span>
-                )}
-              </div>
             </div>
           )}
         </div>
@@ -446,7 +419,7 @@ export default function CocinaVirtualView() {
       {/* Stage badges / resumen por etapa (solo tablet compact) */}
       {!isMobileViewport && isCompactViewport && (
         <div
-          className="rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 px-3 py-2.5 animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-forwards"
+          className="flex-shrink-0 rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 px-3 py-2.5 animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-forwards"
           style={{ animationDelay: '80ms' }}
         >
           <div className="flex items-center justify-between gap-2">
@@ -492,7 +465,7 @@ export default function CocinaVirtualView() {
       )}
 
       {/* Kitchen panel — aparición escalonada */}
-      <div className="flex-1 rounded-2xl overflow-hidden shadow-lg dark:shadow-black/30 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 relative animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-forwards" style={{ animationDelay: '160ms' }}>
+      <div className="flex-1 min-h-0 rounded-2xl overflow-hidden shadow-lg dark:shadow-black/30 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900/80 relative animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-forwards" style={{ animationDelay: '160ms' }}>
         {!isCompactViewport && (
           <button
             onClick={() => setPanelOpen(true)}
@@ -529,7 +502,6 @@ export default function CocinaVirtualView() {
           sessionId={sesionAbierta?.id}
           onOrderClick={handleOrderClick}
           stageOverrides={stageOverrides}
-          bestDailyOrders={store?.lifetimeStats?.bestDailyOrders ?? 0}
         />
       </div>
 

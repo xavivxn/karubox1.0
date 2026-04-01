@@ -9,9 +9,10 @@ import type { ClientRanking } from '../types/admin.types'
 
 interface TopClientsProps {
   topClients: ClientRanking[]
+  periodLabel?: string
 }
 
-export const TopClients = ({ topClients }: TopClientsProps) => {
+export const TopClients = ({ topClients, periodLabel }: TopClientsProps) => {
   return (
     <div className="rounded-3xl border border-white/60 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 backdrop-blur p-6">
       <div className="flex items-center justify-between mb-4">
@@ -19,7 +20,7 @@ export const TopClients = ({ topClients }: TopClientsProps) => {
           <Users2 className="w-5 h-5 text-orange-500" />
           Top clientes
         </h3>
-        <span className="text-xs text-gray-500">Últimos 30 días</span>
+        <span className="text-xs text-gray-500">{periodLabel ?? 'Período seleccionado'}</span>
       </div>
       <div className="space-y-4">
         {topClients.map((client) => (

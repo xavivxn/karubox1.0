@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, FileText, Loader2, ShoppingCart, Search, Gift, Printer } from 'lucide-react'
+import { LayoutDashboard, FileText, Loader2, ShoppingCart, Search, Gift, Printer, QrCode, X, ExternalLink, Copy, Check } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
 import { useEstadoCaja } from '@/features/caja/hooks/useEstadoCaja'
 import { CajaCerradaModal } from '@/features/caja/components/CajaCerradaModal'
-import { ROUTES } from '@/config/routes'
+import { FEATURES } from '@/config'
+import { ROUTES, getPublicCartaQrPath } from '@/config/routes'
 import { normalizarParaBusqueda } from '@/features/clientes/utils/clientes.utils'
 import { usePOSData } from '../hooks/usePOSData'
 import { useOrderConfirmation } from '../hooks/useOrderConfirmation'
@@ -16,6 +17,7 @@ import { FeedbackModal } from '@/components/ui/FeedbackModal'
 import type { FeedbackState, Producto } from '../types/pos.types'
 import { ItemCustomizationDrawer } from '../components/ItemCustomizationDrawer'
 import Cart from '../components/Cart'
+import { DeseaFacturaModal } from '../components/DeseaFacturaModal'
 import ClientModal from '../components/ClientModal'
 import CategoryList from '../components/CategoryList'
 import ProductGrid from '../components/ProductGrid'
@@ -36,12 +38,21 @@ export default function POSView() {
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
   const [showCajaCerradaModal, setShowCajaCerradaModal] = useState(false)
   const [reprintModalOpen, setReprintModalOpen] = useState(false)
+  const [isCartaQrModalOpen, setIsCartaQrModalOpen] = useState(false)
+  const [cartaQrCopied, setCartaQrCopied] = useState(false)
 
   const { usuario, tenant, loading: tenantLoading, darkMode, isAdmin, isCajero } = useTenant()
   const { items, addItem, addComboItem } = useCartStore()
   const { sesionAbierta, loading: loadingCaja } = useEstadoCaja(tenant?.id ?? null)
   const { categorias, productos, loading, feedback: dataFeedback } = usePOSData()
-  const { handleConfirmOrder, isProcessing } = useOrderConfirmation()
+  const {
+    prepareConfirmOrder,
+    confirmOrderWithFacturaChoice,
+    confirmOrderNoFactura,
+    cancelFacturaModal,
+    facturaPrefModalOpen,
+    isProcessing,
+  } = useOrderConfirmation()
   const initialCategorySet = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const searchSentinelRef = useRef<HTMLDivElement>(null)
@@ -49,6 +60,16 @@ export default function POSView() {
   const searchOverlayRef = useRef<HTMLDivElement>(null)
   const [searchBarStuck, setSearchBarStuck] = useState(false)
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false)
+  const cartaQrPath = tenant?.slug ? getPublicCartaQrPath(tenant.slug) : null
+  const cartaQrUrl = useMemo(() => {
+    if (!cartaQrPath) return null
+    if (typeof window === 'undefined') return cartaQrPath
+    return `${window.location.origin}${cartaQrPath}`
+  }, [cartaQrPath])
+  const cartaQrImageUrl = useMemo(() => {
+    if (!cartaQrUrl) return ''
+    return `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=10&data=${encodeURIComponent(cartaQrUrl)}`
+  }, [cartaQrUrl])
 
   // Al cargar el POS, seleccionar la primera categoría (no "Todos") para que lo primero que se vea sea una categoría definida
   useEffect(() => {
@@ -151,7 +172,22 @@ export default function POSView() {
       setShowCajaCerradaModal(true)
       return
     }
-    const result = await handleConfirmOrder()
+    if (facturaPrefModalOpen) return
+    const result = prepareConfirmOrder()
+    if (result) {
+      setFeedback(result)
+      return
+    }
+
+    // Feature flag apagado: confirmar directo sin abrir modal
+    if (!FEATURES.POS_FACTURA_MODAL) {
+      const direct = await confirmOrderNoFactura()
+      if (direct) setFeedback(direct)
+    }
+  }
+
+  const onFacturaModalConfirm = async (facturaALNombreDelCliente: boolean, comprobanteNombreYCI: boolean) => {
+    const result = await confirmOrderWithFacturaChoice(facturaALNombreDelCliente, comprobanteNombreYCI)
     if (result) {
       setFeedback(result)
     }
@@ -220,6 +256,24 @@ export default function POSView() {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+                    {cartaQrPath && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCartaQrCopied(false)
+                          setIsCartaQrModalOpen(true)
+                        }}
+                        title="Abrir carta QR publica para clientes"
+                        className={`inline-flex items-center justify-center rounded-lg border p-2 sm:rounded-xl sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-medium transition min-h-[40px] min-w-[40px] sm:min-h-0 sm:min-w-0 ${
+                          darkMode
+                            ? 'border-gray-600 text-gray-300 hover:bg-gray-700/50 hover:text-white'
+                            : 'border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-orange-200'
+                        }`}
+                      >
+                        <QrCode className="h-4 w-4 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Carta QR</span>
+                      </button>
+                    )}
                     {(isAdmin || isCajero) && (
                       <button
                         type="button"
@@ -430,7 +484,7 @@ export default function POSView() {
                 <Cart
                   onOpenClientModal={() => setIsClientModalOpen(true)}
                   onConfirmOrder={onConfirmOrder}
-                  isProcessing={isProcessing}
+                  isProcessing={isProcessing || facturaPrefModalOpen}
                   darkMode={darkMode}
                   onEditItem={(itemId) => setEditingItemId(itemId)}
                 />
@@ -444,6 +498,16 @@ export default function POSView() {
       </div>
       </div>
       </div>
+
+      {FEATURES.POS_FACTURA_MODAL && (
+        <DeseaFacturaModal
+          open={facturaPrefModalOpen}
+          darkMode={darkMode}
+          onClose={cancelFacturaModal}
+          onConfirm={onFacturaModalConfirm}
+          isProcessing={isProcessing}
+        />
+      )}
 
       <ClientModal
         isOpen={isClientModalOpen}
@@ -486,6 +550,84 @@ export default function POSView() {
         onClose={() => setReprintModalOpen(false)}
         darkMode={darkMode}
       />
+      {isCartaQrModalOpen && cartaQrUrl && (
+        <div
+          className={`fixed inset-0 z-[70] flex items-center justify-center p-4 ${darkMode ? 'bg-black/70' : 'bg-black/55'}`}
+          onClick={() => setIsCartaQrModalOpen(false)}
+        >
+          <div
+            className={`w-full max-w-md rounded-2xl border p-4 shadow-2xl ${darkMode ? 'border-gray-600 bg-gray-900 text-gray-100' : 'border-gray-200 bg-white text-gray-900'}`}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="QR de carta publica"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className={`text-[11px] font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Carta QR
+                </p>
+                <h3 className="text-lg font-black">Escanear para ver menu</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCartaQrModalOpen(false)}
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border transition ${darkMode ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
+                aria-label="Cerrar modal QR"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className={`mx-auto mb-3 w-full max-w-[280px] rounded-2xl border p-3 ${darkMode ? 'border-gray-700 bg-white' : 'border-orange-100 bg-white'}`}>
+              <img
+                src={cartaQrImageUrl}
+                alt="Codigo QR de la carta publica"
+                className="mx-auto h-full w-full rounded-lg"
+                loading="lazy"
+              />
+            </div>
+
+            <p className={`mb-2 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Enlace publico:
+            </p>
+            <div className={`mb-4 rounded-xl border px-3 py-2 text-xs break-all ${darkMode ? 'border-gray-700 bg-gray-800 text-gray-200' : 'border-gray-200 bg-gray-50 text-gray-700'}`}>
+              {cartaQrUrl}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(cartaQrUrl)
+                    setCartaQrCopied(true)
+                  } catch {
+                    setCartaQrCopied(false)
+                  }
+                }}
+                className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                  darkMode ? 'border border-gray-600 hover:bg-gray-800' : 'border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {cartaQrCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {cartaQrCopied ? 'Copiado' : 'Copiar link'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!cartaQrPath) return
+                  window.open(cartaQrPath, '_blank', 'noopener,noreferrer')
+                }}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Abrir carta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

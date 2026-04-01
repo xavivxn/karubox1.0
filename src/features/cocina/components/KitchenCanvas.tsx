@@ -16,8 +16,17 @@ import {
   type KitchenStats,
 } from '../utils/cocina.utils'
 import { createStimulusGate } from '../utils/eventDirector'
+import {
+  isCocinaKanbanPagerWidth,
+  isCocinaKanbanWideWidth,
+  isCocinaKitchenKpiDesktopWidth,
+  isCocinaMobileWidth,
+} from '../utils/cocina-layout'
 
 /* ═══════════════ CONSTANTS ═══════════════ */
+
+/** Máximo de pedidos entregados visibles en la columna "Entregado" en modo móvil ultraCompact (rendimiento + UX). */
+const MOBILE_MAX_DELIVERED = 30
 
 const ORDER_TYPE_LABELS: Record<string, string> = {
   delivery: 'Delivery',
@@ -67,6 +76,12 @@ function formatElapsed(ms: number): string {
 
 function formatGs(n: number): string {
   return 'Gs. ' + n.toLocaleString('es-PY')
+}
+
+function formatCompactGs(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${Math.round(n / 1_000)}k`
+  return String(n)
 }
 
 /* ═══════════════ ROLLING DIGIT COUNTER ═══════════════ */
@@ -251,12 +266,14 @@ function OrderCard({
   order,
   isNew,
   compact = false,
+  ultraCompact = false,
   minHeight,
   onClick,
 }: {
   order: KitchenOrder
   isNew: boolean
   compact?: boolean
+  ultraCompact?: boolean
   minHeight?: number
   onClick?: () => void
 }) {
@@ -266,6 +283,60 @@ function OrderCard({
   const isCooking = order.stage === 'cocinando'
   const isNuevo = order.stage === 'nuevo'
   const isEmpacando = order.stage === 'empacando'
+
+  if (ultraCompact) {
+    return (
+      <div
+        onClick={onClick}
+        style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
+        className={`
+          relative h-fit bg-white dark:bg-gray-700/90 rounded-lg shadow-sm border p-1.5
+          ${isNew ? 'animate-slam-in' : 'animate-fade-in-up'}
+          ${isDone ? 'opacity-75 border-yellow-200 dark:border-amber-700/50' : 'border-gray-100 dark:border-gray-600'}
+          ${isCooking ? 'animate-fire-shimmer-strong' : ''}
+          ${onClick ? 'cursor-pointer active:scale-[0.97]' : ''}
+          transition-all duration-200
+        `}
+      >
+        <div className="flex items-center justify-between mb-0.5 relative z-[1]">
+          <span className="text-[11px] font-black text-gray-800 dark:text-gray-100 leading-none">#{order.numero_pedido}</span>
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: typeColor }}
+            title={typeLabel}
+          />
+        </div>
+        <div className="relative z-[1] mb-0.5">
+          <span className="text-[10px] font-bold text-green-600 dark:text-green-400 leading-none truncate block">
+            {formatCompactGs(order.total)}
+          </span>
+        </div>
+        {!isDone && (
+          <>
+            <div className="w-full h-0.5 bg-gray-100 dark:bg-gray-600 rounded-full overflow-hidden mb-0.5 relative z-[1]">
+              <div
+                className={`h-full rounded-full transition-all duration-1000 ease-linear ${
+                  isCooking ? 'animate-cooking-progress' : isNuevo ? 'animate-nuevo-progress' : isEmpacando ? 'animate-empacando-progress' : ''
+                }`}
+                style={{
+                  width: `${Math.min(order.progress * 100, 100)}%`,
+                  backgroundColor: STAGE_COLORS[order.stage],
+                }}
+              />
+            </div>
+            <span className="text-[9px] text-gray-400 dark:text-gray-400 font-medium leading-none relative z-[1]">
+              {formatElapsed(order.elapsed)}
+            </span>
+          </>
+        )}
+        {isDone && (
+          <span className="text-[9px] text-green-600 dark:text-green-400 font-semibold leading-none relative z-[1]">
+            {formatElapsed(order.elapsed)}
+          </span>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div
@@ -341,6 +412,7 @@ function StageColumn({
   hasNewDelivery,
   hasNewOrder,
   compact = false,
+  ultraCompact = false,
   minHeight,
   orderCardMinHeight,
   targetVisibleCards,
@@ -353,6 +425,7 @@ function StageColumn({
   hasNewDelivery: boolean
   hasNewOrder: boolean
   compact?: boolean
+  ultraCompact?: boolean
   minHeight?: number
   orderCardMinHeight?: number
   targetVisibleCards?: number
@@ -402,6 +475,56 @@ function StageColumn({
     if (stage === 'entregado') return 'animate-pulse-gold'
     return ''
   }, [hasOrders, stage])
+
+  if (ultraCompact) {
+    return (
+      <div
+        className={`
+          relative flex flex-col rounded-xl bg-gradient-to-b ${STAGE_BG[stage]}
+          border overflow-hidden h-full min-h-[180px] min-w-0 max-h-full
+          ${columnBorderAndAnim}
+        `}
+      >
+        {hasNewDelivery && showConfettiBurst && <ConfettiBurst onDone={onConfettiDone} />}
+
+        {/* Header ultra-compact: emoji centrado + badge */}
+        <div
+          className={`px-1 py-1.5 flex flex-col items-center gap-0.5 border-b dark:border-gray-600 flex-shrink-0 ${hasNewOrder && hasOrders ? 'animate-shake' : ''}`}
+          style={{ borderColor: `${STAGE_COLORS[stage]}25` }}
+        >
+          <span className={`text-base leading-none ${headerEmojiAnim}`} aria-hidden>
+            {STAGE_EMOJIS[stage]}
+          </span>
+          <span
+            className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full text-white min-w-[20px] text-center tabular-nums leading-none"
+            style={{ backgroundColor: STAGE_COLORS[stage] }}
+            aria-label={`${STAGE_LABELS[stage]}: ${orders.length}`}
+          >
+            {orders.length}
+          </span>
+        </div>
+
+        {/* Orders — scrollable, constrained to column height */}
+        <div className="min-h-0 flex-1 p-1 space-y-1 overflow-y-auto custom-scrollbar">
+          {orders.length === 0 && (
+            <div className="flex items-center justify-center py-4">
+              <span className="text-base" aria-hidden>{STAGE_EMOJIS[stage]}</span>
+            </div>
+          )}
+          {orders.map((order, i) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              isNew={i === 0 && hasNewOrder}
+              compact
+              ultraCompact
+              onClick={onOrderClick ? () => onOrderClick(order) : undefined}
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -585,7 +708,6 @@ export default function KitchenCanvas({
   sessionId,
   onOrderClick,
   stageOverrides,
-  bestDailyOrders = 0,
 }: {
   orders: KitchenOrder[]
   stats: KitchenStats
@@ -596,8 +718,6 @@ export default function KitchenCanvas({
   sessionId?: string | null
   onOrderClick?: (order: KitchenOrder) => void
   stageOverrides?: Record<string, KitchenStage>
-  /** Récord diario de pedidos para mostrar "A X de tu récord". */
-  bestDailyOrders?: number
 }) {
   const soundPlayed = useRef<Set<string>>(new Set())
   const prevOrderCount = useRef(orders.length)
@@ -612,8 +732,9 @@ export default function KitchenCanvas({
   const [record, setRecord] = useState<string | null>(null)
   const bestRevenueRef = useRef(0)
   const [isMobile, setIsMobile] = useState(false)
-  const [isTablet, setIsTablet] = useState(false)
-  const [activeStage, setActiveStage] = useState<KitchenStage>('nuevo')
+  /** Ancho actual; define kanban ancho vs pager vs móvil. */
+  const [viewportWidth, setViewportWidth] = useState(1280)
+  const [activeStage, setActiveStage] = useState<KitchenStage>('nuevo') // kept for potential future use, unused in mobile 4-col layout
   const [activeTypeFilter, setActiveTypeFilter] = useState<'all' | 'delivery' | 'local' | 'para_llevar'>('all')
   const [isTickerCollapsed, setIsTickerCollapsed] = useState(false)
   const [tabletPage, setTabletPage] = useState(0)
@@ -641,7 +762,10 @@ export default function KitchenCanvas({
     entregados: stats.deliveredCount,
     ticket: 0,
   })
-  const isDesktop = !isMobile && !isTablet
+  const isKanbanWide = isCocinaKanbanWideWidth(viewportWidth)
+  const isKanbanPager = isCocinaKanbanPagerWidth(viewportWidth)
+  const isKitchenKpiDesktop = isCocinaKitchenKpiDesktopWidth(viewportWidth)
+  const showTypeFilters = !isKanbanWide
 
   const newDeliveryIdsKey = newDeliveryIds.join(',')
 
@@ -670,8 +794,8 @@ export default function KitchenCanvas({
     const updateViewportType = () => {
       const width = window.innerWidth
       const height = window.visualViewport?.height ?? window.innerHeight
-      setIsMobile(width < 768)
-      setIsTablet(width >= 768 && width < 1024)
+      setViewportWidth(width)
+      setIsMobile(isCocinaMobileWidth(width))
       setViewportHeight(height)
     }
     updateViewportType()
@@ -986,14 +1110,6 @@ export default function KitchenCanvas({
   const hasNewDeliveryInStage = (stage: KitchenStage) =>
     filteredGroups[stage].some((o) => newDeliveryIds.includes(o.id))
 
-  useEffect(() => {
-    if (!isMobile) return
-    if (filteredGroups[activeStage].length > 0) return
-    const stageWithOrders = KITCHEN_STAGES.find((stage) => filteredGroups[stage].length > 0)
-    if (stageWithOrders) {
-      setActiveStage(stageWithOrders)
-    }
-  }, [activeStage, filteredGroups, isMobile])
 
   const handleTabletScroll = useCallback(() => {
     const node = tabletPagerRef.current
@@ -1005,8 +1121,8 @@ export default function KitchenCanvas({
   return (
     <div className="h-full w-full flex flex-col min-w-0">
       {/* ─── Top Bar: negocio (izq) + energía (der) ─── */}
-      <div className={`${isDesktop ? `${desktopSizing.headerPad} pr-32 xl:pr-36` : 'px-4 py-3'} border-b border-gray-100 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80`}>
-        {isDesktop && (
+      <div className={`${isKitchenKpiDesktop ? `${desktopSizing.headerPad} pr-32 xl:pr-36` : 'px-4 py-3'} border-b border-gray-100 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80`}>
+        {isKitchenKpiDesktop && (
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-1.5 mb-2">
             <div className={`relative overflow-hidden rounded-lg border border-orange-300/70 dark:border-orange-700/50 bg-gradient-to-br from-orange-50 via-orange-100/70 to-amber-50 dark:from-orange-900/30 dark:via-orange-900/20 dark:to-amber-900/20 px-2.5 py-1.5 shadow-[0_0_0_1px_rgba(251,146,60,0.15),0_8px_18px_-12px_rgba(251,146,60,0.65)] ${kpiFlash.pedidos ? 'animate-celebrate' : ''}`}>
               {kpiDeltaPop.pedidos && (
@@ -1072,26 +1188,21 @@ export default function KitchenCanvas({
         <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className={isDesktop ? 'text-base' : 'text-lg'}>🔥</span>
+            <span className={isKitchenKpiDesktop ? 'text-base' : 'text-lg'}>🔥</span>
             <div className="flex flex-col">
               <span className="text-[10px] text-gray-400 dark:text-gray-400 font-semibold uppercase tracking-wider">En cocina</span>
-              <span className={`${isDesktop ? 'text-base' : 'text-lg'} font-black text-gray-900 dark:text-gray-100 tabular-nums`}>{stats.activeCount}</span>
+              <span className={`${isKitchenKpiDesktop ? 'text-base' : 'text-lg'} font-black text-gray-900 dark:text-gray-100 tabular-nums`}>{stats.activeCount}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className={isDesktop ? 'text-lg' : 'text-xl'}>⚡</span>
+            <span className={isKitchenKpiDesktop ? 'text-lg' : 'text-xl'}>⚡</span>
             <div className="flex flex-col">
               <span className="text-[10px] text-gray-400 dark:text-gray-400 font-semibold uppercase tracking-wider">Ritmo (ped/h)</span>
-              <span className={`${isDesktop ? 'text-base' : 'text-lg'} font-black text-gray-900 dark:text-gray-100 tabular-nums`}>{pedidosHora}</span>
+              <span className={`${isKitchenKpiDesktop ? 'text-base' : 'text-lg'} font-black text-gray-900 dark:text-gray-100 tabular-nums`}>{pedidosHora}</span>
             </div>
           </div>
         </div>
-        <div className={`flex items-center ${isDesktop ? 'gap-2' : 'gap-3'} flex-wrap`}>
-          {bestDailyOrders > 0 && stats.todayTotal < bestDailyOrders && (
-            <span className={`${isDesktop ? 'text-[10px]' : 'text-[11px]'} font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap`}>
-              A {bestDailyOrders - stats.todayTotal} de tu récord
-            </span>
-          )}
+        <div className={`flex items-center ${isKitchenKpiDesktop ? 'gap-2' : 'gap-3'} flex-wrap`}>
           {streak >= 3 && stats.activeCount > 0 && (
             <ComboBadge streak={streak} lastOrderTime={lastOrderTime.current} />
           )}
@@ -1101,46 +1212,13 @@ export default function KitchenCanvas({
 
       {/* ─── Contenido: kanban + ticker ─── */}
       <div className="flex-1 min-h-0 min-w-0 w-full flex flex-col relative">
-        {isMobile && (
-          <div className="px-2.5 pb-2 sticky top-0 z-10">
-            <div className="rounded-2xl border border-gray-100 dark:border-gray-600 bg-white/90 dark:bg-gray-800/90 p-1.5 backdrop-blur overflow-hidden">
-              <div className="w-full overflow-x-auto custom-scrollbar">
-                <div className="inline-flex min-w-max gap-2">
-                  {KITCHEN_STAGES.map((stage) => {
-                    const isActive = activeStage === stage
-                    const count = filteredGroups[stage].length
-                    return (
-                      <button
-                        key={stage}
-                        onClick={() => setActiveStage(stage)}
-                        className={`
-                          min-w-[132px] rounded-xl px-3 py-2 text-xs font-bold transition-all border
-                          ${isActive
-                            ? 'text-white border-transparent shadow'
-                            : 'text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/60'}
-                        `}
-                        style={isActive ? { backgroundColor: STAGE_COLORS[stage] } : undefined}
-                      >
-                        <span className="inline-flex items-center gap-1.5">
-                          <span>{STAGE_EMOJIS[stage]}</span>
-                          <span>{STAGE_LABELS[stage]}</span>
-                          <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-white/25' : 'bg-gray-100 dark:bg-gray-600'}`}>
-                            {count}
-                          </span>
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Stage tabs removed for mobile — all 4 columns are now always visible */}
 
-        {(isMobile || isTablet) && (
+        {showTypeFilters && (
           <div className="px-2.5 pb-2">
-            <div className="w-full overflow-x-auto custom-scrollbar">
-              <div className="inline-flex min-w-full gap-2">
+            <div className="relative w-full">
+              <div className="w-full overflow-x-auto scroll-smooth snap-x snap-mandatory custom-scrollbar pb-0.5">
+                <div className="inline-flex min-w-max gap-2 pr-8">
                 {([
                   { id: 'all', label: 'Todos' },
                   { id: 'delivery', label: 'Delivery' },
@@ -1151,8 +1229,9 @@ export default function KitchenCanvas({
                   return (
                     <button
                       key={opt.id}
+                      type="button"
                       onClick={() => setActiveTypeFilter(opt.id)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors whitespace-nowrap ${
+                      className={`snap-start shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors whitespace-nowrap ${
                         active
                           ? 'bg-blue-600 text-white border-blue-600'
                           : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600'
@@ -1162,7 +1241,12 @@ export default function KitchenCanvas({
                     </button>
                   )
                 })}
+                </div>
               </div>
+              <div
+                className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/90 dark:from-gray-900/90 to-transparent"
+                aria-hidden
+              />
             </div>
           </div>
         )}
@@ -1174,30 +1258,37 @@ export default function KitchenCanvas({
         )}
 
         {isMobile ? (
-          <div className="flex-1 w-full min-w-0 p-2.5 overflow-hidden min-h-0">
-            <StageColumn
-              stage={activeStage}
-              orders={filteredGroups[activeStage]}
-              hasNewDelivery={hasNewDeliveryInStage(activeStage)}
-              hasNewOrder={newOrderStages.has(activeStage)}
-              showConfettiBurst={
-                !hasNewDeliveryInStage(activeStage) || activeStage !== 'entregado' || deliveryConfettiOk
-              }
-              onConfettiDone={() => handleConfettiDone(activeStage)}
-              onOrderClick={onOrderClick}
-            />
+          <div className="flex-1 w-full min-w-0 grid grid-cols-4 grid-rows-1 gap-1 px-1.5 pb-1.5 overflow-hidden min-h-0">
+            {KITCHEN_STAGES.map((stage) => (
+              <StageColumn
+                key={stage}
+                stage={stage}
+                orders={
+                  stage === 'entregado'
+                    ? filteredGroups[stage].slice(0, MOBILE_MAX_DELIVERED)
+                    : filteredGroups[stage]
+                }
+                hasNewDelivery={hasNewDeliveryInStage(stage)}
+                hasNewOrder={newOrderStages.has(stage)}
+                showConfettiBurst={!hasNewDeliveryInStage(stage) || stage !== 'entregado' || deliveryConfettiOk}
+                compact
+                ultraCompact
+                onConfettiDone={() => handleConfettiDone(stage)}
+                onOrderClick={onOrderClick}
+              />
+            ))}
           </div>
-        ) : isTablet ? (
+        ) : isKanbanPager ? (
           <div className="flex-1 w-full min-w-0 overflow-hidden min-h-0 px-3 pb-2">
             <div
               ref={tabletPagerRef}
               onScroll={handleTabletScroll}
-              className="flex w-full min-w-full gap-3 snap-x snap-mandatory overflow-x-auto overflow-y-hidden h-full"
+              className="flex w-full min-w-full gap-3 snap-x snap-mandatory overflow-x-auto overflow-y-hidden scroll-smooth h-full"
             >
               {[['nuevo', 'cocinando'], ['empacando', 'entregado']].map((pair, i) => (
                 <div
                   key={i}
-                  className="snap-start shrink-0 w-full min-w-full grid grid-cols-2 gap-3"
+                  className="snap-start shrink-0 w-full min-w-full grid grid-cols-2 gap-3 h-full"
                 >
                   {pair.map((stage) => {
                     const stageKey = stage as KitchenStage
@@ -1230,7 +1321,7 @@ export default function KitchenCanvas({
           </div>
         ) : (
           <div
-            className="w-full min-w-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 lg:[grid-template-columns:repeat(4,minmax(0,1fr))] gap-2.5 p-2.5 overflow-x-auto overflow-y-hidden min-h-0 flex-none"
+            className="w-full min-w-0 grid grid-cols-4 gap-2.5 p-2.5 overflow-x-auto overflow-y-hidden min-h-0 flex-none"
             style={{ height: `${desktopSizing.kanbanHeight}px` }}
           >
             {KITCHEN_STAGES.map((stage) => (

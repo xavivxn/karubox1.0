@@ -41,6 +41,8 @@ export interface CartItem {
   tipo: 'producto' | 'combo' // Identifica si es producto individual o combo
   customization?: CartItemCustomization // Para productos individuales
   comboItems?: ComboProductItem[] // Para combos: lista de productos componentes
+  /** Agrupación UI: por ejemplo salsas por vasitos */
+  grupo?: 'salsa'
   /** Puntos bonus por unidad definidos por el admin en este producto */
   puntos_extra?: number
   /** Canje: línea que aplica descuento al total (subtotal=0) y se paga con puntos. */
@@ -53,11 +55,10 @@ interface CartState {
   items: CartItem[]
   cliente: Cliente | null
   tipo: 'delivery' | 'local' | 'para_llevar' | null
-  /** Si el cliente quiere factura fiscal (solo aplica cuando hay cliente) */
-  conFactura: boolean
 
   // Acciones
   addItem: (producto: { id: string; nombre: string; descripcion?: string; precio: number; tiene_receta?: boolean; puntos_extra?: number }) => void
+  upsertSauceItem: (producto: { id: string; nombre: string; descripcion?: string; precio: number }, cantidad: number) => void
   addComboItem: (combo: { id: string; nombre: string; descripcion?: string; precio: number; comboItems: ComboProductItem[] }) => void
   addCanjeItem: (item: { id: string; nombre: string; descripcion?: string; puntos_canje: number; cantidad?: number }) => void
   removeItem: (itemId: string) => void
@@ -67,7 +68,6 @@ interface CartState {
   clearCart: () => void
   setCliente: (cliente: Cliente | null) => void
   setTipo: (tipo: 'delivery' | 'local' | 'para_llevar') => void
-  setConFactura: (conFactura: boolean) => void
 
   // Computed
   getTotal: () => number
@@ -93,7 +93,6 @@ export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   cliente: null,
   tipo: null,
-  conFactura: false,
 
   addItem: (producto) => {
     const items = get().items
@@ -133,6 +132,53 @@ export const useCartStore = create<CartState>((set, get) => ({
         ]
       })
     }
+  },
+
+  upsertSauceItem: (producto, cantidad) => {
+    const qty = Math.max(0, Math.floor(cantidad))
+    const items = get().items
+    const existing = items.find(
+      (i) => i.grupo === 'salsa' && i.tipo === 'producto' && i.producto_id === producto.id && i.modo !== 'canje'
+    )
+
+    if (qty === 0) {
+      if (!existing) return
+      const nextItems = items.filter((i) => i.id !== existing.id)
+      if (nextItems.length === 0) {
+        set({ items: [], cliente: null, tipo: null })
+        return
+      }
+      set({ items: nextItems })
+      return
+    }
+
+    const next: CartItem = {
+      id:
+        existing?.id ??
+        (typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `temp-${Date.now()}-${Math.random()}`),
+      producto_id: producto.id,
+      nombre: producto.nombre,
+      descripcion: producto.descripcion,
+      precio: producto.precio,
+      cantidad: qty,
+      subtotal: producto.precio * qty,
+      extraCostPerUnit: 0,
+      tipo: 'producto',
+      grupo: 'salsa',
+      puntos_extra: 0,
+      modo: 'venta',
+    }
+
+    if (existing) {
+      set({
+        items: items.map((i) => (i.id === existing.id ? next : i)),
+      })
+      return
+    }
+
+    set({ items: [...items, next] })
   },
 
   addComboItem: (combo) => {
@@ -207,13 +253,12 @@ export const useCartStore = create<CartState>((set, get) => ({
     const nextItems = get().items.filter(item => item.id !== itemId)
 
     // Si el carrito queda vacío, limpiamos también el resto de estado relacionado
-    // (cliente, tipo de pedido y emisión de factura) para evitar "estado fantasma".
+    // (cliente y tipo de pedido) para evitar "estado fantasma".
     if (nextItems.length === 0) {
       set({
         items: [],
         cliente: null,
         tipo: null,
-        conFactura: false
       })
       return
     }
@@ -230,7 +275,6 @@ export const useCartStore = create<CartState>((set, get) => ({
           items: [],
           cliente: null,
           tipo: null,
-          conFactura: false
         })
         return
       }
@@ -310,7 +354,6 @@ export const useCartStore = create<CartState>((set, get) => ({
       items: [],
       cliente: null,
       tipo: null,
-      conFactura: false
     })
   },
 
@@ -320,10 +363,6 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   setTipo: (tipo) => {
     set({ tipo })
-  },
-
-  setConFactura: (conFactura) => {
-    set({ conFactura })
   },
 
   getTotal: () => {

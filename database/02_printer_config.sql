@@ -6,7 +6,7 @@
 -- a través del agente de impresión local.
 -- 
 -- Flujo con Supabase Realtime (SIN túneles, SIN Vercel):
--- 1. Vendedor confirma pedido → estado_pedido = 'FACT' en tabla pedidos
+-- 1. Vendedor confirma pedido → pedido en EDIT; al cerrar ítems/stock/factura → UPDATE estado_pedido = 'FACT'
 -- 2. Supabase Realtime notifica al agente (WebSocket)
 -- 3. Agente consulta printer_config por lomiteria_id (tenant_id)
 -- 4. Agente obtiene items desde items_pedido

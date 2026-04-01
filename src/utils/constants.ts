@@ -23,3 +23,13 @@ export const THEME_CONFIG = {
 
 // Types
 export type ThemeMode = keyof typeof THEME_CONFIG
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature flags (frontend)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Producción actual: sin factura → dejar en false.
+ * Cuando habiliten impresión/facturación → cambiar a true.
+ */
+export const POS_FACTURA_MODAL_ENABLED = false

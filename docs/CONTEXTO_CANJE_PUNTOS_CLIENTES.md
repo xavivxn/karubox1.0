@@ -116,7 +116,7 @@ Al presionar “Aplicar canje” en `CanjePuntosModal`:
 2. Se arma `total` como suma de `subtotals` de `canjeItems`.
    - En canje, el modal guarda `subtotal: 0`, por lo que `total` queda `0`.
 3. Se llama:
-   - `orderService.confirmOrder({ tenantId, usuarioId, tenantNombre, usuarioNombre, cliente, tipo, items: canjeItems, total, conFactura: false })`
+   - `orderService.confirmOrder({ ..., emitirFactura: false, facturaALNombreDelCliente: false })` — canje no genera factura (solo cocina).
    - Archivo: `src/features/pos/services/orderService.ts`
 
 ---

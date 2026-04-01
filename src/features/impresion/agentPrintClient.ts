@@ -23,5 +23,5 @@ export async function requestAgentPrint(
 
   const r = await reprintFacturaViaFacturaBump(supabase, pedidoId, tenantId)
   if (!r.ok) throw new Error(r.error)
-  return 'Listo. Reimpresión factura encolada (reprint_solicitud). El agente debe imprimir solo factura (mismo listener que cocina, tipo=factura).'
+  return 'Listo. Reimpresión factura encolada (reprint_solicitud). El agente debe imprimir solo factura, una copia por solicitud (emisión inicial = 2 copias; ver docs/AGENTE_FACTURA_EMISION_DOS_COPIAS.md).'
 }

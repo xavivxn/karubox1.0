@@ -11,8 +11,8 @@ import type { Pedido } from '@/types/supabase'
  * Este servicio usa Supabase Realtime para impresión automática.
  * 
  * FLUJO:
- * 1. Frontend guarda pedido con estado_pedido = 'FACT'
- * 2. Agente escucha cambios en Supabase Realtime
+ * 1. Frontend guarda pedido en EDIT y, al terminar ítems/stock/factura, actualiza a estado_pedido = 'FACT'
+ * 2. Agente escucha cambios en Supabase Realtime (UPDATE a FACT, no solo INSERT)
  * 3. Agente detecta e imprime automáticamente
  * 
  * NO SE REQUIERE comunicación HTTP directa con el agente.

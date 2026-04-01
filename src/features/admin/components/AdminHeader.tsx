@@ -7,11 +7,13 @@
 
 import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
-import { BarChart3, PlusCircle, Users, ChefHat, ArrowDownCircle, Package, List, Loader2, Sun, Wallet } from 'lucide-react'
+import { BarChart3, PlusCircle, Users, ChefHat, ArrowDownCircle, Package, List, Loader2, Sun, Wallet, Droplets } from 'lucide-react'
+import { DatePresetPills } from './DatePresetPills'
 import { formatGuaranies } from '@/lib/utils/format'
 import { ROUTES } from '@/config/routes'
 import { getTodayLabel } from '../utils/admin.utils'
 import type { DashboardStats } from '../types/admin.types'
+import type { AdminDatePreset } from '../types/admin.types'
 import type { SesionCaja } from '@/features/caja/types/caja.types'
 
 interface AdminHeaderProps {
@@ -21,6 +23,7 @@ interface AdminHeaderProps {
   resumenLabel?: string
   onOpenIngredienteModal: () => void
   onOpenStockDrawer: () => void
+  onOpenSalsasDrawer?: () => void
   onOpenProductModal?: () => void
   onOpenProductosList?: () => void
   /** Estado de caja: null = cerrada, objeto = abierta */
@@ -28,6 +31,8 @@ interface AdminHeaderProps {
   loadingCaja: boolean
   onEmpezarDia: () => void
   onAbrirModalCerrarCaja: () => void
+  selectedPreset: AdminDatePreset
+  onPresetChange: (preset: AdminDatePreset) => void
 }
 
 function formatHora (iso: string) {
@@ -40,12 +45,15 @@ export const AdminHeader = ({
   resumenLabel,
   onOpenIngredienteModal,
   onOpenStockDrawer,
+  onOpenSalsasDrawer,
   onOpenProductModal,
   onOpenProductosList,
   sesionAbierta,
   loadingCaja,
   onEmpezarDia,
-  onAbrirModalCerrarCaja
+  onAbrirModalCerrarCaja,
+  selectedPreset,
+  onPresetChange
 }: AdminHeaderProps) => {
   const router = useRouter()
   const [loadingHref, setLoadingHref] = useState<string | null>(null)
@@ -99,7 +107,14 @@ export const AdminHeader = ({
         </div>
       </div>
 
-      {/* Estado de caja: Empezar el día / Cerrar caja (solo admin) */}
+      {/* Selector de período con pills animados */}
+      <DatePresetPills
+        selected={selectedPreset}
+        onChange={onPresetChange}
+        disabled={isNavigating}
+      />
+
+      {/* Estado de caja */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 p-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
           Caja
@@ -181,7 +196,7 @@ export const AdminHeader = ({
             type="button"
             onClick={() => handleNav(cocinaHref)}
             disabled={isNavigating}
-            className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-red-600 transition min-w-[7rem] disabled:opacity-60 disabled:cursor-not-allowed ${isNavigating ? 'cursor-not-allowed' : 'hover:opacity-90'}`}
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-orange-600 dark:bg-orange-600 transition min-w-[7rem] disabled:opacity-60 disabled:cursor-not-allowed ${isNavigating ? 'cursor-not-allowed' : 'hover:bg-orange-700 dark:hover:bg-orange-500'}`}
             aria-busy={isNavTo(cocinaHref)}
           >
             {isNavTo(cocinaHref) ? (
@@ -252,6 +267,19 @@ export const AdminHeader = ({
             >
               <Package className="w-4 h-4 shrink-0" />
               Nuevo producto
+            </button>
+          )}
+
+          {/* 6.1 Salsas por vasitos */}
+          {onOpenSalsasDrawer && (
+            <button
+              type="button"
+              onClick={onOpenSalsasDrawer}
+              disabled={isNavigating}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-950/30 px-4 py-2.5 text-sm font-semibold text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Droplets className="w-4 h-4 shrink-0" />
+              Salsas
             </button>
           )}
 

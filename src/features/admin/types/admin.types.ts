@@ -9,6 +9,7 @@ export interface PedidoRecord {
   created_at: string
   tipo: 'local' | 'delivery' | 'para_llevar'
   puntos_generados: number | null
+  cliente_id?: string | null
 }
 
 export interface InventoryRecord {
@@ -54,6 +55,24 @@ export interface WeeklyTrendItem {
   value: number
 }
 
+export type AdminDatePreset =
+  | 'turno_actual'
+  | 'hoy'
+  | 'ayer'
+  | 'ultimos_7_dias'
+  | 'este_mes'
+  | 'mes_pasado'
+  | 'historico'
+
+export interface AdminDateRange {
+  preset: AdminDatePreset
+  label: string
+  /** Inclusive lower bound */
+  from: string | null
+  /** Exclusive upper bound */
+  to: string | null
+}
+
 export interface ChannelSplit {
   local: number
   delivery: number
@@ -75,4 +94,5 @@ export interface DashboardStats {
   loyaltyPoints: number
   weeklyTrend: WeeklyTrendItem[]
   channelSplit: ChannelSplit
+  trendContextLabel?: string
 }

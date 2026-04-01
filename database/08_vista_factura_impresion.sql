@@ -5,7 +5,14 @@
 -- una factura fiscal: emisor, receptor, timbrado, numeración, detalle con IVA, total.
 -- La impresora (agente) o el servicio de facturación pueden consultar por
 -- factura_id o pedido_id.
+--
+-- Receptor: columnas snapshot en facturas (ver también database/16_facturas_receptor_impresion.sql).
 -- ============================================
+
+ALTER TABLE public.facturas
+  ADD COLUMN IF NOT EXISTS receptor_nombre_impresion TEXT,
+  ADD COLUMN IF NOT EXISTS receptor_ruc_impresion TEXT,
+  ADD COLUMN IF NOT EXISTS receptor_ci_impresion TEXT;
 
 DROP VIEW IF EXISTS public.vista_factura_impresion;
 
@@ -24,10 +31,10 @@ SELECT
   t.email AS emisor_email,
   t.actividad_economica AS emisor_actividad_economica,
 
-  -- RECEPTOR (cliente)
-  c.ruc AS receptor_ruc,
-  c.ci AS receptor_ci,
-  c.nombre AS receptor_nombre,
+  -- RECEPTOR: snapshot en factura o datos del cliente vinculado
+  COALESCE(f.receptor_ruc_impresion, c.ruc) AS receptor_ruc,
+  COALESCE(f.receptor_ci_impresion, c.ci) AS receptor_ci,
+  COALESCE(f.receptor_nombre_impresion, c.nombre) AS receptor_nombre,
   c.direccion AS receptor_direccion,
   c.telefono AS receptor_telefono,
   c.email AS receptor_email,
