@@ -16,6 +16,7 @@ type PageInfo = {
 }
 
 const NAV_EXCLUDED_PATHS = ['/']
+const NAV_EXCLUDED_PREFIXES = ['/carta/']
 
 const PAGE_MAP: Array<{ test: (pathname: string) => boolean; info: PageInfo }> = [
   {
@@ -93,7 +94,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   }, [tenant, router])
 
   // Ocultar navbar en rutas de autenticación
-  const hideNavbar = NAV_EXCLUDED_PATHS.includes(pathname)
+  const hideNavbar = NAV_EXCLUDED_PATHS.includes(pathname) || NAV_EXCLUDED_PREFIXES.some((prefix) => pathname.startsWith(prefix))
 
   // POS y Cocina usan layout de altura bloqueada para priorizar workspace interno.
   // No aplicamos esto al resto de la app para no afectar el scrollbar global.
@@ -106,11 +107,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
     DEFAULT_INFO
 
   const isLoginPage = pathname === '/'
+  const isPublicCartaPage = pathname.startsWith('/carta/')
 
   return (
     <div
       className={`flex flex-col ${
-        isLoginPage
+        isLoginPage || isPublicCartaPage
           ? 'min-h-[100dvh] min-h-screen overflow-y-auto'
           : isPosPage
             ? 'h-[100dvh] min-h-0 overflow-hidden'
@@ -130,10 +132,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
       )}
       <InactiveTenantOverlay />
       <main
-        className={`flex flex-col ${isLoginPage ? '' : 'flex-1 min-h-0 min-w-0'} ${
+        className={`flex flex-col ${isLoginPage || isPublicCartaPage ? '' : 'flex-1 min-h-0 min-w-0'} ${
           pageInfo.fullWidth ? ((isPosPage || isKitchenPage) ? 'py-0' : 'py-4') : 'px-4 py-6'
-        } ${!isLoginPage && (isPosPage || isKitchenPage) ? 'overflow-hidden' : ''}`}
-        style={isLoginPage ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}
+        } ${!isLoginPage && !isPublicCartaPage && (isPosPage || isKitchenPage) ? 'overflow-hidden' : ''}`}
+        style={isLoginPage || isPublicCartaPage ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}
       >
         {pageInfo.fullWidth ? (
           children

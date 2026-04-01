@@ -6,6 +6,7 @@ export const ROUTES = {
   // Rutas públicas (sin autenticación)
   PUBLIC: {
     LOGIN: '/',
+    CARTA_QR: '/carta',
   },
 
   // Rutas protegidas (requieren autenticación)
@@ -50,11 +51,17 @@ export const ROUTES = {
   },
 } as const
 
+/** Ruta pública de carta QR por local (slug de tenant). */
+export function getPublicCartaQrPath(tenantSlug: string): string {
+  return `${ROUTES.PUBLIC.CARTA_QR}/${encodeURIComponent(tenantSlug)}`
+}
+
 /**
  * Lista de rutas públicas que no requieren autenticación
  */
 export const PUBLIC_ROUTES = [
   ROUTES.PUBLIC.LOGIN,
+  ROUTES.PUBLIC.CARTA_QR,
 ] as const
 
 /**
