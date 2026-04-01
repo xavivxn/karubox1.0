@@ -8,7 +8,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import { useEstadoCaja } from '@/features/caja/hooks/useEstadoCaja'
 import { CajaCerradaModal } from '@/features/caja/components/CajaCerradaModal'
 import { FEATURES } from '@/config'
-import { ROUTES, getPublicCartaQrPath } from '@/config/routes'
+import { ROUTES, getPublicCartaQrPath, getAbsoluteCartaQrUrl } from '@/config/routes'
 import { normalizarParaBusqueda } from '@/features/clientes/utils/clientes.utils'
 import { usePOSData } from '../hooks/usePOSData'
 import { useOrderConfirmation } from '../hooks/useOrderConfirmation'
@@ -62,10 +62,9 @@ export default function POSView() {
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false)
   const cartaQrPath = tenant?.slug ? getPublicCartaQrPath(tenant.slug) : null
   const cartaQrUrl = useMemo(() => {
-    if (!cartaQrPath) return null
-    if (typeof window === 'undefined') return cartaQrPath
-    return `${window.location.origin}${cartaQrPath}`
-  }, [cartaQrPath])
+    if (!tenant?.slug) return null
+    return getAbsoluteCartaQrUrl(tenant.slug)
+  }, [tenant?.slug])
   const cartaQrImageUrl = useMemo(() => {
     if (!cartaQrUrl) return ''
     return `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=10&data=${encodeURIComponent(cartaQrUrl)}`

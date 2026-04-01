@@ -267,8 +267,11 @@ BEGIN
   INSERT INTO tenant_pedido_counters (tenant_id, ultimo_numero)
   VALUES (p_tenant_id, 1)
   ON CONFLICT (tenant_id) DO UPDATE
-    SET ultimo_numero = tenant_pedido_counters.ultimo_numero + 1,
-        updated_at = NOW()
+    SET ultimo_numero = CASE
+      WHEN tenant_pedido_counters.ultimo_numero >= 999 THEN 1
+      ELSE tenant_pedido_counters.ultimo_numero + 1
+    END,
+    updated_at = NOW()
   RETURNING tenant_pedido_counters.ultimo_numero INTO nuevo_numero;
 
   RETURN nuevo_numero;
@@ -1014,8 +1017,11 @@ BEGIN
   INSERT INTO tenant_pedido_counters (tenant_id, ultimo_numero)
   VALUES (p_tenant_id, 1)
   ON CONFLICT (tenant_id) DO UPDATE
-    SET ultimo_numero = tenant_pedido_counters.ultimo_numero + 1,
-        updated_at = NOW()
+    SET ultimo_numero = CASE
+      WHEN tenant_pedido_counters.ultimo_numero >= 999 THEN 1
+      ELSE tenant_pedido_counters.ultimo_numero + 1
+    END,
+    updated_at = NOW()
   RETURNING tenant_pedido_counters.ultimo_numero INTO nuevo_numero;
 
   RETURN nuevo_numero;

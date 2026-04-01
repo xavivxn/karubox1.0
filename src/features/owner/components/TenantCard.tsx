@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Package, Mail, Phone, MapPin, Eye, Loader2 } from 'lucide-react'
+import { Package, Mail, Phone, MapPin, Eye, Loader2, Trash2 } from 'lucide-react'
 import { toggleTenantStatus } from '@/app/actions/owner'
+import { DeleteTenantModal } from '@/features/owner/components/DeleteTenantModal'
+import { canPurgeTenant } from '@/lib/owner/tenantDeletionGuard'
+import { ROUTES } from '@/config/routes'
 
 type LoadingAction = 'detalle' | 'gestionar' | 'toggle' | null
 
@@ -27,6 +30,8 @@ interface TenantCardProps {
 export function TenantCard({ tenant, onStatusChange }: TenantCardProps) {
   const router = useRouter()
   const [loadingAction, setLoadingAction] = useState<LoadingAction>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const deletable = canPurgeTenant({ id: tenant.id, slug: tenant.slug })
 
   const usuariosCount = tenant.usuarios?.[0]?.count ?? 0
   const fechaCreacion = new Date(tenant.created_at).toLocaleDateString('es-PY', {
@@ -179,7 +184,30 @@ export function TenantCard({ tenant, onStatusChange }: TenantCardProps) {
           ) : null}
           {loadingAction === 'toggle' ? 'Actualizando...' : tenant.activo ? 'Desactivar' : 'Activar'}
         </button>
+
+        {deletable && (
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            disabled={loadingAction !== null}
+            className="w-full py-2 px-4 rounded-lg text-sm font-medium transition border border-red-300 dark:border-red-800 bg-white dark:bg-gray-800 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+          >
+            <Trash2 className="w-4 h-4 shrink-0" aria-hidden />
+            Eliminar local y todos sus datos
+          </button>
+        )}
       </div>
+
+      <DeleteTenantModal
+        open={showDeleteModal}
+        tenant={{ id: tenant.id, nombre: tenant.nombre }}
+        onClose={() => setShowDeleteModal(false)}
+        onSuccess={() => {
+          setShowDeleteModal(false)
+          router.push(ROUTES.PROTECTED.OWNER)
+          onStatusChange()
+        }}
+      />
     </div>
   )
 }

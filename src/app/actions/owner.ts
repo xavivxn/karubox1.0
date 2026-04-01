@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { canPurgeTenant } from '@/lib/owner/tenantDeletionGuard'
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -794,7 +795,7 @@ export async function deleteTenantOwner(tenantId: string) {
     .single()
 
   if (fetchError || !tenant) return { error: 'Lomitería no encontrada' }
-  if (tenant.slug === 'sistema') return { error: 'No se puede eliminar el tenant del sistema' }
+  if (!canPurgeTenant(tenant)) return { error: 'Esta lomitería no puede eliminarse' }
 
   // 2. Obtener todos los auth_user_id de usuarios del tenant
   const { data: usuarios } = await supabase

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createCartaPublicSupabaseClient } from '@/lib/supabase/cartaPublic'
 import CartaQrPublicView, {
   type CartaQrCategoryData,
   type CartaQrProductData,
@@ -20,89 +20,95 @@ type Tenant = {
   telefono: string | null
 }
 
+/**
+ * Carta pública: primero RPC con clave anon (no requiere service_role en el servidor).
+ * Si la RPC no existe aún, fallback con createAdminClient (migración 22_carta_public_snapshot_rpc.sql).
+ */
 export default async function PublicCartaQrPage({ params }: Props) {
   const { tenantSlug } = await params
   const slug = decodeURIComponent(tenantSlug || '').trim()
   const slugLower = slug.toLowerCase()
   if (!slug) notFound()
 
-  const sessionClient = await createClient()
-  const {
-    data: { user },
-  } = await sessionClient.auth.getUser()
+  let tenantData: CartaQrTenantData | null = null
+  let categories: CartaQrCategoryData[] = []
+  let products: CartaQrProductData[] = []
 
-  let tenant: Tenant | null = null
+  const publicClient = createCartaPublicSupabaseClient()
+  const { data: rpcData, error: rpcError } = await publicClient.rpc('get_carta_public_snapshot', {
+    p_slug: slugLower,
+  })
 
-  // 1) Camino principal: resolver tenant usando sesión actual (flujo desde POS)
-  if (user) {
-    const { data: sessionTenant } = await sessionClient
-      .from('usuarios')
-      .select('tenants!inner(id,nombre,slug,logo_url,direccion,telefono,activo,is_deleted)')
-      .eq('auth_user_id', user.id)
-      .eq('is_deleted', false)
-      .eq('tenants.slug', slugLower)
-      .eq('tenants.activo', true)
-      .eq('tenants.is_deleted', false)
-      .maybeSingle()
+  if (!rpcError && rpcData && typeof rpcData === 'object' && rpcData !== null && 'tenant' in rpcData) {
+    const snap = rpcData as {
+      tenant: CartaQrTenantData
+      categories: CartaQrCategoryData[]
+      products: CartaQrProductData[]
+    }
+    tenantData = snap.tenant
+    categories = snap.categories ?? []
+    products = snap.products ?? []
+  } else {
+    if (rpcError) {
+      console.warn('[carta] RPC get_carta_public_snapshot:', rpcError.message, '→ fallback admin')
+    }
 
-    tenant = (sessionTenant?.tenants ?? null) as Tenant | null
-  }
-
-  // 2) Fallback: intentar con service-role para acceso público sin login
-  if (!tenant) {
     try {
       const adminClient = createAdminClient()
-      const { data: tenantActive } = await adminClient
+      const { data: row, error: tenantError } = await adminClient
         .from('tenants')
         .select('id,nombre,slug,logo_url,direccion,telefono')
         .ilike('slug', slugLower)
         .eq('activo', true)
         .eq('is_deleted', false)
         .maybeSingle()
-      tenant = (tenantActive ?? null) as Tenant | null
-    } catch {
-      tenant = null
+
+      if (tenantError) {
+        console.error('[carta] Error al buscar tenant (admin):', slugLower, tenantError.message)
+      }
+
+      const tenant = (row ?? null) as Tenant | null
+      if (!tenant) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(
+            '[carta] 404: sin tenant o ejecutá en Supabase: database/22_carta_public_snapshot_rpc.sql'
+          )
+        }
+        notFound()
+      }
+
+      const [catRes, prodRes] = await Promise.all([
+        adminClient
+          .from('categorias')
+          .select('id,nombre,orden')
+          .eq('tenant_id', tenant.id)
+          .eq('activa', true)
+          .order('orden')
+          .order('nombre'),
+        adminClient
+          .from('productos')
+          .select('id,nombre,descripcion,precio,categoria_id,imagen_url')
+          .eq('tenant_id', tenant.id)
+          .eq('disponible', true)
+          .neq('is_deleted', true)
+          .order('nombre'),
+      ])
+
+      categories = ((catRes.data ?? []) as Array<{ id: string; nombre: string }>).map((c) => ({
+        id: c.id,
+        nombre: c.nombre,
+      }))
+      products = (prodRes.data ?? []) as CartaQrProductData[]
+      tenantData = tenant as CartaQrTenantData
+    } catch (e) {
+      console.error('[carta] fallback admin:', e)
+      notFound()
     }
   }
 
-  if (!tenant) notFound()
-
-  const supabase = user ? sessionClient : createAdminClient()
-
-  const [catRes, prodRes] = await Promise.all([
-    supabase
-      .from('categorias')
-      .select('id,nombre,orden')
-      .eq('tenant_id', tenant.id)
-      .eq('activa', true)
-      .order('orden')
-      .order('nombre'),
-    supabase
-      .from('productos')
-      .select('id,nombre,descripcion,precio,categoria_id,imagen_url')
-      .eq('tenant_id', tenant.id)
-      .eq('disponible', true)
-      .neq('is_deleted', true)
-      .order('nombre'),
-  ])
-
-  const categories = ((catRes.data ?? []) as Array<{ id: string; nombre: string }>).map(
-    (c) =>
-      ({
-        id: c.id,
-        nombre: c.nombre,
-      }) satisfies CartaQrCategoryData
-  )
-
-  const products = (prodRes.data ?? []) as CartaQrProductData[]
-  const tenantData = tenant as CartaQrTenantData
+  if (!tenantData) notFound()
 
   return (
-    <CartaQrPublicView
-      tenant={tenantData}
-      categories={categories}
-      products={products}
-    />
+    <CartaQrPublicView tenant={tenantData} categories={categories} products={products} />
   )
 }
-

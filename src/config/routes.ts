@@ -57,6 +57,25 @@ export function getPublicCartaQrPath(tenantSlug: string): string {
 }
 
 /**
+ * Origen canónico del sitio (sin barra final). Si está definido `NEXT_PUBLIC_SITE_URL`,
+ * el QR y el enlace copiado usan ese dominio (útil detrás de proxy o para forzar www).
+ */
+export function getPublicSiteOrigin(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  if (raw) return raw.replace(/\/$/, '')
+  if (typeof window !== 'undefined') return window.location.origin
+  return ''
+}
+
+/** URL absoluta de la carta pública (QR y copiar). */
+export function getAbsoluteCartaQrUrl(tenantSlug: string): string | null {
+  const path = getPublicCartaQrPath(tenantSlug)
+  const origin = getPublicSiteOrigin()
+  if (!origin) return null
+  return `${origin}${path}`
+}
+
+/**
  * Lista de rutas públicas que no requieren autenticación
  */
 export const PUBLIC_ROUTES = [
