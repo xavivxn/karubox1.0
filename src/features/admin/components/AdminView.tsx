@@ -31,6 +31,7 @@ import { IngredientConsumption } from './IngredientConsumption'
 import { ChannelPieChart } from './ChannelPieChart'
 import { InventoryGrid } from './InventoryGrid'
 import { InventoryDrawer } from './InventoryDrawer'
+import { SalsasDrawer } from './SalsasDrawer'
 import type { AdminDatePreset } from '../types/admin.types'
 import { resolveAdminDateRange } from '../utils/date.utils'
 
@@ -40,6 +41,7 @@ export const AdminView = () => {
   const [showOwnerProductModal, setShowOwnerProductModal] = useState(false)
   const [showProductosListModal, setShowProductosListModal] = useState(false)
   const [showStockDrawer, setShowStockDrawer] = useState(false)
+  const [showSalsasDrawer, setShowSalsasDrawer] = useState(false)
   const [showCerrarCajaModal, setShowCerrarCajaModal] = useState(false)
   const [showConfirmEmpezar, setShowConfirmEmpezar] = useState(false)
   const [showConfirmCerrar, setShowConfirmCerrar] = useState(false)
@@ -125,6 +127,11 @@ export const AdminView = () => {
     refetch()
   }
 
+  const handleSalsasSaved = () => {
+    setShowSalsasDrawer(false)
+    refetch()
+  }
+
   const displayStats =
     selectedPreset === 'turno_actual' && !sesionAbierta && ultimaSesionCerrada
       ? {
@@ -155,6 +162,7 @@ export const AdminView = () => {
         resumenLabel={resumenLabel}
         onOpenIngredienteModal={() => setShowIngredienteModal(true)}
         onOpenStockDrawer={() => setShowStockDrawer(true)}
+        onOpenSalsasDrawer={canManageProducts ? () => setShowSalsasDrawer(true) : undefined}
         onOpenProductosList={canManageProducts ? () => setShowProductosListModal(true) : undefined}
         onOpenProductModal={canManageProducts ? () => setShowOwnerProductModal(true) : undefined}
         sesionAbierta={sesionAbierta}
@@ -244,6 +252,14 @@ export const AdminView = () => {
         tenantId={tenant.id}
         usuarioId={usuario?.id ?? null}
         onSaved={handleStockDrawerSaved}
+      />
+
+      {/* Drawer para crear salsas por vasitos (productos + receta de 1 ingrediente) */}
+      <SalsasDrawer
+        open={showSalsasDrawer}
+        onClose={() => setShowSalsasDrawer(false)}
+        tenantId={tenant.id}
+        onSaved={handleSalsasSaved}
       />
 
       {/* Confirmación: Empezar el día */}

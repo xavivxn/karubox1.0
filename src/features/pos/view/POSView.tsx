@@ -8,6 +8,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import { useEstadoCaja } from '@/features/caja/hooks/useEstadoCaja'
 import { CajaCerradaModal } from '@/features/caja/components/CajaCerradaModal'
 import { ROUTES } from '@/config/routes'
+import { FEATURES } from '@/config'
 import { normalizarParaBusqueda } from '@/features/clientes/utils/clientes.utils'
 import { usePOSData } from '../hooks/usePOSData'
 import { useOrderConfirmation } from '../hooks/useOrderConfirmation'
@@ -45,6 +46,7 @@ export default function POSView() {
   const {
     prepareConfirmOrder,
     confirmOrderWithFacturaChoice,
+    confirmOrderNoFactura,
     cancelFacturaModal,
     facturaPrefModalOpen,
     isProcessing,
@@ -152,7 +154,7 @@ export default function POSView() {
       ? categorias.slice(selectedIndex + 1, selectedIndex + 3)
       : categorias.slice(0, 2)
 
-  const onConfirmOrder = () => {
+  const onConfirmOrder = async () => {
     if (loadingCaja) return
     if (!sesionAbierta) {
       setShowCajaCerradaModal(true)
@@ -162,6 +164,13 @@ export default function POSView() {
     const result = prepareConfirmOrder()
     if (result) {
       setFeedback(result)
+      return
+    }
+
+    // Feature flag apagado: confirmar directo sin abrir modal
+    if (!FEATURES.POS_FACTURA_MODAL) {
+      const direct = await confirmOrderNoFactura()
+      if (direct) setFeedback(direct)
     }
   }
 
@@ -460,13 +469,15 @@ export default function POSView() {
       </div>
       </div>
 
-      <DeseaFacturaModal
-        open={facturaPrefModalOpen}
-        darkMode={darkMode}
-        onClose={cancelFacturaModal}
-        onConfirm={onFacturaModalConfirm}
-        isProcessing={isProcessing}
-      />
+      {FEATURES.POS_FACTURA_MODAL && (
+        <DeseaFacturaModal
+          open={facturaPrefModalOpen}
+          darkMode={darkMode}
+          onClose={cancelFacturaModal}
+          onConfirm={onFacturaModalConfirm}
+          isProcessing={isProcessing}
+        />
+      )}
 
       <ClientModal
         isOpen={isClientModalOpen}

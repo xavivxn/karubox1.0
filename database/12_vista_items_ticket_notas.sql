@@ -3,7 +3,20 @@ DROP VIEW IF EXISTS public.vista_items_ticket_cocina;
 CREATE VIEW public.vista_items_ticket_cocina AS
 SELECT
   ip.pedido_id,
-  ip.id AS item_pedido_id,
+  -- Mantener orden estable para el agente (que ordena por item_pedido_id).
+  -- Si `orden_ticket` existe, lo usamos; si no, caemos a created_at.
+  lpad(
+    (
+      COALESCE(
+        CASE WHEN cat.nombre = 'Salsas' THEN 900000 ELSE 0 END,
+        0
+      )
+      + COALESCE(ip.orden_ticket, 0)
+    )::text,
+    6,
+    '0'
+  ) || '_' || ip.id::text AS item_pedido_id,
+  ip.id AS item_pedido_uuid,
   ip.producto_nombre,
   ip.cantidad,
   ip.precio_unitario,
@@ -27,7 +40,9 @@ SELECT
     ),
     ''
   ) AS modificaciones
-FROM items_pedido ip;
+FROM items_pedido ip
+LEFT JOIN productos p ON p.id = ip.producto_id
+LEFT JOIN categorias cat ON cat.id = p.categoria_id;
 
 COMMENT ON VIEW vista_items_ticket_cocina IS 'Items de pedido con texto de modificaciones para ticket de cocina (sin X, extra Y) y notas por ítem.';
 

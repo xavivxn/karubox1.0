@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
+import { FEATURES } from '@/config'
 import { orderService } from '../services/orderService'
 import type { FeedbackState, FeedbackDetail } from '../types/pos.types'
 import { buildUnexpectedErrorState } from '../utils/error.utils'
@@ -44,8 +45,59 @@ export function useOrderConfirmation() {
       )
     }
 
+    if (!FEATURES.POS_FACTURA_MODAL) {
+      // Feature flag apagado: confirmación directa sin factura (sin modal).
+      // El flujo de UI llamará a `confirmOrderNoFactura`.
+      return null
+    }
+
     setFacturaPrefModalOpen(true)
     return null
+  }
+
+  const confirmOrderNoFactura = async (): Promise<FeedbackState | null> => {
+    if (!usuario || !tenant || !tipo) {
+      return showInlineError(
+        'No encontramos el usuario',
+        'Volvé a iniciar sesión para poder registrar ventas.'
+      )
+    }
+
+    setIsProcessing(true)
+    try {
+      const total = getTotal()
+      const { pedido, successDetails } = await orderService.confirmOrder({
+        tenantId: tenant.id,
+        usuarioId: usuario.id,
+        tenantNombre: tenant.nombre,
+        usuarioNombre: usuario.nombre,
+        cliente,
+        tipo,
+        items,
+        total,
+        emitirFactura: false,
+        facturaALNombreDelCliente: false,
+        facturaMostrarNombreYCI: false,
+      })
+
+      clearCart()
+
+      return {
+        type: 'success',
+        title: `Pedido #${pedido.numero_pedido} confirmado`,
+        message: 'Venta registrada y stock actualizado.',
+        details: successDetails,
+      }
+    } catch (error) {
+      const err =
+        error instanceof Error
+          ? error
+          : new Error(String((error as { message?: string })?.message ?? 'Error desconocido'))
+      console.error('Error confirmando pedido:', err.message, error)
+      return buildUnexpectedErrorState('No pudimos confirmar el pedido', err)
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   const cancelFacturaModal = () => {
@@ -107,6 +159,7 @@ export function useOrderConfirmation() {
   return {
     prepareConfirmOrder,
     confirmOrderWithFacturaChoice,
+    confirmOrderNoFactura,
     cancelFacturaModal,
     facturaPrefModalOpen,
     isProcessing,

@@ -1,8 +1,11 @@
 'use client'
 
 import { useCartStore, type CartItem } from '@/store/cartStore'
-import { Trash2, Plus, Minus, ShoppingBag, Settings2, Star, Zap, Gift } from 'lucide-react'
+import { Trash2, Plus, Minus, ShoppingBag, Settings2, Star, Zap, Gift, Droplets } from 'lucide-react'
 import { formatGuaranies } from '@/lib/utils/format'
+import { useMemo, useState } from 'react'
+import { useTenant } from '@/contexts/TenantContext'
+import { SaucesDrawer } from './SaucesDrawer'
 
 type OrderTypeValue = 'delivery' | 'local' | 'para_llevar'
 
@@ -53,7 +56,9 @@ export default function Cart({
   darkMode,
   onEditItem
 }: Props) {
-  const { items, cliente, tipo, removeItem, updateQuantity, getTotal, getTotalPuntos, setTipo } = useCartStore()
+  const { tenant } = useTenant()
+  const { items, cliente, tipo, removeItem, updateQuantity, getTotal, getTotalPuntos, setTipo, upsertSauceItem } = useCartStore()
+  const [saucesOpen, setSaucesOpen] = useState(false)
   const orderTypeInactiveClasses = darkMode
     ? 'bg-gray-700/60 text-gray-200 border-gray-600 hover:bg-gray-600'
     : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
@@ -62,8 +67,17 @@ export default function Cart({
     : 'focus-visible:ring-offset-white'
   
   const total = getTotal()
-  const itemCount = items.reduce((sum, item) => sum + item.cantidad, 0)
+  const visibleItems = useMemo(() => items.filter((i) => i.grupo !== 'salsa'), [items])
+  const itemCount = visibleItems.reduce((sum, item) => sum + item.cantidad, 0)
   const puntos = getTotalPuntos()
+  const sauceItems = useMemo(() => items.filter((i) => i.grupo === 'salsa'), [items])
+  const saucesInitialQty = useMemo(() => {
+    const map: Record<string, number> = {}
+    sauceItems.forEach((i) => {
+      map[i.producto_id] = i.cantidad
+    })
+    return map
+  }, [sauceItems])
 
   return (
     <div
@@ -79,13 +93,13 @@ export default function Cart({
 
       {/* Lista de items - scrollable */}
       <div className="overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-orange-500 scrollbar-track-transparent hover:scrollbar-thumb-orange-600" style={{ maxHeight: '350px' }}>
-        {items.length === 0 ? (
+        {visibleItems.length === 0 ? (
           <div className={`text-center py-8 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
             <div className="text-4xl mb-2">🛒</div>
             <p className="text-sm">Selecciona productos</p>
           </div>
         ) : (
-          items.map((item) => (
+          visibleItems.map((item) => (
             <div
               key={item.id}
               className={`rounded-lg p-3 border ${
@@ -208,6 +222,42 @@ export default function Cart({
       {/* Sección fija inferior - siempre visible */}
       {items.length > 0 && (
         <div className={`flex-shrink-0 p-3 border-t space-y-2 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          {/* Salsas (vasitos) - justo arriba de Agregar Cliente */}
+          <div
+            className={`w-full p-2 rounded-lg border transition-all text-left ${
+              darkMode
+                ? 'bg-gray-700/20 border-orange-500/30'
+                : 'bg-orange-50/40 border-orange-200'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Droplets className={darkMode ? 'text-orange-300' : 'text-orange-600'} size={16} />
+                <div className="min-w-0">
+                  <div className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Salsas {sauceItems.length > 0 ? `(${sauceItems.reduce((s, i) => s + i.cantidad, 0)})` : ''}
+                  </div>
+                  <div className={`text-[10px] truncate ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {sauceItems.length === 0
+                      ? 'Agregar vasitos (gratis o con costo)'
+                      : sauceItems.map((s) => `${s.nombre} x${s.cantidad}`).join(' · ')}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSaucesOpen(true)}
+                className={`shrink-0 px-3 py-1.5 rounded-xl text-[11px] font-bold transition ${
+                  darkMode
+                    ? 'bg-gray-800 text-orange-200 hover:bg-gray-700'
+                    : 'bg-white text-orange-700 border border-orange-200 hover:bg-orange-50'
+                }`}
+              >
+                {sauceItems.length > 0 ? 'Editar' : 'Agregar'}
+              </button>
+            </div>
+          </div>
+
           {/* Cliente - compacto */}
           <button
             onClick={onOpenClientModal}
@@ -330,6 +380,34 @@ export default function Cart({
             )}
           </button>
         </div>
+      )}
+
+      {/* Drawer de salsas */}
+      {tenant?.id && (
+        <SaucesDrawer
+          open={saucesOpen}
+          onClose={() => setSaucesOpen(false)}
+          tenantId={tenant.id}
+          darkMode={darkMode}
+          initialQuantities={saucesInitialQty}
+          onConfirm={(nextQty, saucesById) => {
+            // Aplicar: actualizar las que el user tocó; y remover las que estaban antes pero ahora quedaron 0.
+            const allIds = new Set<string>([
+              ...Object.keys(saucesInitialQty),
+              ...Object.keys(nextQty),
+            ])
+            for (const id of allIds) {
+              const qty = nextQty[id] ?? 0
+              const sauce = saucesById[id]
+              // Si el catálogo no trajo este id (ej: salsa borrada), igual intentamos remover del carrito.
+              if (!sauce) {
+                upsertSauceItem({ id, nombre: 'Salsa', precio: 0 }, 0)
+              } else {
+                upsertSauceItem({ id: sauce.id, nombre: sauce.nombre, descripcion: sauce.descripcion ?? undefined, precio: sauce.precio }, qty)
+              }
+            }
+          }}
+        />
       )}
     </div>
   )

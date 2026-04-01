@@ -71,6 +71,19 @@ export const orderService = {
       throw new Error('El carrito está vacío')
     }
 
+    // Orden de impresión/cocina:
+    // 1) Mantener el orden de selección original para productos
+    // 2) Dejar las salsas (grupo='salsa') al final
+    const itemsOrdenados = items
+      .map((item, idx) => ({ item, idx }))
+      .sort((a, b) => {
+        const aIsSauce = a.item.grupo === 'salsa'
+        const bIsSauce = b.item.grupo === 'salsa'
+        if (aIsSauce !== bIsSauce) return aIsSauce ? 1 : -1
+        return a.idx - b.idx
+      })
+      .map(({ item }) => item)
+
     const puntosAuto = calcularPuntos(total)
     const puntosBonus = items.reduce((sum, item) => sum + ((item.puntos_extra ?? 0) * item.cantidad), 0)
     const puntosGenerados = puntosAuto + puntosBonus
@@ -111,7 +124,7 @@ export const orderService = {
     if (errorPedido) throw toError(errorPedido, 'Error al crear el pedido')
 
     // Insertar items del pedido (notas = texto de modificaciones para el ticket de cocina)
-    const itemsToInsert = items.map((item) => ({
+    const itemsToInsert = itemsOrdenados.map((item, idx) => ({
       pedido_id: pedido.id,
       producto_id: item.producto_id,
       producto_nombre:
@@ -120,6 +133,7 @@ export const orderService = {
       // En canje el total se cobra con puntos, por eso evitamos mostrar precios en tickets (manteniendo total=0).
       precio_unitario: item.modo === 'canje' && item.tipo === 'producto' ? 0 : item.precio,
       subtotal: item.subtotal,
+      orden_ticket: idx + 1,
       notas: (() => {
         const baseNotas = formatItemModificacionesForTicket(item)
         if (!(item.modo === 'canje' && item.tipo === 'producto')) return baseNotas ?? null
@@ -140,7 +154,7 @@ export const orderService = {
     if (errorItems) throw toError(errorItems, 'Error al guardar los ítems del pedido')
 
     // Mapear los CartItems con sus IDs reales de items_pedido para la customización
-    const cartItemsConId = items.map((item, index) => ({
+    const cartItemsConId = itemsOrdenados.map((item, index) => ({
       ...item,
       id: itemsInsertados?.[index]?.id || item.id
     }))
@@ -274,7 +288,7 @@ export const orderService = {
 
     // Imprimir ticket de cocina (no crítico - si falla, el pedido se guarda igual)
     printService
-      .printKitchenTicket(tenantId, pedidoFacturado, items, tenantNombre)
+      .printKitchenTicket(tenantId, pedidoFacturado, itemsOrdenados, tenantNombre)
       .catch((printError) => {
         console.warn('No se pudo imprimir el ticket de cocina', printError)
       })
