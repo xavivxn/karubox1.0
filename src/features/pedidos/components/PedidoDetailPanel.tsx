@@ -58,19 +58,23 @@ export function PedidoDetailPanel({
     let cancelled = false
     const supabase = createClient()
 
-    setLoadingItems(true)
-    supabase
-      .from('items_pedido')
-      .select('id, producto_nombre, cantidad, subtotal, notas')
-      .eq('pedido_id', pedido.id)
-      .order('created_at', { ascending: true })
-      .then(({ data }) => {
+    const loadItems = async () => {
+      setLoadingItems(true)
+      try {
+        const { data } = await supabase
+          .from('items_pedido')
+          .select('id, producto_nombre, cantidad, subtotal, notas')
+          .eq('pedido_id', pedido.id)
+          .order('created_at', { ascending: true })
+
         if (cancelled) return
         setItems((data ?? []) as PedidoItemDetail[])
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoadingItems(false)
-      })
+      }
+    }
+
+    void loadItems()
 
     return () => {
       cancelled = true
