@@ -1,8 +1,24 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ChevronRight, Home, Users, ShoppingCart, LayoutDashboard, ChefHat, Store, PlusCircle, Package, UserCog, Building2, FileText, Settings } from 'lucide-react'
+import {
+  ChevronRight,
+  Home,
+  Users,
+  ShoppingCart,
+  LayoutDashboard,
+  ChefHat,
+  Store,
+  PlusCircle,
+  Package,
+  UserCog,
+  Building2,
+  FileText,
+  Settings,
+  Loader2,
+} from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { ROUTES } from '@/config/routes'
 
@@ -12,11 +28,15 @@ interface BreadcrumbItem {
   icon?: ReactNode
 }
 
+const NAV_TIMEOUT_MS = 12_000
+
 export function Breadcrumb() {
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { darkMode, isAdmin } = useTenant()
+  /** `path` o `href` exacto del botón pulsado (mientras Next navega) */
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
   const items: BreadcrumbItem[] = []
 
@@ -173,8 +193,23 @@ export function Breadcrumb() {
     }
   }
 
+  const searchKey = searchParams.toString()
+
+  useEffect(() => {
+    setNavigatingTo(null)
+  }, [pathname, searchKey])
+
+  useEffect(() => {
+    if (!navigatingTo) return
+    const t = setTimeout(() => setNavigatingTo(null), NAV_TIMEOUT_MS)
+    return () => clearTimeout(t)
+  }, [navigatingTo])
+
+  const isNavigating = navigatingTo !== null
+
   const handleClick = (path: string, isLast: boolean) => {
-    if (!isLast) {
+    if (!isLast && !isNavigating) {
+      setNavigatingTo(path)
       router.push(path)
     }
   }
@@ -279,10 +314,15 @@ export function Breadcrumb() {
             <button
               type="button"
               onClick={() => handleClick(item.path, isLast)}
-              disabled={isLast}
-              className={`flex items-center gap-1.5 transition-colors ${breadcrumbSegmentClass(item, isLast)}`}
+              disabled={isLast || isNavigating}
+              aria-busy={navigatingTo === item.path}
+              className={`flex items-center gap-1.5 transition-colors disabled:opacity-60 ${breadcrumbSegmentClass(item, isLast)}`}
             >
-              {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+              {navigatingTo === item.path ? (
+                <Loader2 className="w-4 h-4 shrink-0 animate-spin" aria-hidden />
+              ) : (
+                item.icon && <span className="flex-shrink-0">{item.icon}</span>
+              )}
               <span>{item.label}</span>
             </button>
           </div>
@@ -299,10 +339,20 @@ export function Breadcrumb() {
             />
             <button
               type="button"
-              onClick={() => router.push(link.href)}
-              className={`flex items-center gap-1.5 transition-colors ${accentLink[link.color]} hover:underline`}
+              onClick={() => {
+                if (isNavigating) return
+                setNavigatingTo(link.href)
+                router.push(link.href)
+              }}
+              disabled={isNavigating}
+              aria-busy={navigatingTo === link.href}
+              className={`flex items-center gap-1.5 transition-colors disabled:opacity-60 ${accentLink[link.color]} hover:underline`}
             >
-              <span className="flex-shrink-0">{link.icon}</span>
+              {navigatingTo === link.href ? (
+                <Loader2 className="w-4 h-4 shrink-0 animate-spin" aria-hidden />
+              ) : (
+                <span className="flex-shrink-0">{link.icon}</span>
+              )}
               <span>{link.label}</span>
             </button>
           </div>

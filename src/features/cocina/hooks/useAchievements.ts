@@ -98,13 +98,18 @@ export function useAchievements({ tenantId, sessionId, stats, orders, streak }: 
     }
   }, [tenantId, store])
 
-  // Track combo milestones for lifetime stats
+  // Combo milestones (x5 / x10) y récord histórico de racha para logros globales
   useEffect(() => {
     if (!tenantId || !store) return
     let updated = false
     const ls = { ...store.lifetimeStats }
     if (streak >= 5 && prevStreak.current < 5) { ls.totalCombo5 += 1; updated = true }
     if (streak >= 10 && prevStreak.current < 10) { ls.totalCombo10 += 1; updated = true }
+    const maxPrev = ls.maxStreakEver ?? 0
+    if (streak > maxPrev) {
+      ls.maxStreakEver = streak
+      updated = true
+    }
     prevStreak.current = streak
     if (updated) {
       const newStore = { ...store, lifetimeStats: ls }
