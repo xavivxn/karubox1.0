@@ -1,5 +1,7 @@
 'use client'
 
+import { createPortal } from 'react-dom'
+import { useLayoutEffect, useState } from 'react'
 import { X, Loader2, Sun, AlertTriangle, ShieldAlert } from 'lucide-react'
 
 export type ConfirmVariant = 'primary' | 'warning' | 'danger'
@@ -51,7 +53,12 @@ export function ConfirmModal({
   loading = false,
   darkMode = false
 }: ConfirmModalProps) {
-  if (!open) return null
+  const [mounted, setMounted] = useState(false)
+  useLayoutEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!open || !mounted) return null
 
   const styles = variantStyles[variant]
   const Icon = styles.Icon
@@ -64,9 +71,9 @@ export function ConfirmModal({
     await onConfirm()
   }
 
-  return (
+  const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       aria-modal="true"
       role="dialog"
       aria-labelledby="confirm-modal-title"
@@ -137,4 +144,6 @@ export function ConfirmModal({
       </div>
     </div>
   )
+
+  return createPortal(modal, document.body)
 }

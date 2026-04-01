@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom'
 import { X, Loader2, Wallet, CheckCircle2, FileDown, Plus, Trash2 } from 'lucide-react'
 import { formatGuaranies, formatNumber } from '@/lib/utils/format'
 import { getTotalesTurnoAction, cerrarCajaAction } from '@/app/actions/caja'
+import { upsertCocinaAchievementStoreAction } from '@/app/actions/cocina-achievements'
+import { loadStore, resetCocinaDailyData } from '@/features/cocina/utils/achievements'
 import { generarPdfCierreCaja } from '../utils/generarPdfCierreCaja'
 import type { GastoExtra, SesionCaja } from '../types/caja.types'
 
@@ -104,6 +106,10 @@ export function CerrarCajaModal({
     const result = await cerrarCajaAction(sesion.id, montoNum, gastos)
     setIsSaving(false)
     if (result.success) {
+      // Archivar logros del turno en localStorage y persistir en BD (historial de turnos / multi-dispositivo)
+      resetCocinaDailyData(tenantId, sesion.apertura_at)
+      const achievementStore = loadStore(tenantId)
+      void upsertCocinaAchievementStoreAction(tenantId, achievementStore)
       setSesionCerrada(result.data)
     } else {
       setError(result.error)

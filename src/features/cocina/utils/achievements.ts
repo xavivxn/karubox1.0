@@ -11,6 +11,8 @@ export interface Achievement {
   id: string
   name: string
   description: string
+  /** Pista corta para estado bloqueado (estilo misterio). */
+  mysteryHint?: string
   tier: AchievementTier
   emoji: string
   type: AchievementType
@@ -49,6 +51,8 @@ export interface AchievementStore {
     totalCombo5: number
     totalCombo10: number
     recordsBroken: number
+    /** Mayor racha de combo (pedidos seguidos) jamás alcanzada en cocina */
+    maxStreakEver: number
   }
 }
 
@@ -82,6 +86,7 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     id: 'primer-pedido',
     name: 'Primer Pedido',
     description: 'Recibir el primer pedido del día',
+    mysteryHint: 'Se desbloquea con un comienzo simple del turno.',
     tier: 'bronze',
     emoji: '🎯',
     type: 'daily',
@@ -146,6 +151,7 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     id: 'tesoro',
     name: 'Tesoro',
     description: 'Facturar 500.000 Gs en el día',
+    mysteryHint: 'Se activa cuando la caja empieza a pesar.',
     tier: 'silver',
     emoji: '💰',
     type: 'daily',
@@ -194,6 +200,7 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     id: 'imparable',
     name: 'Imparable',
     description: '50 pedidos en el día',
+    mysteryHint: 'Ritmo extremo sostenido durante el turno.',
     tier: 'diamond',
     emoji: '🚀',
     type: 'daily',
@@ -250,6 +257,7 @@ export const GLOBAL_ACHIEVEMENTS: Achievement[] = [
     id: 'bienvenido-chef',
     name: 'Bienvenido Chef',
     description: 'Ver tu primer pedido en la cocina',
+    mysteryHint: 'Un hito básico para quienes recién comienzan.',
     tier: 'bronze',
     emoji: '👨‍🍳',
     type: 'global',
@@ -283,6 +291,7 @@ export const GLOBAL_ACHIEVEMENTS: Achievement[] = [
     id: 'rompe-records',
     name: 'Rompe Récords',
     description: 'Superar tu récord de facturación',
+    mysteryHint: 'Solo aparece cuando superás una marca histórica.',
     tier: 'gold',
     emoji: '🏆',
     type: 'global',
@@ -323,9 +332,149 @@ export const GLOBAL_ACHIEVEMENTS: Achievement[] = [
     type: 'global',
     impact: 'high',
   },
+  {
+    id: 'archivo-vivo',
+    name: 'Archivo vivo',
+    description: '10 turnos con logros guardados en el historial',
+    tier: 'bronze',
+    emoji: '📁',
+    type: 'global',
+  },
+  {
+    id: 'operacion-media',
+    name: 'Operación media',
+    description: '180 días de operación',
+    tier: 'gold',
+    emoji: '📊',
+    type: 'global',
+  },
+  {
+    id: 'pico-tres-millones',
+    name: 'Día de tres millones',
+    description: 'Tu mejor día facturó al menos 3.000.000 Gs',
+    tier: 'silver',
+    emoji: '💵',
+    type: 'global',
+  },
+  {
+    id: 'biblio-cocina',
+    name: 'Biblioteca de cocina',
+    description: '50 turnos con logros en el historial',
+    tier: 'silver',
+    emoji: '📚',
+    type: 'global',
+  },
+  {
+    id: 'hipercenturion',
+    name: 'Hipercenturión',
+    description: 'Tu mejor día tuvo 150 pedidos o más',
+    tier: 'gold',
+    emoji: '📈',
+    type: 'global',
+  },
+  {
+    id: 'cumbre-siete-m',
+    name: 'Cumbre',
+    description: 'Tu mejor día facturó al menos 7.000.000 Gs',
+    tier: 'gold',
+    emoji: '⛰️',
+    type: 'global',
+  },
+  {
+    id: 'ritmo-veinticinco',
+    name: 'Ritmo sostenido',
+    description: 'Alcanzar combo x5 veinticinco veces en total',
+    tier: 'gold',
+    emoji: '🥁',
+    type: 'global',
+  },
+  {
+    id: 'rompevidrios',
+    name: 'Rompevidrios',
+    description: 'Superar tu récord de facturación 5 veces',
+    tier: 'gold',
+    emoji: '💥',
+    type: 'global',
+  },
+  {
+    id: 'furia-quince-x10',
+    name: 'Furia x10',
+    description: 'Alcanzar combo x10 quince veces en total',
+    tier: 'gold',
+    emoji: '⚡',
+    type: 'global',
+  },
+  {
+    id: 'racha-historica',
+    name: 'Racha histórica',
+    description: 'Alcanzar una racha de 20 pedidos seguidos o más (máximo histórico)',
+    tier: 'gold',
+    emoji: '🔗',
+    type: 'global',
+  },
+  {
+    id: 'serial-rompe-records',
+    name: 'Serial de récords',
+    description: 'Superar tu récord de facturación 15 veces',
+    tier: 'diamond',
+    emoji: '📉',
+    type: 'global',
+    impact: 'high',
+  },
+  {
+    id: 'infierno-combo',
+    name: 'Infierno',
+    description: 'Alcanzar combo x5 cincuenta veces en total',
+    tier: 'diamond',
+    emoji: '🔥',
+    type: 'global',
+  },
+  {
+    id: 'tsunami-pedidos',
+    name: 'Tsunami',
+    description: 'Tu mejor día tuvo 200 pedidos o más',
+    tier: 'diamond',
+    emoji: '🌊',
+    type: 'global',
+    impact: 'high',
+  },
+  {
+    id: 'imparable-total',
+    name: 'Imparable total',
+    description: 'Alcanzar una racha de 35 pedidos seguidos o más (máximo histórico)',
+    tier: 'diamond',
+    emoji: '🏃',
+    type: 'global',
+    impact: 'high',
+  },
+  {
+    id: 'ano-dorado',
+    name: 'Año dorado',
+    description: '365 días de operación',
+    tier: 'diamond',
+    emoji: '🗓️',
+    type: 'global',
+    impact: 'high',
+  },
 ]
 
 export const ALL_ACHIEVEMENTS = [...DAILY_ACHIEVEMENTS, ...GLOBAL_ACHIEVEMENTS]
+
+function mysteryHintFallback(achievement: Achievement): string {
+  if (achievement.id.includes('combo')) return 'Tiene que ver con mantener rachas.'
+  if (achievement.id.includes('millon')) return 'Requiere una facturación muy alta.'
+  if (achievement.id.includes('record')) return 'Exige superar una marca previa.'
+  if (achievement.id.includes('delivery')) return 'Relacionado a pedidos de reparto.'
+  if (achievement.id.includes('dia') || achievement.id.includes('semana') || achievement.id.includes('centenario')) {
+    return 'Se desbloquea por constancia a lo largo del tiempo.'
+  }
+  if (achievement.type === 'daily') return 'Pista: depende del rendimiento del turno actual.'
+  return 'Pista: depende de progreso acumulado.'
+}
+
+export function getAchievementMysteryHint(achievement: Achievement): string {
+  return achievement.mysteryHint ?? mysteryHintFallback(achievement)
+}
 
 /* ═══════════════ LOCALSTORAGE HELPERS ═══════════════ */
 
@@ -347,6 +496,7 @@ function defaultStore(): AchievementStore {
       totalCombo5: 0,
       totalCombo10: 0,
       recordsBroken: 0,
+      maxStreakEver: 0,
     },
   }
 }
@@ -437,13 +587,20 @@ export function ensureSessionReset(
   }
 }
 
-function archiveCurrentSession(store: AchievementStore): Record<string, SessionRecord> {
+function archiveCurrentSession(
+  store: AchievementStore,
+  /** Al cerrar caja conviene pasar la apertura real de `sesiones_caja` para ordenar el historial. */
+  forcedAperturaAt?: string
+): Record<string, SessionRecord> {
   const history = { ...store.sessionHistory }
   if (store.dailySessionId && store.dailyUnlocked.length > 0) {
     history[store.dailySessionId] = {
       achievementIds: [...store.dailyUnlocked],
       date: store.dailyDate || todayStr(),
-      aperturaAt: new Date().toISOString(),
+      aperturaAt:
+        forcedAperturaAt ??
+        store.sessionHistory[store.dailySessionId]?.aperturaAt ??
+        new Date().toISOString(),
     }
   }
   return history
@@ -458,18 +615,56 @@ function trimHistory(history: Record<string, SessionRecord>, max = 60): Record<s
 }
 
 /**
- * Reinicia solo los datos del día de Cocina 3D (logros diarios).
- * Se llama al confirmar cierre de caja. No toca logros globales ni lifetimeStats.
+ * Fusiona estado remoto (BD) con localStorage: máximos en globales/historial; turno actual preferido desde local si hay actividad.
  */
-export function resetCocinaDailyData(tenantId: string): void {
+export function mergeDbWithLocal(db: AchievementStore, local: AchievementStore): AchievementStore {
+  const mergedUnlocked: Record<string, number> = { ...db.unlocked, ...local.unlocked }
+  for (const k of Object.keys(mergedUnlocked)) {
+    mergedUnlocked[k] = Math.max(db.unlocked[k] ?? 0, local.unlocked[k] ?? 0)
+  }
+  const mergedHistory: Record<string, SessionRecord> = { ...db.sessionHistory }
+  for (const [k, loc] of Object.entries(local.sessionHistory)) {
+    const prev = mergedHistory[k]
+    const pick =
+      !prev || loc.achievementIds.length > (prev.achievementIds?.length ?? 0) ? loc : prev
+    mergedHistory[k] = pick
+  }
+  const defLs = defaultStore().lifetimeStats
+  const dbLs = { ...defLs, ...db.lifetimeStats }
+  const localLs = { ...defLs, ...local.lifetimeStats }
+  const ls = { ...defLs }
+  for (const key of Object.keys(defLs) as (keyof AchievementStore['lifetimeStats'])[]) {
+    ls[key] = Math.max(dbLs[key], localLs[key])
+  }
+  const preferLocalDaily =
+    local.dailyUnlocked.length > 0 || Boolean(local.dailySessionId && !db.dailySessionId)
+  return {
+    unlocked: mergedUnlocked,
+    dailyDate: preferLocalDaily ? local.dailyDate : db.dailyDate || local.dailyDate,
+    dailySessionId: preferLocalDaily ? local.dailySessionId : db.dailySessionId || local.dailySessionId,
+    dailyUnlocked: preferLocalDaily ? local.dailyUnlocked : db.dailyUnlocked,
+    sessionHistory: trimHistory(mergedHistory),
+    lifetimeStats: ls,
+  }
+}
+
+/**
+ * Reinicia solo los datos del día de Cocina 3D (logros diarios).
+ * Tras cerrar caja: pasar `closedSessionAperturaAt` = apertura_at de la sesión cerrada para el historial.
+ * No toca logros globales ni lifetimeStats.
+ */
+export function resetCocinaDailyData(tenantId: string, closedSessionAperturaAt?: string): void {
   if (typeof window === 'undefined') return
   try {
     const store = loadStore(tenantId)
+    // Antes de limpiar, archivar la sesión actual para que aparezca en Historial de turnos.
+    const archivedHistory = trimHistory(archiveCurrentSession(store, closedSessionAperturaAt))
     const newStore: AchievementStore = {
       ...store,
       dailyDate: todayStr(),
       dailySessionId: '',
       dailyUnlocked: [],
+      sessionHistory: archivedHistory,
     }
     saveStore(tenantId, newStore)
   } catch {
@@ -543,6 +738,21 @@ const GLOBAL_EVAL: Record<string, EvalFn> = {
   'leyenda-global': (ctx) => ctx.store.lifetimeStats.totalCombo10 >= 5,
   'dia-perfecto': (ctx) =>
     ctx.store.dailyUnlocked.length >= DAILY_ACHIEVEMENTS.length,
+  'archivo-vivo': (ctx) => Object.keys(ctx.store.sessionHistory).length >= 10,
+  'operacion-media': (ctx) => ctx.store.lifetimeStats.totalDaysActive >= 180,
+  'pico-tres-millones': (ctx) => ctx.store.lifetimeStats.bestDailyRevenue >= 3_000_000,
+  'biblio-cocina': (ctx) => Object.keys(ctx.store.sessionHistory).length >= 50,
+  'hipercenturion': (ctx) => ctx.store.lifetimeStats.bestDailyOrders >= 150,
+  'cumbre-siete-m': (ctx) => ctx.store.lifetimeStats.bestDailyRevenue >= 7_000_000,
+  'ritmo-veinticinco': (ctx) => ctx.store.lifetimeStats.totalCombo5 >= 25,
+  'rompevidrios': (ctx) => ctx.store.lifetimeStats.recordsBroken >= 5,
+  'furia-quince-x10': (ctx) => ctx.store.lifetimeStats.totalCombo10 >= 15,
+  'racha-historica': (ctx) => (ctx.store.lifetimeStats.maxStreakEver ?? 0) >= 20,
+  'serial-rompe-records': (ctx) => ctx.store.lifetimeStats.recordsBroken >= 15,
+  'infierno-combo': (ctx) => ctx.store.lifetimeStats.totalCombo5 >= 50,
+  'tsunami-pedidos': (ctx) => ctx.store.lifetimeStats.bestDailyOrders >= 200,
+  'imparable-total': (ctx) => (ctx.store.lifetimeStats.maxStreakEver ?? 0) >= 35,
+  'ano-dorado': (ctx) => ctx.store.lifetimeStats.totalDaysActive >= 365,
 }
 
 export interface EvaluationResult {
@@ -587,17 +797,52 @@ export function getGlobalProgress(
   achievement: Achievement,
   store: AchievementStore
 ): { current: number; target: number } | null {
+  const ls = store.lifetimeStats
+  const sessions = Object.keys(store.sessionHistory).length
+  const maxS = ls.maxStreakEver ?? 0
   switch (achievement.id) {
     case 'semana-1':
-      return { current: Math.min(store.lifetimeStats.totalDaysActive, 7), target: 7 }
+      return { current: Math.min(ls.totalDaysActive, 7), target: 7 }
     case 'veterano':
-      return { current: Math.min(store.lifetimeStats.totalDaysActive, 30), target: 30 }
+      return { current: Math.min(ls.totalDaysActive, 30), target: 30 }
     case 'centenario':
-      return { current: Math.min(store.lifetimeStats.totalDaysActive, 100), target: 100 }
+      return { current: Math.min(ls.totalDaysActive, 100), target: 100 }
+    case 'operacion-media':
+      return { current: Math.min(ls.totalDaysActive, 180), target: 180 }
+    case 'ano-dorado':
+      return { current: Math.min(ls.totalDaysActive, 365), target: 365 }
     case 'combo-habitual':
-      return { current: Math.min(store.lifetimeStats.totalCombo5, 10), target: 10 }
+      return { current: Math.min(ls.totalCombo5, 10), target: 10 }
+    case 'ritmo-veinticinco':
+      return { current: Math.min(ls.totalCombo5, 25), target: 25 }
+    case 'infierno-combo':
+      return { current: Math.min(ls.totalCombo5, 50), target: 50 }
     case 'leyenda-global':
-      return { current: Math.min(store.lifetimeStats.totalCombo10, 5), target: 5 }
+      return { current: Math.min(ls.totalCombo10, 5), target: 5 }
+    case 'furia-quince-x10':
+      return { current: Math.min(ls.totalCombo10, 15), target: 15 }
+    case 'rompe-records':
+      return { current: Math.min(ls.recordsBroken, 1), target: 1 }
+    case 'rompevidrios':
+      return { current: Math.min(ls.recordsBroken, 5), target: 5 }
+    case 'serial-rompe-records':
+      return { current: Math.min(ls.recordsBroken, 15), target: 15 }
+    case 'pico-tres-millones':
+      return { current: Math.min(ls.bestDailyRevenue, 3_000_000), target: 3_000_000 }
+    case 'cumbre-siete-m':
+      return { current: Math.min(ls.bestDailyRevenue, 7_000_000), target: 7_000_000 }
+    case 'hipercenturion':
+      return { current: Math.min(ls.bestDailyOrders, 150), target: 150 }
+    case 'tsunami-pedidos':
+      return { current: Math.min(ls.bestDailyOrders, 200), target: 200 }
+    case 'archivo-vivo':
+      return { current: Math.min(sessions, 10), target: 10 }
+    case 'biblio-cocina':
+      return { current: Math.min(sessions, 50), target: 50 }
+    case 'racha-historica':
+      return { current: Math.min(maxS, 20), target: 20 }
+    case 'imparable-total':
+      return { current: Math.min(maxS, 35), target: 35 }
     default:
       return null
   }

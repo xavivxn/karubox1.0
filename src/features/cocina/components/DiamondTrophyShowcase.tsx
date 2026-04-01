@@ -224,9 +224,9 @@ function CopyButton({ achievement, tenantNombre }: { achievement: Achievement; t
   return (
     <motion.button
       onClick={handleCopy}
-      whileTap={{ scale: 0.95 }}
-      whileHover={{ scale: 1.03 }}
-      className="relative overflow-hidden rounded-2xl px-2.5 sm:px-4 py-2 sm:py-2.5 font-black text-white text-[11px] sm:text-xs flex items-center justify-center gap-2 shadow-xl w-[min(270px,85vw)] text-center"
+      whileTap={{ scale: 0.96 }}
+      whileHover={{ scale: 1.04, y: -1 }}
+      className="group relative overflow-hidden rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 font-black text-white text-[11px] sm:text-xs flex items-center justify-center gap-2 shadow-xl w-[min(290px,88vw)] text-center border border-white/25"
       style={{
         background: copied
           ? 'linear-gradient(135deg, #10b981, #059669)'
@@ -235,8 +235,16 @@ function CopyButton({ achievement, tenantNombre }: { achievement: Achievement; t
         transition: 'background 0.3s',
       }}
     >
+      <span
+        className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        style={{
+          background: 'linear-gradient(105deg, transparent 25%, rgba(255,255,255,0.35) 50%, transparent 75%)',
+          transform: 'translateX(-120%)',
+          animation: 'holo-sheen 1.8s linear infinite',
+        }}
+      />
       <span>{copied ? '✅' : '📸'}</span>
-      <span>{copied ? '¡Copiado! Pegalo en Instagram' : 'Copiar mensaje para redes'}</span>
+      <span>{copied ? '¡Copiado! Pegalo en Instagram' : 'Compartir logro en redes'}</span>
     </motion.button>
   )
 }
@@ -332,48 +340,67 @@ export default function DiamondTrophyShowcase({
           transition={{ duration: 0.3 }}
         >
           {/* Starfield */}
-          <StarField />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.9, delay: 0.15 }}
+            className="absolute inset-0"
+          >
+            <StarField />
+          </motion.div>
 
           {/* Close backdrop click */}
           <div className="absolute inset-0 z-0" onClick={onClose} />
 
           {/* Main card */}
-          <div className="relative z-10">
+          <motion.div
+            className="relative z-10"
+            initial={{ opacity: 0, y: 16, scale: 0.96, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+            transition={{ duration: 0.55, delay: 0.25, ease: 'easeOut' }}
+          >
+            <div
+              className="absolute inset-[-22px] rounded-[32px] pointer-events-none"
+              style={{
+                background: 'radial-gradient(circle at 50% 45%, rgba(168,85,247,0.32), rgba(59,130,246,0.14), rgba(14,6,30,0))',
+                filter: 'blur(16px)',
+              }}
+            />
             <HoloCard achievement={achievement} />
-          </div>
+          </motion.div>
 
           {/* Text block */}
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.55, type: 'spring', bounce: 0.3 }}
+            transition={{ delay: 0.62, type: 'spring', bounce: 0.24 }}
             className="relative z-10 text-center px-4 sm:px-6 space-y-1 sm:space-y-1.5"
           >
             <p
-              className="text-lg sm:text-xl md:text-2xl font-black text-white"
-              style={{ textShadow: '0 0 24px rgba(167,139,250,0.7)' }}
+              className="text-[26px] sm:text-3xl md:text-4xl font-black text-white leading-tight"
+              style={{ textShadow: '0 0 28px rgba(167,139,250,0.78)' }}
             >
               ¡Sos una leyenda, {tenantNombre}! 🏆
             </p>
-            <p className="text-xs sm:text-sm text-purple-300 max-w-[280px] sm:max-w-xs mx-auto leading-relaxed">
+            <p className="text-sm sm:text-base text-purple-200 max-w-[320px] sm:max-w-md mx-auto leading-relaxed font-medium">
               Karúbox te felicita. Este logro es tuyo.
               <br />
-              Presumilo en tus redes y que todos lo vean. 💪
+              Presumilo en tus redes y que todos lo vean.
             </p>
           </motion.div>
 
           {/* Actions */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.75, type: 'spring', bounce: 0.3 }}
+            transition={{ delay: 0.86, type: 'spring', bounce: 0.24 }}
             className="relative z-10 flex flex-col items-center gap-1 sm:gap-1.5"
           >
             <CopyButton achievement={achievement} tenantNombre={tenantNombre} />
 
             <button
               onClick={onClose}
-              className="text-[11px] sm:text-sm text-purple-400 hover:text-purple-200 transition-colors font-medium"
+              className="text-[11px] sm:text-sm text-purple-300/90 hover:text-purple-100 transition-all font-semibold hover:tracking-wide"
             >
               × Cerrar
             </button>

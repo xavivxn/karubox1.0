@@ -16,7 +16,12 @@ import {
   ensureSessionReset,
   evaluateAchievements,
   getNextTarget,
+  mergeDbWithLocal,
 } from '../utils/achievements'
+import {
+  getCocinaAchievementStoreAction,
+  upsertCocinaAchievementStoreAction,
+} from '@/app/actions/cocina-achievements'
 
 interface UseAchievementsParams {
   tenantId: string | undefined
@@ -26,6 +31,8 @@ interface UseAchievementsParams {
   orders: KitchenOrder[]
   streak: number
 }
+
+const SYNC_DEBOUNCE_MS = 12_000
 
 export function useAchievements({ tenantId, sessionId, stats, orders, streak }: UseAchievementsParams) {
   const [store, setStore] = useState<AchievementStore | null>(null)
@@ -38,47 +45,71 @@ export function useAchievements({ tenantId, sessionId, stats, orders, streak }: 
    */
   const preExistingIds = useRef<Set<string>>(new Set())
   const initialized = useRef(false)
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Carga inicial: una sola vez por tenant
+  // Carga inicial + BD + cambio de sesión de caja
   useEffect(() => {
     if (!tenantId) return
-    const loaded = loadStore(tenantId)
-    const { store: afterDaily } = ensureDailyReset(loaded)
-    // Recordar qué logros ya existían ANTES de esta sesión de React
-    preExistingIds.current = new Set([
-      ...afterDaily.dailyUnlocked,
-      ...Object.keys(afterDaily.unlocked),
-    ])
-    setStore(afterDaily)
-    saveStore(tenantId, afterDaily)
-    initialized.current = true
-  }, [tenantId])
+    let cancelled = false
+    initialized.current = false
 
-  // Al cambiar de sesión de caja (nuevo turno), resetear logros del día
-  useEffect(() => {
-    if (!tenantId || !sessionId) return
-    // Leer siempre desde localStorage para no trabajar con estado stale
-    const loaded = loadStore(tenantId)
-    const { store: afterSession, didReset } = ensureSessionReset(loaded, sessionId)
-    if (didReset) {
-      // Si hubo reset real de turno, los pre-existing ya no aplican (es una nueva sesión)
-      preExistingIds.current = new Set(Object.keys(afterSession.unlocked))
+    ;(async () => {
+      const local = loadStore(tenantId)
+      let merged = local
+      try {
+        const res = await getCocinaAchievementStoreAction(tenantId)
+        if (!cancelled && res.success && res.data?.store) {
+          merged = mergeDbWithLocal(res.data.store, local)
+        }
+      } catch {
+        // Sin red o tabla aún no migrada: seguimos con local
+      }
+      if (cancelled) return
+
+      const { store: afterDaily } = ensureDailyReset(merged)
+      const { store: afterSession } = ensureSessionReset(afterDaily, sessionId)
+
+      preExistingIds.current = new Set([
+        ...afterSession.dailyUnlocked,
+        ...Object.keys(afterSession.unlocked),
+      ])
       setStore(afterSession)
       saveStore(tenantId, afterSession)
-    } else if (!store) {
-      // Store todavía null (race con carga inicial), sincronizar
-      setStore(afterSession)
+      initialized.current = true
+    })()
+
+    return () => {
+      cancelled = true
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId, sessionId])
 
-  // Track combo milestones for lifetime stats
+  // Sincronización diferida a Supabase cuando el store cambia (no bloquea UI)
+  useEffect(() => {
+    if (!tenantId || !store || !initialized.current) return
+    if (syncTimer.current) clearTimeout(syncTimer.current)
+    syncTimer.current = setTimeout(() => {
+      syncTimer.current = null
+      void upsertCocinaAchievementStoreAction(tenantId, store).catch(() => {
+        // ignorar fallos de red
+      })
+    }, SYNC_DEBOUNCE_MS)
+    return () => {
+      if (syncTimer.current) clearTimeout(syncTimer.current)
+    }
+  }, [tenantId, store])
+
+  // Combo milestones (x5 / x10) y récord histórico de racha para logros globales
   useEffect(() => {
     if (!tenantId || !store) return
     let updated = false
     const ls = { ...store.lifetimeStats }
     if (streak >= 5 && prevStreak.current < 5) { ls.totalCombo5 += 1; updated = true }
     if (streak >= 10 && prevStreak.current < 10) { ls.totalCombo10 += 1; updated = true }
+    const maxPrev = ls.maxStreakEver ?? 0
+    if (streak > maxPrev) {
+      ls.maxStreakEver = streak
+      updated = true
+    }
     prevStreak.current = streak
     if (updated) {
       const newStore = { ...store, lifetimeStats: ls }

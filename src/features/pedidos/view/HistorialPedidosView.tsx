@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import Link from 'next/link'
 import { ShoppingBag, Search, XCircle, FileText } from 'lucide-react'
 import { ROUTES } from '@/config/routes'
@@ -11,6 +11,7 @@ import type { PedidoParaHistorial } from '../types/pedidos.types'
 import { formatGuaranies } from '@/lib/utils/format'
 import { requestAgentPrint } from '@/features/impresion/agentPrintClient'
 import { ReprintOrderActions } from '../components/ReprintOrderActions'
+import { PedidoDetailPanel } from '../components/PedidoDetailPanel'
 
 const TIPO_LABEL: Record<string, string> = {
   local: 'Local',
@@ -43,6 +44,7 @@ export function HistorialPedidosView() {
 
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [pedidoToCancel, setPedidoToCancel] = useState<PedidoParaHistorial | null>(null)
+  const [selectedPedido, setSelectedPedido] = useState<PedidoParaHistorial | null>(null)
   const [printingKey, setPrintingKey] = useState<string | null>(null)
   const [printFeedback, setPrintFeedback] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
 
@@ -63,6 +65,18 @@ export function HistorialPedidosView() {
 
   const handleCancelSuccess = () => {
     load(filters)
+  }
+
+  const handleOpenDetalle = (pedido: PedidoParaHistorial) => {
+    setSelectedPedido(pedido)
+  }
+
+  const handleRowClick = (e: MouseEvent<HTMLElement>, pedido: PedidoParaHistorial) => {
+    const target = e.target as HTMLElement
+    if (target.closest('button, a, input, select, textarea, [data-no-row-open="true"]')) {
+      return
+    }
+    handleOpenDetalle(pedido)
   }
 
   const handleReprint = async (pedidoId: string, tipo: 'cocina' | 'factura') => {
@@ -243,6 +257,15 @@ export function HistorialPedidosView() {
           pedidos.map((p) => (
             <div
               key={p.id}
+              onClick={(e) => handleRowClick(e, p)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleOpenDetalle(p)
+                }
+              }}
+              role="button"
+              tabIndex={0}
               className={`rounded-xl border p-4 ${
                 darkMode ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-white'
               }`}
@@ -279,7 +302,7 @@ export function HistorialPedidosView() {
                 </div>
               </dl>
               {p.estado_pedido === 'FACT' && (
-                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700" data-no-row-open="true">
                   <p className={`mb-2 text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     Impresión
                   </p>
@@ -293,7 +316,7 @@ export function HistorialPedidosView() {
                 </div>
               )}
               {isAdmin && p.estado_pedido === 'FACT' && (
-                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700" data-no-row-open="true">
                   <button
                     type="button"
                     onClick={() => openCancelModal(p)}
@@ -342,7 +365,8 @@ export function HistorialPedidosView() {
                 {pedidos.map((p) => (
                   <tr
                     key={p.id}
-                    className={darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'}
+                    onClick={(e) => handleRowClick(e, p)}
+                    className={`${darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'} cursor-pointer`}
                   >
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                       #{p.numero_pedido}
@@ -371,7 +395,7 @@ export function HistorialPedidosView() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-4 py-3 align-top" data-no-row-open="true">
                       <ReprintOrderActions
                         pedido={p}
                         darkMode={darkMode ?? false}
@@ -381,7 +405,7 @@ export function HistorialPedidosView() {
                       />
                     </td>
                     {isAdmin && (
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" data-no-row-open="true">
                         {p.estado_pedido === 'FACT' && (
                           <button
                             type="button"
@@ -410,6 +434,12 @@ export function HistorialPedidosView() {
         }}
         onSuccess={handleCancelSuccess}
         darkMode={darkMode ?? false}
+      />
+      <PedidoDetailPanel
+        pedido={selectedPedido}
+        open={Boolean(selectedPedido)}
+        onClose={() => setSelectedPedido(null)}
+        darkMode={Boolean(darkMode)}
       />
     </div>
   )

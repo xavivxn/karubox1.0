@@ -34,6 +34,35 @@ function getSparkles(seed: string) {
   return [...positions.slice(shift), ...positions.slice(0, shift)]
 }
 
+/** Título del logro oculto sin texto genérico: barras que simulan nombre censurado (varía por id). */
+function RedactedAchievementTitle({ seed }: { seed: string }) {
+  const w = (i: number) => {
+    const n = (seed.charCodeAt(i % Math.max(seed.length, 1)) + i * 11) % 36
+    return 52 + n
+  }
+  return (
+    <div className="mb-1">
+      <span className="sr-only">Nombre del logro oculto hasta desbloquearlo</span>
+      <div className="flex flex-col gap-1.5" aria-hidden="true">
+        <div className="flex items-center gap-1.5">
+          <span
+            className="h-2 rounded-full bg-gray-400/55 dark:bg-gray-500/50"
+            style={{ width: w(0) }}
+          />
+          <span
+            className="h-2 rounded-full bg-gray-400/40 dark:bg-gray-500/38"
+            style={{ width: w(1) }}
+          />
+        </div>
+        <span
+          className="h-2 rounded-full bg-gray-400/35 dark:bg-gray-500/32"
+          style={{ width: w(2) }}
+        />
+      </div>
+    </div>
+  )
+}
+
 /* ════════════════════════════════════════════
    DIAMOND HOLO CARD
 ════════════════════════════════════════════ */
@@ -61,8 +90,8 @@ function DiamondMedalCard({
             Diamante
           </span>
         </div>
-        <h4 className="text-sm font-bold mb-0.5 text-gray-400 dark:text-gray-500">{achievement.name}</h4>
-        <p className="text-xs text-gray-400 dark:text-gray-500">{achievement.description}</p>
+        <RedactedAchievementTitle seed={achievement.id} />
+        <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{achievement.description}</p>
       </div>
     )
   }
@@ -143,15 +172,27 @@ function MedalCard({
 }) {
   const tierColor = TIER_COLORS[achievement.tier]
   const progress = store && achievement.type === 'global' ? getGlobalProgress(achievement, store) : null
-
+  const lockedProgress = !unlocked
+    ? progress ?? { current: 0, target: 1 }
+    : null
   return (
     <div
       className={`relative rounded-2xl border-2 p-4 transition-all duration-300 ${
         unlocked ? `bg-gradient-to-br ${TIER_BG[achievement.tier]} animate-medal-shine-subtle`
-          : darkMode ? 'bg-gray-700/50 border-gray-600 opacity-70 grayscale' : 'bg-gray-50 border-gray-200 opacity-60 grayscale'
+          : darkMode ? 'bg-gray-700/70 border-gray-500/80' : 'bg-gray-50 border-gray-300/90'
       }`}
       style={unlocked ? { borderColor: tierColor } : undefined}
     >
+      {!unlocked && (
+        <div
+          className="pointer-events-none absolute inset-0 rounded-2xl opacity-60"
+          style={{
+            background: darkMode
+              ? 'linear-gradient(140deg, rgba(17,24,39,0.45), rgba(31,41,55,0.2))'
+              : 'linear-gradient(140deg, rgba(243,244,246,0.55), rgba(229,231,235,0.2))',
+          }}
+        />
+      )}
       <div className="flex items-start justify-between mb-3">
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${unlocked ? 'animate-tier-glow' : ''}`}
           style={{ background: unlocked ? `${tierColor}20` : darkMode ? '#4b5563' : '#e5e7eb', '--tier-color': tierColor } as React.CSSProperties}>
@@ -162,21 +203,27 @@ function MedalCard({
           {TIER_LABELS[achievement.tier]}
         </span>
       </div>
-      <h4 className={`text-sm font-bold mb-0.5 ${unlocked ? (darkMode ? 'text-white' : 'text-gray-900') : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-        {achievement.name}
-      </h4>
-      <p className={`text-xs ${unlocked ? (darkMode ? 'text-gray-300' : 'text-gray-600') : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+      {unlocked ? (
+        <h4 className={`relative z-[1] text-sm font-bold mb-0.5 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          {achievement.name}
+        </h4>
+      ) : (
+        <div className="relative z-[1]">
+          <RedactedAchievementTitle seed={achievement.id} />
+        </div>
+      )}
+      <p className={`relative z-[1] text-xs leading-relaxed ${unlocked ? (darkMode ? 'text-gray-300' : 'text-gray-600') : darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
         {achievement.description}
       </p>
-      {progress && !unlocked && (
+      {lockedProgress && (
         <div className="mt-2">
           <div className="flex items-center justify-between mb-1">
-            <span className={`text-[10px] font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{progress.current}/{progress.target}</span>
-            <span className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{Math.round((progress.current / progress.target) * 100)}%</span>
+            <span className={`text-[10px] font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{lockedProgress.current}/{lockedProgress.target}</span>
+            <span className={`text-[10px] ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{Math.round((lockedProgress.current / lockedProgress.target) * 100)}%</span>
           </div>
-          <div className={`w-full h-1.5 rounded-full overflow-hidden ${darkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
+          <div className={`w-full h-1.5 rounded-full overflow-hidden ${darkMode ? 'bg-gray-600/80' : 'bg-gray-200'}`}>
             <div className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${(progress.current / progress.target) * 100}%`, backgroundColor: tierColor }} />
+              style={{ width: `${(lockedProgress.current / lockedProgress.target) * 100}%`, backgroundColor: tierColor }} />
           </div>
         </div>
       )}
@@ -710,13 +757,23 @@ export default function AchievementsPanel({
                 </div>
               ) : (
                 sesiones.map(sesion => (
+                  // Si es la sesión activa, mostrar también los logros diarios actuales (aún no archivados).
+                  // Al cerrar/iniciar nueva sesión, esos mismos logros quedan en sessionHistory.
+                  (() => {
+                    const fromHistory = sessionHistory[sesion.id]?.achievementIds ?? []
+                    const fromActiveSession =
+                      sesion.id === store?.dailySessionId ? (store?.dailyUnlocked ?? []) : []
+                    const mergedIds = Array.from(new Set([...fromHistory, ...fromActiveSession]))
+                    return (
                   <HistorialCard
                     key={sesion.id}
                     sesion={sesion}
-                    achievementIds={sessionHistory[sesion.id]?.achievementIds ?? []}
+                    achievementIds={mergedIds}
                     darkMode={darkMode}
                     tenantId={tenant?.id}
                   />
+                    )
+                  })()
                 ))
               )}
             </div>
