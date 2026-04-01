@@ -7,7 +7,6 @@ import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
 import { useEstadoCaja } from '@/features/caja/hooks/useEstadoCaja'
 import { CajaCerradaModal } from '@/features/caja/components/CajaCerradaModal'
-import { ROUTES } from '@/config/routes'
 import { FEATURES } from '@/config'
 import { ROUTES, getPublicCartaQrPath } from '@/config/routes'
 import { normalizarParaBusqueda } from '@/features/clientes/utils/clientes.utils'
@@ -616,7 +615,10 @@ export default function POSView() {
               </button>
               <button
                 type="button"
-                onClick={() => window.open(cartaQrPath, '_blank', 'noopener,noreferrer')}
+                onClick={() => {
+                  if (!cartaQrPath) return
+                  window.open(cartaQrPath, '_blank', 'noopener,noreferrer')
+                }}
                 className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
               >
                 <ExternalLink className="h-4 w-4" />
