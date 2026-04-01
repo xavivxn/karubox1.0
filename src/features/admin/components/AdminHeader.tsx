@@ -181,7 +181,7 @@ export const AdminHeader = ({
             type="button"
             onClick={() => handleNav(cocinaHref)}
             disabled={isNavigating}
-            className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-red-600 transition min-w-[7rem] disabled:opacity-60 disabled:cursor-not-allowed ${isNavigating ? 'cursor-not-allowed' : 'hover:opacity-90'}`}
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-orange-600 dark:bg-orange-600 transition min-w-[7rem] disabled:opacity-60 disabled:cursor-not-allowed ${isNavigating ? 'cursor-not-allowed' : 'hover:bg-orange-700 dark:hover:bg-orange-500'}`}
             aria-busy={isNavTo(cocinaHref)}
           >
             {isNavTo(cocinaHref) ? (

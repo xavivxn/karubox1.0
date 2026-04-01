@@ -11,6 +11,8 @@ export interface Achievement {
   id: string
   name: string
   description: string
+  /** Pista corta para estado bloqueado (estilo misterio). */
+  mysteryHint?: string
   tier: AchievementTier
   emoji: string
   type: AchievementType
@@ -82,6 +84,7 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     id: 'primer-pedido',
     name: 'Primer Pedido',
     description: 'Recibir el primer pedido del día',
+    mysteryHint: 'Se desbloquea con un comienzo simple del turno.',
     tier: 'bronze',
     emoji: '🎯',
     type: 'daily',
@@ -146,6 +149,7 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     id: 'tesoro',
     name: 'Tesoro',
     description: 'Facturar 500.000 Gs en el día',
+    mysteryHint: 'Se activa cuando la caja empieza a pesar.',
     tier: 'silver',
     emoji: '💰',
     type: 'daily',
@@ -194,6 +198,7 @@ export const DAILY_ACHIEVEMENTS: Achievement[] = [
     id: 'imparable',
     name: 'Imparable',
     description: '50 pedidos en el día',
+    mysteryHint: 'Ritmo extremo sostenido durante el turno.',
     tier: 'diamond',
     emoji: '🚀',
     type: 'daily',
@@ -250,6 +255,7 @@ export const GLOBAL_ACHIEVEMENTS: Achievement[] = [
     id: 'bienvenido-chef',
     name: 'Bienvenido Chef',
     description: 'Ver tu primer pedido en la cocina',
+    mysteryHint: 'Un hito básico para quienes recién comienzan.',
     tier: 'bronze',
     emoji: '👨‍🍳',
     type: 'global',
@@ -283,6 +289,7 @@ export const GLOBAL_ACHIEVEMENTS: Achievement[] = [
     id: 'rompe-records',
     name: 'Rompe Récords',
     description: 'Superar tu récord de facturación',
+    mysteryHint: 'Solo aparece cuando superás una marca histórica.',
     tier: 'gold',
     emoji: '🏆',
     type: 'global',
@@ -326,6 +333,22 @@ export const GLOBAL_ACHIEVEMENTS: Achievement[] = [
 ]
 
 export const ALL_ACHIEVEMENTS = [...DAILY_ACHIEVEMENTS, ...GLOBAL_ACHIEVEMENTS]
+
+function mysteryHintFallback(achievement: Achievement): string {
+  if (achievement.id.includes('combo')) return 'Tiene que ver con mantener rachas.'
+  if (achievement.id.includes('millon')) return 'Requiere una facturación muy alta.'
+  if (achievement.id.includes('record')) return 'Exige superar una marca previa.'
+  if (achievement.id.includes('delivery')) return 'Relacionado a pedidos de reparto.'
+  if (achievement.id.includes('dia') || achievement.id.includes('semana') || achievement.id.includes('centenario')) {
+    return 'Se desbloquea por constancia a lo largo del tiempo.'
+  }
+  if (achievement.type === 'daily') return 'Pista: depende del rendimiento del turno actual.'
+  return 'Pista: depende de progreso acumulado.'
+}
+
+export function getAchievementMysteryHint(achievement: Achievement): string {
+  return achievement.mysteryHint ?? mysteryHintFallback(achievement)
+}
 
 /* ═══════════════ LOCALSTORAGE HELPERS ═══════════════ */
 
@@ -437,13 +460,20 @@ export function ensureSessionReset(
   }
 }
 
-function archiveCurrentSession(store: AchievementStore): Record<string, SessionRecord> {
+function archiveCurrentSession(
+  store: AchievementStore,
+  /** Al cerrar caja conviene pasar la apertura real de `sesiones_caja` para ordenar el historial. */
+  forcedAperturaAt?: string
+): Record<string, SessionRecord> {
   const history = { ...store.sessionHistory }
   if (store.dailySessionId && store.dailyUnlocked.length > 0) {
     history[store.dailySessionId] = {
       achievementIds: [...store.dailyUnlocked],
       date: store.dailyDate || todayStr(),
-      aperturaAt: new Date().toISOString(),
+      aperturaAt:
+        forcedAperturaAt ??
+        store.sessionHistory[store.dailySessionId]?.aperturaAt ??
+        new Date().toISOString(),
     }
   }
   return history
@@ -458,18 +488,53 @@ function trimHistory(history: Record<string, SessionRecord>, max = 60): Record<s
 }
 
 /**
- * Reinicia solo los datos del día de Cocina 3D (logros diarios).
- * Se llama al confirmar cierre de caja. No toca logros globales ni lifetimeStats.
+ * Fusiona estado remoto (BD) con localStorage: máximos en globales/historial; turno actual preferido desde local si hay actividad.
  */
-export function resetCocinaDailyData(tenantId: string): void {
+export function mergeDbWithLocal(db: AchievementStore, local: AchievementStore): AchievementStore {
+  const mergedUnlocked: Record<string, number> = { ...db.unlocked, ...local.unlocked }
+  for (const k of Object.keys(mergedUnlocked)) {
+    mergedUnlocked[k] = Math.max(db.unlocked[k] ?? 0, local.unlocked[k] ?? 0)
+  }
+  const mergedHistory: Record<string, SessionRecord> = { ...db.sessionHistory }
+  for (const [k, loc] of Object.entries(local.sessionHistory)) {
+    const prev = mergedHistory[k]
+    const pick =
+      !prev || loc.achievementIds.length > (prev.achievementIds?.length ?? 0) ? loc : prev
+    mergedHistory[k] = pick
+  }
+  const ls = { ...db.lifetimeStats }
+  for (const key of Object.keys(ls) as (keyof AchievementStore['lifetimeStats'])[]) {
+    ls[key] = Math.max(db.lifetimeStats[key], local.lifetimeStats[key])
+  }
+  const preferLocalDaily =
+    local.dailyUnlocked.length > 0 || Boolean(local.dailySessionId && !db.dailySessionId)
+  return {
+    unlocked: mergedUnlocked,
+    dailyDate: preferLocalDaily ? local.dailyDate : db.dailyDate || local.dailyDate,
+    dailySessionId: preferLocalDaily ? local.dailySessionId : db.dailySessionId || local.dailySessionId,
+    dailyUnlocked: preferLocalDaily ? local.dailyUnlocked : db.dailyUnlocked,
+    sessionHistory: trimHistory(mergedHistory),
+    lifetimeStats: ls,
+  }
+}
+
+/**
+ * Reinicia solo los datos del día de Cocina 3D (logros diarios).
+ * Tras cerrar caja: pasar `closedSessionAperturaAt` = apertura_at de la sesión cerrada para el historial.
+ * No toca logros globales ni lifetimeStats.
+ */
+export function resetCocinaDailyData(tenantId: string, closedSessionAperturaAt?: string): void {
   if (typeof window === 'undefined') return
   try {
     const store = loadStore(tenantId)
+    // Antes de limpiar, archivar la sesión actual para que aparezca en Historial de turnos.
+    const archivedHistory = trimHistory(archiveCurrentSession(store, closedSessionAperturaAt))
     const newStore: AchievementStore = {
       ...store,
       dailyDate: todayStr(),
       dailySessionId: '',
       dailyUnlocked: [],
+      sessionHistory: archivedHistory,
     }
     saveStore(tenantId, newStore)
   } catch {

@@ -113,9 +113,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
         isLoginPage
           ? 'min-h-[100dvh] min-h-screen overflow-y-auto'
           : isPosPage
-            ? 'h-screen min-h-0 overflow-hidden'
+            ? 'h-[100dvh] min-h-0 overflow-hidden'
             : isKitchenPage
-              ? 'min-h-screen lg:h-screen lg:min-h-0 lg:overflow-hidden'
+              ? 'h-[100dvh] min-h-0 overflow-hidden'
             : 'min-h-screen'
       } ${
         hideNavbar
@@ -132,7 +132,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <main
         className={`flex flex-col ${isLoginPage ? '' : 'flex-1 min-h-0 min-w-0'} ${
           pageInfo.fullWidth ? ((isPosPage || isKitchenPage) ? 'py-0' : 'py-4') : 'px-4 py-6'
-        } ${!isLoginPage && isPosPage ? 'overflow-hidden' : ''} ${!isLoginPage && isKitchenPage ? 'lg:overflow-hidden' : ''}`}
+        } ${!isLoginPage && (isPosPage || isKitchenPage) ? 'overflow-hidden' : ''}`}
         style={isLoginPage ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}
       >
         {pageInfo.fullWidth ? (

@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ChevronRight, Home, Users, ShoppingCart, LayoutDashboard, ChefHat, Store, PlusCircle, Package, UserCog, Building2, FileText, Settings } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
@@ -8,7 +9,7 @@ import { ROUTES } from '@/config/routes'
 interface BreadcrumbItem {
   label: string
   path: string
-  icon?: React.ReactNode
+  icon?: ReactNode
 }
 
 export function Breadcrumb() {
@@ -178,41 +179,108 @@ export function Breadcrumb() {
     }
   }
 
+  /** En Cocina 3D: mismos estilos que el breadcrumb, enlaces en línea tras "Cocina 3D" */
+  const showCocinaQuickNav =
+    isAdmin && pathname.startsWith(ROUTES.PROTECTED.COCINA)
+
+  const clientesHref = `${ROUTES.PROTECTED.CLIENTES}?from=${ROUTES.CLIENTES_FROM.ADMIN}`
+  const pedidosHref = `${ROUTES.PROTECTED.PEDIDOS}?from=${ROUTES.PEDIDOS_FROM.HOME}`
+
+  /** Alineado con `AppDashboardCard` / tarjetas del inicio */
+  const quickLinks: { label: string; href: string; icon: ReactNode; color: 'orange' | 'blue' | 'purple' | 'green' }[] = [
+    {
+      label: 'POS',
+      href: ROUTES.PROTECTED.POS,
+      icon: <ShoppingCart className="w-4 h-4" />,
+      color: 'orange',
+    },
+    {
+      label: 'Admin',
+      href: ROUTES.PROTECTED.ADMIN,
+      icon: <LayoutDashboard className="w-4 h-4" />,
+      color: 'blue',
+    },
+    {
+      label: 'Clientes',
+      href: clientesHref,
+      icon: <Users className="w-4 h-4" />,
+      color: 'purple',
+    },
+    {
+      label: 'Historial de pedidos',
+      href: pedidosHref,
+      icon: <FileText className="w-4 h-4" />,
+      color: 'green',
+    },
+  ]
+
+  const linkSecondaryClass = darkMode
+    ? 'text-gray-400 hover:text-orange-400'
+    : 'text-gray-600 hover:text-orange-600'
+
+  const accentLink = {
+    orange: darkMode
+      ? 'text-orange-400 hover:text-orange-300'
+      : 'text-orange-600 hover:text-orange-700',
+    blue: darkMode
+      ? 'text-blue-400 hover:text-blue-300'
+      : 'text-blue-600 hover:text-blue-700',
+    purple: darkMode
+      ? 'text-purple-400 hover:text-purple-300'
+      : 'text-purple-600 hover:text-purple-700',
+    green: darkMode
+      ? 'text-emerald-400 hover:text-emerald-300'
+      : 'text-emerald-600 hover:text-emerald-700',
+    red: darkMode ? 'text-red-400' : 'text-red-600',
+  } as const
+
+  function breadcrumbSegmentClass(item: BreadcrumbItem, isLast: boolean): string {
+    if (showCocinaQuickNav) {
+      if (item.label === 'Inicio' && !isLast) {
+        return `${linkSecondaryClass} hover:underline`
+      }
+      if (item.label === 'Administración' && !isLast) {
+        return `${accentLink.blue} hover:underline`
+      }
+      if (item.label === 'Cocina 3D' && isLast) {
+        return `${accentLink.red} font-semibold cursor-default`
+      }
+      if (item.label === 'Inicio' && isLast) {
+        return `${accentLink.red} font-semibold cursor-default`
+      }
+    }
+    if (isLast) {
+      return darkMode
+        ? 'text-white font-semibold cursor-default'
+        : 'text-gray-900 font-semibold cursor-default'
+    }
+    return `${linkSecondaryClass} hover:underline`
+  }
+
   return (
     <nav
-      className={`flex items-center gap-1.5 text-sm ${
+      className={`flex w-full min-w-0 flex-wrap items-center gap-1.5 text-sm ${
         darkMode ? 'text-gray-400' : 'text-gray-600'
       }`}
-      aria-label="Breadcrumb"
+      aria-label={showCocinaQuickNav ? 'Breadcrumb y accesos' : 'Breadcrumb'}
     >
       {items.map((item, index) => {
         const isLast = index === items.length - 1
 
         return (
-          <div key={item.path} className="flex items-center gap-1.5">
+          <div key={`${item.path}-${index}`} className="flex items-center gap-1.5">
             {index > 0 && (
               <ChevronRight
-                className={`w-4 h-4 ${
+                className={`w-4 h-4 shrink-0 ${
                   darkMode ? 'text-gray-600' : 'text-gray-400'
                 }`}
               />
             )}
             <button
+              type="button"
               onClick={() => handleClick(item.path, isLast)}
               disabled={isLast}
-              className={`flex items-center gap-1.5 transition-colors ${
-                isLast
-                  ? `${
-                      darkMode
-                        ? 'text-white font-semibold cursor-default'
-                        : 'text-gray-900 font-semibold cursor-default'
-                    }`
-                  : `${
-                      darkMode
-                        ? 'text-gray-400 hover:text-orange-400'
-                        : 'text-gray-600 hover:text-orange-600'
-                    } hover:underline`
-              }`}
+              className={`flex items-center gap-1.5 transition-colors ${breadcrumbSegmentClass(item, isLast)}`}
             >
               {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
               <span>{item.label}</span>
@@ -220,6 +288,25 @@ export function Breadcrumb() {
           </div>
         )
       })}
+
+      {showCocinaQuickNav &&
+        quickLinks.map((link) => (
+          <div key={link.href} className="flex items-center gap-1.5">
+            <ChevronRight
+              className={`w-4 h-4 shrink-0 ${
+                darkMode ? 'text-gray-600' : 'text-gray-400'
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => router.push(link.href)}
+              className={`flex items-center gap-1.5 transition-colors ${accentLink[link.color]} hover:underline`}
+            >
+              <span className="flex-shrink-0">{link.icon}</span>
+              <span>{link.label}</span>
+            </button>
+          </div>
+        ))}
     </nav>
   )
 }
