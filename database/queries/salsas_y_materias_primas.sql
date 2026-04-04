@@ -3,8 +3,8 @@
 -- =============================================================================
 -- En Lomiteria, las salsas son productos en la categoría "Salsas" (nombre exacto
 -- como en SalsasDrawer / posService). El descuento de ingredientes al vender
--- usa recetas_producto: cada salsa tiene al menos una fila que apunta a
--- ingredientes (materia prima) con cantidad/unidad por unidad vendida (vasito).
+-- usa recetas_producto: cada salsa suele tener (1) la salsa en volumen/peso y
+-- (2) `vasito-para-salsa` × 1 unidad (envase), si está configurado.
 --
 -- Reemplazá :tenant_id por el UUID del tenant (ej. Atlas Burger).
 -- =============================================================================

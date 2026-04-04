@@ -8,6 +8,9 @@ import type { IngredientDefinition } from '@/types/ingredients'
 
 const SAUCES_CATEGORY_NAME = 'Salsas'
 
+/** Materia prima del envase (50 ml); debe existir por tenant para descontar stock del vasito. */
+const VASITO_CONTAINER_SLUG = 'vasito-para-salsa'
+
 function formatGsInput(value: string): string {
   const digits = value.replace(/\D/g, '')
   if (!digits) return ''
@@ -209,6 +212,24 @@ export function SalsasDrawer({ open, onClose, tenantId, onSaved }: SalsasDrawerP
     setIsSaving(true)
     try {
       const supabase = createClient()
+
+      const { data: vasitoContainer, error: vasitoLookupError } = await supabase
+        .from('ingredientes')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('slug', VASITO_CONTAINER_SLUG)
+        .eq('activo', true)
+        .maybeSingle()
+
+      if (vasitoLookupError) throw vasitoLookupError
+      if (!vasitoContainer?.id) {
+        setErrorMessage(
+          'Falta la materia prima del vasito. Creá un ingrediente con slug «vasito-para-salsa» (ej. "Vasito para salsa", unidad) en Ingredientes; el POS descontará 1 por cada vasito vendido.'
+        )
+        setIsSaving(false)
+        return
+      }
+
       const categoriaId = await ensureSaucesCategoryId()
 
       // 1) Crear producto (salsa)
@@ -243,6 +264,24 @@ export function SalsasDrawer({ open, onClose, tenantId, onSaved }: SalsasDrawerP
 
       if (recetaError) throw recetaError
 
+      // 3) Receta: 1 vasito desechable por unidad vendida (salsa + envase)
+      const { error: recetaVasitoError } = await supabase
+        .from('recetas_producto')
+        .insert({
+          tenant_id: tenantId,
+          producto_id: producto.id,
+          ingrediente_id: vasitoContainer.id,
+          cantidad: 1,
+          unidad: 'unidad',
+          obligatorio: true,
+        } as any)
+
+      if (recetaVasitoError) {
+        await supabase.from('recetas_producto').delete().eq('producto_id', producto.id)
+        await supabase.from('productos').delete().eq('id', producto.id)
+        throw recetaVasitoError
+      }
+
       setSuccessMessage(`Salsa creada: "${producto.nombre}"`)
       onSaved?.()
       setTimeout(() => {
@@ -274,7 +313,7 @@ export function SalsasDrawer({ open, onClose, tenantId, onSaved }: SalsasDrawerP
                 Crear salsas por vasitos
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                Se guardan como productos y se descuentan por receta
+                Se guardan como productos; la receta incluye la salsa y 1 vasito (envase)
               </p>
             </div>
           </div>
