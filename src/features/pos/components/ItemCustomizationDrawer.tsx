@@ -5,7 +5,8 @@ import { X, Loader2, Minus, Plus, Check, ChevronLeft, ChevronRight } from 'lucid
 import { useCartStore, type ComboProductItem, type CartItemCustomization } from '@/store/cartStore'
 import { fetchProductRecipe, fetchTenantIngredients } from '@/lib/api/ingredients'
 import type { IngredientDefinition, IngredientRequirement } from '@/types/ingredients'
-import { formatGuaranies } from '@/lib/utils/format'
+import { formatGuaranies, roundGuaraniesToStep } from '@/lib/utils/format'
+import { getExtrasPrecioRedondeModo, getExtrasPrecioRedondePaso } from '@/lib/env/posExtras'
 import { useTenant } from '@/contexts/TenantContext'
 
 interface ItemCustomizationDrawerProps {
@@ -92,7 +93,13 @@ function useIngredientEditor(
 
   const priceBySlug = useMemo(() => {
     const map: Record<string, number> = {}
-    catalog.forEach((ing) => { map[ing.slug] = ing.precio_publico ?? 0 })
+    const step = getExtrasPrecioRedondePaso()
+    const mode = getExtrasPrecioRedondeModo()
+    catalog.forEach((ing) => {
+      const raw = ing.precio_publico ?? 0
+      map[ing.slug] =
+        step > 0 ? roundGuaraniesToStep(raw, step, mode) : raw
+    })
     return map
   }, [catalog])
 

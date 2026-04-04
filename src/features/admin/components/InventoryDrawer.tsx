@@ -740,7 +740,9 @@ async function ensureIngredientProduct(
         tenant_id: tenantId,
         nombre: INGREDIENT_CATEGORY_NAME,
         descripcion: 'Insumos críticos para recetas',
-        orden: 99
+        orden: 99,
+        activa: true,
+        mostrar_en_pos: false,
       })
       .select('id')
       .single()

@@ -45,7 +45,9 @@ BEGIN
         '[]'::jsonb
       )
       FROM public.categorias c
-      WHERE c.tenant_id = tid AND c.activa = true
+      WHERE c.tenant_id = tid
+        AND c.activa = true
+        AND COALESCE(c.mostrar_en_pos, true) = true
     ),
     'products', (
       SELECT coalesce(
@@ -66,6 +68,13 @@ BEGIN
       WHERE p.tenant_id = tid
         AND p.disponible = true
         AND (p.is_deleted IS DISTINCT FROM true)
+        AND EXISTS (
+          SELECT 1
+          FROM public.categorias c2
+          WHERE c2.id = p.categoria_id
+            AND c2.tenant_id = tid
+            AND COALESCE(c2.mostrar_en_pos, true) = true
+        )
     )
   );
 END;

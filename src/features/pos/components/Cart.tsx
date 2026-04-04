@@ -81,7 +81,7 @@ export default function Cart({
 
   return (
     <div
-      className={`rounded-2xl shadow-2xl flex flex-col h-full overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
+      className={`rounded-2xl shadow-2xl flex flex-col min-h-0 overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
     >
       {/* Header fijo */}
       <div className="flex items-center gap-3 p-3 border-b flex-shrink-0">

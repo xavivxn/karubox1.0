@@ -89,6 +89,26 @@ const isBaseSaleItem = (item: CartItem) => {
   return item.tipo === 'producto' && item.modo !== 'canje' && !hasCustomization
 }
 
+/** Componente de combo con modificación de receta (extras, sin ingredientes, notas). */
+const comboProductHasRecipeCustomization = (cp: ComboProductItem): boolean => {
+  const c = cp.customization
+  if (!c) return false
+  if ((c.removedIngredients?.length ?? 0) > 0) return true
+  if ((c.extras?.length ?? 0) > 0) return true
+  if (c.notes?.trim()) return true
+  return false
+}
+
+/**
+ * Combo sin personalización de receta en ningún componente (mismo criterio que producto “base” para sumar cantidad).
+ */
+const isBaseComboItem = (item: CartItem): boolean => {
+  if (item.tipo !== 'combo' || item.modo !== 'venta') return false
+  if ((item.extraCostPerUnit ?? 0) > 0) return false
+  if (!item.comboItems?.length) return true
+  return !item.comboItems.some(comboProductHasRecipeCustomization)
+}
+
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   cliente: null,
@@ -183,12 +203,33 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   addComboItem: (combo) => {
     const items = get().items
-    // Los combos siempre se agregan como nuevos items (no se agrupan)
+    const existingItem = items.find(
+      (item) => item.producto_id === combo.id && isBaseComboItem(item)
+    )
+
+    if (existingItem) {
+      set({
+        items: items.map((item) =>
+          item.id === existingItem.id
+            ? {
+                ...item,
+                cantidad: item.cantidad + 1,
+                subtotal: calculateSubtotal(item.precio, item.extraCostPerUnit, item.cantidad + 1),
+              }
+            : item
+        ),
+      })
+      return
+    }
+
     set({
       items: [
         ...items,
         {
-          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `temp-${Date.now()}-${Math.random()}`,
+          id:
+            typeof crypto !== 'undefined' && crypto.randomUUID
+              ? crypto.randomUUID()
+              : `temp-${Date.now()}-${Math.random()}`,
           producto_id: combo.id,
           nombre: combo.nombre,
           descripcion: combo.descripcion,
@@ -198,9 +239,9 @@ export const useCartStore = create<CartState>((set, get) => ({
           extraCostPerUnit: 0,
           tipo: 'combo' as const,
           comboItems: combo.comboItems,
-          modo: 'venta'
-        }
-      ]
+          modo: 'venta',
+        },
+      ],
     })
   },
 

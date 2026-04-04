@@ -123,7 +123,7 @@ export function CerrarCajaModal({
   }
 
   const handleDescargarPdf = () => {
-    if (sesionCerrada) generarPdfCierreCaja(sesionCerrada, { tenantNombre })
+    if (sesionCerrada) void generarPdfCierreCaja(sesionCerrada, { tenantNombre })
   }
 
   if (!open) return null
@@ -137,9 +137,13 @@ export function CerrarCajaModal({
   /** Confirmar cierre solo si se proporcionó monto pagado a empleados (puede ser 0) */
   const montoPagadoProporcionado = montoPagado !== ''
 
+  /** Altura máxima del panel: viewport menos safe areas y margen (~2rem) para que el pie quede siempre accesible */
+  const panelMaxHClass =
+    'max-h-[calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-2rem)]'
+
   const modalContent = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-4 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]"
       aria-modal="true"
       role="dialog"
       aria-labelledby={sesionCerrada ? 'cerrar-caja-success-title' : 'cerrar-caja-title'}
@@ -151,8 +155,10 @@ export function CerrarCajaModal({
         aria-hidden="true"
       />
   {sesionCerrada ? (
-        <div className={`relative z-10 w-full max-w-md overflow-hidden rounded-2xl border ${border} ${bg} shadow-xl`}>
-          <div className={`flex items-center justify-between border-b ${border} px-5 py-4`}>
+        <div
+          className={`relative z-10 flex w-full max-w-md flex-col overflow-hidden rounded-t-2xl border sm:rounded-2xl ${border} ${bg} shadow-xl ${panelMaxHClass}`}
+        >
+          <div className={`flex shrink-0 items-center justify-between border-b ${border} px-5 py-4`}>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white">
                 <CheckCircle2 className="h-6 w-6" />
@@ -176,7 +182,7 @@ export function CerrarCajaModal({
             </button>
           </div>
 
-          <div className="space-y-4 px-5 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 py-4 space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className={`rounded-xl border ${border} p-3`}>
                 <p className={`text-xs uppercase ${textMuted}`}>Total ventas</p>
@@ -217,7 +223,7 @@ export function CerrarCajaModal({
             </p>
           </div>
 
-          <div className={`flex flex-col gap-2 border-t ${border} px-5 py-4`}>
+          <div className={`flex shrink-0 flex-col gap-2 border-t ${border} px-5 py-4`}>
             <button
               type="button"
               onClick={handleDescargarPdf}
@@ -236,8 +242,10 @@ export function CerrarCajaModal({
           </div>
         </div>
   ) : (
-      <div className={`relative z-10 w-full max-w-md overflow-hidden rounded-2xl border ${border} ${bg} shadow-xl`}>
-        <div className={`flex items-center justify-between border-b ${border} px-5 py-4`}>
+      <div
+        className={`relative z-10 flex w-full max-w-md flex-col overflow-hidden rounded-t-2xl border sm:rounded-2xl ${border} ${bg} shadow-xl ${panelMaxHClass}`}
+      >
+        <div className={`flex shrink-0 items-center justify-between border-b ${border} px-5 py-4`}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500 text-white">
               <Wallet className="h-5 w-5" />
@@ -262,7 +270,7 @@ export function CerrarCajaModal({
           </button>
         </div>
 
-        <div className="space-y-4 px-5 py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-5 py-4">
           {error && (
             <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300">
               {error}
@@ -402,7 +410,7 @@ export function CerrarCajaModal({
           ) : null}
         </div>
 
-        <div className={`flex gap-3 border-t ${border} px-5 py-4`}>
+        <div className={`flex shrink-0 gap-3 border-t ${border} px-5 py-4`}>
           <button
             type="button"
             onClick={onClose}

@@ -21,6 +21,10 @@ import {
   estimateCostFromAmount
 } from '../utils/admin.utils'
 import { buildTrendContextLabel, resolveAdminDateRange } from '../utils/date.utils'
+import { getTrendGranularity, processCandleSeries, processTrendSeries } from '../utils/trendSeries'
+
+/** Misma categoría que `loadSauceProducts` / SalsasDrawer (productos vasito). */
+const SAUCES_CATEGORY_NAME = 'Salsas'
 
 /**
  * Aplica el rango temporal a consultas de pedidos.
@@ -152,14 +156,16 @@ export const fetchInventory = async (tenantId: string): Promise<InventoryRecord[
   const inventoryRawData = data ?? []
   const inventoryData: InventoryRecord[] = inventoryRawData.map((item) => {
     // Supabase puede devolver producto como objeto (FK) o array; inventario tiene columna nombre propia
-    const rawProductos = item.productos as { nombre?: string | null } | Array<{ nombre?: string | null }> | null
-    const productoNombre =
-      rawProductos == null
-        ? null
-        : Array.isArray(rawProductos)
-          ? rawProductos[0]?.nombre ?? null
-          : rawProductos.nombre ?? null
-    const inventarioNombre = (item as { nombre?: string | null }).nombre ?? null
+    type ProdRow = {
+      nombre?: string | null
+      categoria?: { nombre?: string | null } | null
+    }
+    const rawProductos = item.productos as ProdRow | ProdRow[] | null
+    const productoRow =
+      rawProductos == null ? null : Array.isArray(rawProductos) ? rawProductos[0] ?? null : rawProductos
+    const productoNombre = productoRow?.nombre?.trim() || null
+    const categoriaNombre = productoRow?.categoria?.nombre?.trim() || null
+    const inventarioNombre = (item as { nombre?: string | null }).nombre?.trim() || null
     const displayNombre = productoNombre || inventarioNombre || null
 
     return {
@@ -169,7 +175,9 @@ export const fetchInventory = async (tenantId: string): Promise<InventoryRecord[
       unidad: String(item.unidad),
       controlar_stock: Boolean(item.controlar_stock),
       nombre: displayNombre,
-      productos: displayNombre ? { nombre: displayNombre } : null
+      productos: displayNombre ? { nombre: displayNombre } : null,
+      nombre_inventario: inventarioNombre,
+      producto_categoria: categoriaNombre || null
     }
   })
 
@@ -197,6 +205,39 @@ export const fetchOrderItems = async (
 
   if (error) throw error
   return (data as any[]) ?? []
+}
+
+/**
+ * IDs de productos en la categoría "Salsas" (vasitos). Para excluirlos del top de productos.
+ */
+export const fetchSauceProductIds = async (tenantId: string): Promise<Set<string>> => {
+  const supabase = createClient()
+  const { data: cat, error: catErr } = await supabase
+    .from('categorias')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('nombre', SAUCES_CATEGORY_NAME)
+    .maybeSingle()
+
+  if (catErr) {
+    console.warn('fetchSauceProductIds (categorias):', catErr)
+    return new Set()
+  }
+  if (!cat?.id) return new Set()
+
+  const { data: prods, error: prodErr } = await supabase
+    .from('productos')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('categoria_id', cat.id)
+    .eq('is_deleted', false)
+
+  if (prodErr) {
+    console.warn('fetchSauceProductIds (productos):', prodErr)
+    return new Set()
+  }
+
+  return new Set((prods ?? []).map((p: { id: string }) => p.id))
 }
 
 /**
@@ -240,60 +281,6 @@ export const processMonthlyStats = (pedidos: PedidoRecord[]) => {
 }
 
 /**
- * Procesa la tendencia semanal de ventas
- */
-const buildTrendLabelsForRange = (dateRange: AdminDateRange): Array<{ label: string; date: string }> => {
-  const labels: Array<{ label: string; date: string }> = []
-  const now = new Date()
-  const endDate = dateRange.to
-    ? (() => {
-        const toExclusive = new Date(dateRange.to)
-        toExclusive.setDate(toExclusive.getDate() - 1)
-        toExclusive.setHours(0, 0, 0, 0)
-        return toExclusive
-      })()
-    : (() => {
-        const current = new Date(now)
-        current.setHours(0, 0, 0, 0)
-        return current
-      })()
-
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date(endDate)
-    date.setDate(endDate.getDate() - i)
-    date.setHours(0, 0, 0, 0)
-    labels.push({
-      label: date.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase(),
-      date: date.toISOString()
-    })
-  }
-
-  return labels
-}
-
-export const processWeeklyTrend = (
-  pedidos: PedidoRecord[],
-  dateRange: AdminDateRange
-): WeeklyTrendItem[] => {
-  const weeklyLabels = buildTrendLabelsForRange(dateRange)
-  
-  return weeklyLabels.map((slot) => {
-    const value = pedidos
-      .filter(
-        (pedido) =>
-          new Date(pedido.created_at).toLocaleDateString() ===
-          new Date(slot.date).toLocaleDateString()
-      )
-      .reduce((sum, pedido) => sum + normalizeNumber(pedido.total), 0)
-    
-    return {
-      label: slot.label,
-      value
-    }
-  })
-}
-
-/**
  * Procesa la distribución por canal de venta
  */
 export const processChannelSplit = (pedidos: PedidoRecord[]): ChannelSplit => {
@@ -308,12 +295,25 @@ export const processChannelSplit = (pedidos: PedidoRecord[]): ChannelSplit => {
 }
 
 /**
- * Procesa los items para obtener el top de productos
+ * Procesa los items para obtener el top de productos.
+ * Opcionalmente excluye productos de la categoría "Salsas" (vasitos).
  */
-export const processTopProducts = (items: any[]): ProductRanking[] => {
+export const processTopProducts = (
+  items: any[],
+  excludeProductIds?: Set<string>
+): ProductRanking[] => {
   const productTotals = new Map<string, ProductRanking>()
 
-  items.forEach((item) => {
+  const rows =
+    excludeProductIds && excludeProductIds.size > 0
+      ? items.filter((item) => {
+          const pid = item.producto_id as string | null | undefined
+          if (!pid) return true
+          return !excludeProductIds.has(pid)
+        })
+      : items
+
+  rows.forEach((item) => {
     const key = item.producto_id || item.producto_nombre
     const existing = productTotals.get(key) ?? {
       producto_id: item.producto_id,
@@ -403,12 +403,16 @@ export const fetchDashboardData = async (
   // Fetch paralelo de todos los datos
   try {
     console.log('📊 Iniciando queries paralelas...')
-    const [pedidos, activeClients, topClients, inventory, items] = await Promise.all([
+    const [pedidos, activeClients, topClients, inventory, items, sauceProductIds] = await Promise.all([
       fetchPedidos(tenantId, dateRange).catch(e => { console.error('❌ Error en fetchPedidos:', e); throw e; }),
       fetchActiveClientsCount(tenantId).catch(e => { console.error('❌ Error en fetchActiveClientsCount:', e); throw e; }),
       fetchTopClients(tenantId, dateRange).catch(e => { console.error('❌ Error en fetchTopClients:', e); throw e; }),
       fetchInventory(tenantId).catch(e => { console.error('❌ Error en fetchInventory:', e); throw e; }),
-      fetchOrderItems(tenantId, dateRange).catch(e => { console.error('❌ Error en fetchOrderItems:', e); throw e; })
+      fetchOrderItems(tenantId, dateRange).catch(e => { console.error('❌ Error en fetchOrderItems:', e); throw e; }),
+      fetchSauceProductIds(tenantId).catch((e) => {
+        console.warn('fetchSauceProductIds:', e)
+        return new Set<string>()
+      })
     ])
     
     console.log('✅ Queries completadas:', {
@@ -423,9 +427,11 @@ export const fetchDashboardData = async (
     console.log('🧮 Procesando estadísticas...')
     const dailyStats = processDailyStats(pedidos)
     const monthlyStats = processMonthlyStats(pedidos)
-    const weeklyTrend = processWeeklyTrend(pedidos, dateRange)
+    const weeklyTrend = processTrendSeries(pedidos, dateRange)
+    const candleTrend = processCandleSeries(pedidos, dateRange)
+    const trendGranularity = getTrendGranularity(dateRange.preset)
     const channelSplit = processChannelSplit(pedidos)
-    const topProducts = processTopProducts(items)
+    const topProducts = processTopProducts(items, sauceProductIds)
     const itemsMetrics = processItemsMetrics(items, pedidos)
     const ingredientsUsage = await fetchIngredientUsage(tenantId, itemsMetrics.periodItems)
 
@@ -447,6 +453,8 @@ export const fetchDashboardData = async (
       activeClients,
       loyaltyPoints: monthlyStats.loyaltyPoints,
       weeklyTrend,
+      candleTrend,
+      trendGranularity,
       channelSplit,
       trendContextLabel: buildTrendContextLabel(dateRange)
     }

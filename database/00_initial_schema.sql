@@ -133,11 +133,13 @@ CREATE TABLE IF NOT EXISTS categorias (
   descripcion TEXT,
   orden INTEGER DEFAULT 0,
   activa BOOLEAN DEFAULT true,
+  mostrar_en_pos BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 COMMENT ON TABLE categorias IS 'Categorías de productos por tenant';
+COMMENT ON COLUMN categorias.mostrar_en_pos IS 'Si false, oculta la categoría en POS/carta (ej. Salsas, Insumos base)';
 
 CREATE INDEX IF NOT EXISTS idx_categorias_tenant ON categorias(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_categorias_orden ON categorias(tenant_id, orden);
@@ -883,11 +885,13 @@ CREATE TABLE IF NOT EXISTS categorias (
   descripcion TEXT,
   orden INTEGER DEFAULT 0,
   activa BOOLEAN DEFAULT true,
+  mostrar_en_pos BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 COMMENT ON TABLE categorias IS 'Categorías de productos por tenant';
+COMMENT ON COLUMN categorias.mostrar_en_pos IS 'Si false, oculta la categoría en POS/carta (ej. Salsas, Insumos base)';
 
 CREATE INDEX IF NOT EXISTS idx_categorias_tenant ON categorias(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_categorias_orden ON categorias(tenant_id, orden);

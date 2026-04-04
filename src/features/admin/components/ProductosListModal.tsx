@@ -5,22 +5,13 @@
 
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Package, Loader2, Plus, Pencil, Trash2, CheckCircle, XCircle, ChefHat, AlertTriangle } from 'lucide-react'
+import { X, Package, Loader2, Plus, Pencil, Trash2, CheckCircle, XCircle, ChefHat, AlertTriangle, Search } from 'lucide-react'
 import { listProductosOwner, deleteProductoOwner } from '@/app/actions/owner'
-import { EditProductoModal } from '@/features/owner/components/EditProductoModal'
+import { EditProductoModal, type ProductoEditShape } from '@/features/owner/components/EditProductoModal'
 
-interface Producto {
-  id: string
-  nombre: string
-  descripcion?: string | null
-  precio: number
-  disponible: boolean
-  tiene_receta: boolean
-  imagen_url?: string | null
-  categoria_id?: string | null
-}
+type Producto = ProductoEditShape & { tiene_receta: boolean }
 
 interface ProductosListModalProps {
   open: boolean
@@ -45,6 +36,7 @@ export function ProductosListModal({
   const [productoToDelete, setProductoToDelete] = useState<Producto | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const loadProductos = useCallback(async () => {
     if (!tenantId) return
@@ -75,8 +67,19 @@ export function ProductosListModal({
       setProductoToEdit(null)
       setProductoToDelete(null)
       setDeleteError(null)
+      setSearchQuery('')
     }
   }, [open])
+
+  const productosFiltrados = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return productos
+    return productos.filter((p) => {
+      const nombre = p.nombre?.toLowerCase() ?? ''
+      const desc = (p.descripcion ?? '').toLowerCase()
+      return nombre.includes(q) || desc.includes(q)
+    })
+  }, [productos, searchQuery])
 
   const handleDeleteConfirm = async () => {
     if (!productoToDelete) return
@@ -131,7 +134,9 @@ export function ProductosListModal({
                 Productos creados
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {productos.length} producto{productos.length !== 1 ? 's' : ''} en el menú
+                {searchQuery.trim()
+                  ? `${productosFiltrados.length} de ${productos.length} producto${productos.length !== 1 ? 's' : ''}`
+                  : `${productos.length} producto${productos.length !== 1 ? 's' : ''} en el menú`}
               </p>
             </div>
           </div>
@@ -159,6 +164,28 @@ export function ProductosListModal({
 
         {/* Body - scrollable */}
         <div className="flex-1 overflow-y-auto p-6">
+          {!loading && !error && productos.length > 0 && (
+            <div className="mb-4">
+              <label htmlFor="productos-list-buscar" className="sr-only">
+                Buscar productos
+              </label>
+              <div className="relative">
+                <Search
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                  aria-hidden
+                />
+                <input
+                  id="productos-list-buscar"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar por nombre o descripción..."
+                  autoComplete="off"
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/80 pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                />
+              </div>
+            </div>
+          )}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16">
               <Loader2 className="w-10 h-10 text-orange-500 animate-spin mb-4" />
@@ -188,9 +215,28 @@ export function ProductosListModal({
                 </button>
               )}
             </div>
+          ) : productosFiltrados.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+                <Search className="w-7 h-7 text-gray-400" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-1">
+                Sin coincidencias
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
+                No hay productos que coincidan con &quot;{searchQuery.trim()}&quot;. Probá con otras palabras o limpiá el filtro.
+              </p>
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="mt-4 text-sm font-semibold text-orange-600 dark:text-orange-400 hover:underline"
+              >
+                Limpiar búsqueda
+              </button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {productos.map((producto) => (
+              {productosFiltrados.map((producto) => (
                 <div
                   key={producto.id}
                   className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 p-4 flex flex-col gap-3"

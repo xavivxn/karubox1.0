@@ -7,7 +7,14 @@ import { useTenant } from '@/contexts/TenantContext'
 import { Breadcrumb } from './Breadcrumb'
 import { LOGIN_STRINGS } from '@/utils/strings'
 import { ROUTES } from '@/config/routes'
-import { listUsuariosMyTenant, updateNombreUsuarioMyTenant, type UsuarioDelTenant } from '@/app/actions/tenant'
+import { updateNombreUsuarioMyTenant, type UsuarioDelTenant } from '@/app/actions/tenant'
+import {
+  invalidateUsuariosDelTenantCache,
+  loadUsuariosDelTenantCached,
+} from '@/lib/cache/usuariosDelTenantCache'
+import Image from 'next/image'
+import { PreprodBadge } from '@/components/PreprodBadge'
+import { LOGO_SISTEMA_2026_PATH } from '@/config/branding'
 
 const ROL_LABELS: Record<string, string> = {
   admin: 'Administrador',
@@ -31,6 +38,13 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
   const [editingNombre, setEditingNombre] = useState('')
   const [savingNombre, setSavingNombre] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const prevTenantIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const prev = prevTenantIdRef.current
+    if (prev && tenant?.id && prev !== tenant.id) invalidateUsuariosDelTenantCache(prev)
+    prevTenantIdRef.current = tenant?.id ?? null
+  }, [tenant?.id])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -49,18 +63,38 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
     }
   }, [showMenu])
 
+  /** Precarga al tener tenant; reutiliza caché en aperturas del menú (sin red si sigue vigente). */
   useEffect(() => {
-    if (!showMenu) return
-    listUsuariosMyTenant().then(({ usuarios: list }) => setUsuarios(list))
-  }, [showMenu])
+    if (!tenant?.id) {
+      setUsuarios([])
+      return
+    }
+    let cancelled = false
+    loadUsuariosDelTenantCached(tenant.id).then(({ usuarios: list }) => {
+      if (!cancelled) setUsuarios(list)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [tenant?.id])
+
+  /** Al abrir el menú, sincroniza por si la caché se actualizó en otro sitio o expiró el TTL. */
+  useEffect(() => {
+    if (!showMenu || !tenant?.id) return
+    loadUsuariosDelTenantCached(tenant.id).then(({ usuarios: list }) => setUsuarios(list))
+  }, [showMenu, tenant?.id])
 
   const handleSaveNombre = async (id: string) => {
-    if (editingNombre.trim() === '') return
+    if (editingNombre.trim() === '' || !tenant?.id) return
     setSavingNombre(true)
     const { error } = await updateNombreUsuarioMyTenant(id, editingNombre.trim())
     setSavingNombre(false)
     setEditingId(null)
-    if (!error) listUsuariosMyTenant().then(({ usuarios: list }) => setUsuarios(list))
+    if (!error) {
+      invalidateUsuariosDelTenantCache(tenant.id)
+      const { usuarios: list } = await loadUsuariosDelTenantCached(tenant.id, { force: true })
+      setUsuarios(list)
+    }
   }
 
   return (
@@ -73,12 +107,19 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
         <div className="flex flex-row items-center justify-between gap-2 md:gap-4">
           {/* Logo + título — compacto en móvil */}
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 md:gap-4">
-            <div className="h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-orange-500/30 sm:h-10 sm:w-10 sm:text-xl md:h-12 md:w-12 md:rounded-2xl">
-              🍔
-            </div>
+            <Image
+              src={LOGO_SISTEMA_2026_PATH}
+              alt="Sistema 2026"
+              width={256}
+              height={256}
+              className="h-9 w-auto shrink-0 sm:h-10 md:h-12"
+              sizes="48px"
+              priority={false}
+            />
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] uppercase tracking-widest text-orange-500 mb-0.5 sm:text-xs sm:tracking-[0.35em] sm:mb-1">
-                {LOGIN_STRINGS.LOGIN_TITLE}
+              <p className="mb-0.5 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest text-orange-500 sm:mb-1 sm:text-xs sm:tracking-[0.35em]">
+                <span>{LOGIN_STRINGS.LOGIN_TITLE}</span>
+                <PreprodBadge />
               </p>
               <div className="flex items-center gap-1.5 text-xs sm:gap-2 sm:text-sm flex-wrap">
                 <span className={`truncate font-semibold sm:text-base md:text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>

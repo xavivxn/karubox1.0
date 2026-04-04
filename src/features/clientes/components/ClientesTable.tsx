@@ -26,7 +26,7 @@ export const ClientesTable = ({
   tenantNombre,
 }: ClientesTableProps) => {
   const handleDescargarPdf = () => {
-    generarPdfClientes(clientes, { tenantNombre })
+    void generarPdfClientes(clientes, { tenantNombre })
   }
 
   if (loading) {

@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
-import type { Categoria, Producto, ComboItemDB } from '../types/pos.types'
+import type { Categoria, Producto, ComboItemDB, SauceProduct } from '../types/pos.types'
+
+const SAUCES_CATEGORY_NAME = 'Salsas'
 
 interface ComboItemRow {
   combo_id: string
@@ -42,14 +44,14 @@ export const posService = {
     const [catRes, ventasMap] = await Promise.all([
       supabase
         .from('categorias')
-        .select('id,nombre,orden')
+        .select('id,nombre,orden,mostrar_en_pos')
         .eq('tenant_id', tenantId)
         .eq('activa', true)
         .order('orden'),
       loadVentasPorCategoria(tenantId)
     ])
     if (catRes.error) throw catRes.error
-    const categorias = (catRes.data || []) as Categoria[]
+    const categorias = ((catRes.data || []) as Categoria[]).filter((c) => c.mostrar_en_pos !== false)
     // Más pedidos primero; mismo nivel: respetar orden luego nombre
     categorias.sort((a, b) => {
       const va = ventasMap.get(a.id) ?? 0
@@ -63,7 +65,7 @@ export const posService = {
 
   async loadProductos(tenantId: string): Promise<Producto[]> {
     const supabase = createClient()
-    const [prodRes, ventasMap] = await Promise.all([
+    const [prodRes, ventasMap, catVis] = await Promise.all([
       supabase
         .from('productos')
         .select('id,nombre,descripcion,precio,categoria_id,disponible,tiene_receta,puntos_extra')
@@ -71,10 +73,19 @@ export const posService = {
         .eq('disponible', true)
         .neq('is_deleted', true)
         .order('nombre'),
-      loadVentasPorProducto(tenantId)
+      loadVentasPorProducto(tenantId),
+      supabase.from('categorias').select('id,mostrar_en_pos').eq('tenant_id', tenantId),
     ])
     if (prodRes.error) throw prodRes.error
-    const productos = (prodRes.data || []) as Producto[]
+    if (catVis.error) throw catVis.error
+    const hiddenCatIds = new Set(
+      (catVis.data || [])
+        .filter((row: { mostrar_en_pos: boolean | null }) => row.mostrar_en_pos === false)
+        .map((row: { id: string }) => row.id)
+    )
+    const productos = ((prodRes.data || []) as Producto[]).filter(
+      (p) => !p.categoria_id || !hiddenCatIds.has(p.categoria_id)
+    )
     // Más pedidos primero; mismo nivel: orden por nombre
     productos.sort((a, b) => {
       const va = ventasMap.get(a.id) ?? 0
@@ -106,5 +117,34 @@ export const posService = {
       map.set(row.combo_id, items)
     }
     return map
-  }
+  },
+
+  /**
+   * Salsas del tenant (categoría "Salsas"), aunque esté oculta en el catálogo POS.
+   * Misma lógica que el drawer de salsas del carrito.
+   */
+  async loadSauceProducts(tenantId: string): Promise<SauceProduct[]> {
+    const supabase = createClient()
+    const { data: cat, error: catErr } = await supabase
+      .from('categorias')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('nombre', SAUCES_CATEGORY_NAME)
+      .maybeSingle()
+
+    if (catErr) throw catErr
+    if (!cat?.id) return []
+
+    const { data: prods, error: prodErr } = await supabase
+      .from('productos')
+      .select('id, nombre, descripcion, precio')
+      .eq('tenant_id', tenantId)
+      .eq('categoria_id', cat.id)
+      .eq('is_deleted', false)
+      .eq('disponible', true)
+      .order('nombre')
+
+    if (prodErr) throw prodErr
+    return (prods ?? []) as SauceProduct[]
+  },
 }

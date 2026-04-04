@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTenant } from '@/contexts/TenantContext'
 import { posService } from '../services/posService'
-import type { Categoria, Producto, FeedbackState } from '../types/pos.types'
+import type { Categoria, Producto, FeedbackState, SauceProduct } from '../types/pos.types'
 import { buildUnexpectedErrorState } from '../utils/error.utils'
 import { getCachedCatalog, setCachedCatalog } from '../lib/catalogCache'
 
@@ -33,10 +33,11 @@ export function usePOSData() {
 
     async function loadData() {
       try {
-        const [cats, prods, comboMap] = await Promise.all([
+        const [cats, prods, comboMap, salsas] = await Promise.all([
           posService.loadCategorias(tenantId),
           posService.loadProductos(tenantId),
-          posService.loadComboItems(tenantId)
+          posService.loadComboItems(tenantId),
+          posService.loadSauceProducts(tenantId).catch((): SauceProduct[] => [])
         ])
         if (cancelled) return
 
@@ -46,7 +47,7 @@ export function usePOSData() {
           return items && items.length > 0 ? { ...p, combo_items: items } : p
         })
 
-        setCachedCatalog(tenantId, cats, productosConCombos)
+        setCachedCatalog(tenantId, cats, productosConCombos, salsas)
         setCategorias(cats)
         setProductos(productosConCombos)
       } catch (error) {

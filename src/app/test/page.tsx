@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { getSupabaseAnonKey, getSupabaseTarget, getSupabaseUrl } from '@/lib/env/supabase'
 import { createClient } from '@/lib/supabase/client'
 
 export default function TestPage() {
@@ -115,14 +116,28 @@ export default function TestPage() {
           <h2 className="text-xl font-semibold mb-4">🔧 Configuración</h2>
           <div className="space-y-2 font-mono text-sm">
             <div>
-              <span className="font-semibold">URL:</span>{' '}
-              {process.env.NEXT_PUBLIC_SUPABASE_URL || '❌ No configurada'}
+              <span className="font-semibold">Target:</span> {getSupabaseTarget()}
             </div>
             <div>
-              <span className="font-semibold">Key:</span>{' '}
-              {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY 
-                ? '✅ Configurada' 
-                : '❌ No configurada'}
+              <span className="font-semibold">URL efectiva:</span>{' '}
+              {(() => {
+                try {
+                  return getSupabaseUrl()
+                } catch {
+                  return '❌ No configurada'
+                }
+              })()}
+            </div>
+            <div>
+              <span className="font-semibold">Key anon:</span>{' '}
+              {(() => {
+                try {
+                  getSupabaseAnonKey()
+                  return '✅ Configurada'
+                } catch {
+                  return '❌ No configurada'
+                }
+              })()}
             </div>
           </div>
         </div>

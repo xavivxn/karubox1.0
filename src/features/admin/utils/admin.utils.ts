@@ -3,7 +3,27 @@
  * Funciones puras y helpers para el módulo de administración
  */
 
+import type { InventoryRecord } from '../types/admin.types'
+
 export const ESTIMATED_COST_RATIO = 0.48
+
+const EPS_MIN = 1
+
+/**
+ * Ordena inventario de más crítico (menor ratio actual/mínimo) a mayor stock relativo.
+ */
+export function sortInventoryByCriticality(items: InventoryRecord[]): InventoryRecord[] {
+  return [...items].sort((a, b) => {
+    const minA = Math.max(a.stock_minimo || 0, EPS_MIN)
+    const minB = Math.max(b.stock_minimo || 0, EPS_MIN)
+    const ratioA = a.stock_actual / minA
+    const ratioB = b.stock_actual / minB
+    if (ratioA !== ratioB) return ratioA - ratioB
+    const nameA = (a.nombre ?? a.productos?.nombre ?? '').toLowerCase()
+    const nameB = (b.nombre ?? b.productos?.nombre ?? '').toLowerCase()
+    return nameA.localeCompare(nameB, 'es')
+  })
+}
 
 /**
  * Normaliza un valor numérico, manejando null y undefined

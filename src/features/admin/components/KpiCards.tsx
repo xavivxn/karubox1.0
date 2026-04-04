@@ -11,6 +11,8 @@ interface KpiCardsProps {
   totalInventoryItems: number
   lowStockCount: number
   periodLabel?: string
+  /** Sin caja abierta: una línea aclaratoria sobre el período */
+  datosUltimoTurno?: boolean
   animationKey?: string
   darkMode?: boolean
 }
@@ -20,13 +22,20 @@ export const KpiCards = ({
   totalInventoryItems,
   lowStockCount,
   periodLabel,
+  datosUltimoTurno,
   animationKey,
   darkMode
 }: KpiCardsProps) => {
   const mutedClass = darkMode ? 'text-gray-400' : 'text-gray-500'
   const periodText = periodLabel ?? 'Período seleccionado'
   return (
-    <div key={animationKey} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+    <div key={animationKey} className="space-y-3">
+      {datosUltimoTurno && (
+        <p className={`text-[13px] font-medium ${darkMode ? 'text-amber-300/95' : 'text-amber-900'}`}>
+          KPIs del último turno cerrado (no del día en curso).
+        </p>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
       <KpiCard
         title="Ventas del período"
         value={formatGuaranies(stats.todayRevenue)}
@@ -69,6 +78,7 @@ export const KpiCards = ({
         darkMode={darkMode}
         index={3}
       />
+    </div>
     </div>
   )
 }

@@ -81,13 +81,27 @@ export const AdminView = () => {
   const dateRange = useMemo(
     () =>
       resolveAdminDateRange(selectedPreset, {
-        turnStartAt: sesionAbierta?.apertura_at ?? null
+        turnStartAt: sesionAbierta?.apertura_at ?? null,
+        lastClosedTurn:
+          selectedPreset === 'turno_actual' && !sesionAbierta && ultimaSesionCerrada?.cierre_at
+            ? {
+                apertura_at: ultimaSesionCerrada.apertura_at,
+                cierre_at: ultimaSesionCerrada.cierre_at
+              }
+            : null
       }),
-    [selectedPreset, sesionAbierta?.apertura_at]
+    [
+      selectedPreset,
+      sesionAbierta,
+      sesionAbierta?.apertura_at,
+      ultimaSesionCerrada?.apertura_at,
+      ultimaSesionCerrada?.cierre_at
+    ]
   )
 
   const {
     loading,
+    refreshing,
     stats,
     topClients,
     topProducts,
@@ -107,8 +121,8 @@ export const AdminView = () => {
     )
   }
 
-  // Si está cargando, mostrar loading state
-  if (loading) {
+  // Turno: esperar estado de caja para acotar al último cierre; si no, el primer fetch usa "hoy" vacío
+  if (loading || (selectedPreset === 'turno_actual' && loadingCaja)) {
     return <AdminLoading darkMode={darkMode} />
   }
 
@@ -146,11 +160,20 @@ export const AdminView = () => {
         }
       : stats
 
+  const datosUltimoTurno =
+    selectedPreset === 'turno_actual' && !sesionAbierta && !!ultimaSesionCerrada
+
   const resumenLabel =
     selectedPreset === 'turno_actual' && sesionAbierta
       ? `Turno actual (desde ${new Date(sesionAbierta.apertura_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })})`
-      : selectedPreset === 'turno_actual' && ultimaSesionCerrada
-        ? `Último cierre (${new Date(ultimaSesionCerrada.cierre_at!).toLocaleDateString('es-PY', { day: 'numeric', month: 'short', year: 'numeric' })})`
+      : selectedPreset === 'turno_actual' && ultimaSesionCerrada?.cierre_at
+        ? `Datos del último turno · cierre ${new Date(ultimaSesionCerrada.cierre_at).toLocaleString('es-PY', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}`
         : dateRange.label
 
   return (
@@ -160,6 +183,7 @@ export const AdminView = () => {
         tenantName={tenant.nombre}
         stats={displayStats}
         resumenLabel={resumenLabel}
+        datosUltimoTurno={datosUltimoTurno}
         onOpenIngredienteModal={() => setShowIngredienteModal(true)}
         onOpenStockDrawer={() => setShowStockDrawer(true)}
         onOpenSalsasDrawer={canManageProducts ? () => setShowSalsasDrawer(true) : undefined}
@@ -179,6 +203,7 @@ export const AdminView = () => {
         totalInventoryItems={totalInventoryItems}
         lowStockCount={lowStockItems.length}
         periodLabel={dateRange.label}
+        datosUltimoTurno={datosUltimoTurno}
         animationKey={selectedPreset}
         darkMode={darkMode}
       />
@@ -193,10 +218,20 @@ export const AdminView = () => {
       {/* <AdditionalKpis stats={stats} /> */}
 
       {/* Tendencia semanal y alertas de inventario */}
-      <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
-        <WeeklyTrend stats={displayStats} animationKey={selectedPreset} />
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
+        <WeeklyTrend
+          stats={displayStats}
+          animationKey={selectedPreset}
+          selectedPreset={selectedPreset}
+          onPresetChange={setSelectedPreset}
+          isRefreshing={refreshing}
+          darkMode={darkMode}
+          datosUltimoTurno={datosUltimoTurno}
+        />
         <InventoryAlerts
           lowStockItems={lowStockItems}
+          inventory={inventory}
+          tenantNombre={tenant.nombre ?? ''}
           onOpenStockDrawer={() => setShowStockDrawer(true)}
         />
       </section>
@@ -204,10 +239,15 @@ export const AdminView = () => {
       {/* Distribución por canal + Top clientes, productos y consumo */}
       <section className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         <div className="rounded-3xl border border-white/60 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 backdrop-blur p-6">
-          <h3 className="text-lg font-bold mb-4">Distribución por canal</h3>
+          <h3 className={`text-lg font-bold ${datosUltimoTurno ? 'mb-1' : 'mb-4'}`}>Distribución por canal</h3>
+          {datosUltimoTurno && (
+            <p className="mb-3 text-[11px] font-medium text-amber-800 dark:text-amber-400/95">
+              Pedidos del último turno cerrado
+            </p>
+          )}
           <ChannelPieChart channelSplit={displayStats.channelSplit} animationKey={selectedPreset} />
         </div>
-        <TopClients topClients={topClients} periodLabel={dateRange.label} />
+        <TopClients topClients={topClients} periodLabel={dateRange.label} datosUltimoTurno={datosUltimoTurno} />
         <TopProducts topProducts={topProducts} />
         <IngredientConsumption ingredientsUsage={ingredientsUsage} />
       </section>
@@ -215,6 +255,8 @@ export const AdminView = () => {
       {/* Grid completo de inventario */}
       <InventoryGrid
         inventory={inventory}
+        totalInventoryItems={totalInventoryItems}
+        lowStockCount={lowStockItems.length}
         onOpenIngredienteModal={() => setShowIngredienteModal(true)}
         onOpenStockDrawer={() => setShowStockDrawer(true)}
         onOpenProductModal={canManageProducts ? () => setShowOwnerProductModal(true) : undefined}

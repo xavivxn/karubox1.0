@@ -7,7 +7,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
-import { BarChart3, PlusCircle, Users, ChefHat, ArrowDownCircle, Package, List, Loader2, Sun, Wallet, Droplets } from 'lucide-react'
+import { BarChart3, PlusCircle, Users, ChefHat, ArrowDownCircle, Package, List, Loader2, Sun, Wallet, Droplets, History } from 'lucide-react'
 import { DatePresetPills } from './DatePresetPills'
 import { formatGuaranies } from '@/lib/utils/format'
 import { ROUTES } from '@/config/routes'
@@ -19,8 +19,10 @@ import type { SesionCaja } from '@/features/caja/types/caja.types'
 interface AdminHeaderProps {
   tenantName: string
   stats: DashboardStats
-  /** Ej. "Turno actual (desde 08:00)" o "Último cierre (15 mar 2025)" */
+  /** Ej. "Turno actual (desde 08:00)" o "Datos del último turno · …" */
   resumenLabel?: string
+  /** Sin caja abierta: el panel refleja el último turno cerrado */
+  datosUltimoTurno?: boolean
   onOpenIngredienteModal: () => void
   onOpenStockDrawer: () => void
   onOpenSalsasDrawer?: () => void
@@ -43,6 +45,7 @@ export const AdminHeader = ({
   tenantName,
   stats,
   resumenLabel,
+  datosUltimoTurno = false,
   onOpenIngredienteModal,
   onOpenStockDrawer,
   onOpenSalsasDrawer,
@@ -113,6 +116,20 @@ export const AdminHeader = ({
         onChange={onPresetChange}
         disabled={isNavigating}
       />
+
+      {datosUltimoTurno && (
+        <div
+          className="flex gap-3 rounded-2xl border border-amber-300/90 bg-amber-50/95 px-4 py-3 text-sm text-amber-950 dark:border-amber-600/50 dark:bg-amber-950/35 dark:text-amber-100"
+          role="status"
+        >
+          <History className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
+          <p className="leading-snug">
+            <span className="font-semibold">Estás viendo datos del último turno cerrado.</span>{' '}
+            No hay turno abierto: los totales y gráficos corresponden a ese cierre hasta que pulses{' '}
+            <span className="font-medium">Empezar el día</span>.
+          </p>
+        </div>
+      )}
 
       {/* Estado de caja */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 p-4">

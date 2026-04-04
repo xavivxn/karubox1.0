@@ -1,20 +1,14 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Droplets, Loader2, Minus, Plus, Search, X } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { formatGuaranies } from '@/lib/utils/format'
+import { posService } from '../services/posService'
+import { getCachedCatalog, setCachedSalsas } from '../lib/catalogCache'
+import type { SauceProduct } from '../types/pos.types'
 
-const SAUCES_CATEGORY_NAME = 'Salsas'
 const MAX_QTY = 20
-
-type SauceProduct = {
-  id: string
-  nombre: string
-  descripcion: string | null
-  precio: number
-}
 
 interface SaucesDrawerProps {
   open: boolean
@@ -47,51 +41,50 @@ export function SaucesDrawer({
     setQtyById(initialQuantities ?? {})
   }, [open, initialQuantities])
 
+  /** Antes del paint: caché caliente = lista lista sin parpadeo ni “vacío” un frame */
+  useLayoutEffect(() => {
+    if (!open) return
+    const entry = getCachedCatalog(tenantId)
+    const hasCached = Boolean(entry && Array.isArray(entry.salsas))
+    if (hasCached && entry) {
+      setSauces(entry.salsas)
+      setLoading(false)
+      setErrorMessage(null)
+    } else {
+      setLoading(true)
+      setErrorMessage(null)
+    }
+  }, [open, tenantId])
+
   useEffect(() => {
     if (!open) return
 
     let active = true
-    const run = async () => {
-      setLoading(true)
-      setErrorMessage(null)
-      try {
-        const supabase = createClient()
-        const { data: cat, error: catErr } = await supabase
-          .from('categorias')
-          .select('id')
-          .eq('tenant_id', tenantId)
-          .eq('nombre', SAUCES_CATEGORY_NAME)
-          .maybeSingle()
+    const entry = getCachedCatalog(tenantId)
+    const hasCached = Boolean(entry && Array.isArray(entry.salsas))
 
+    void posService
+      .loadSauceProducts(tenantId)
+      .then((list) => {
         if (!active) return
-        if (catErr) throw catErr
-        if (!cat?.id) {
-          setSauces([])
-          return
+        setSauces(list)
+        setErrorMessage(null)
+        if (getCachedCatalog(tenantId)) {
+          setCachedSalsas(tenantId, list)
         }
-
-        const { data: prods, error: prodErr } = await supabase
-          .from('productos')
-          .select('id, nombre, descripcion, precio')
-          .eq('tenant_id', tenantId)
-          .eq('categoria_id', cat.id)
-          .eq('is_deleted', false)
-          .eq('disponible', true)
-          .order('nombre')
-
-        if (!active) return
-        if (prodErr) throw prodErr
-
-        setSauces((prods ?? []) as SauceProduct[])
-      } catch (err: any) {
+      })
+      .catch((err: unknown) => {
         console.error('Error cargando salsas', err)
-        if (active) setErrorMessage(err?.message || 'No se pudieron cargar las salsas.')
-      } finally {
+        if (!active) return
+        if (!hasCached) {
+          setSauces([])
+          setErrorMessage(err instanceof Error ? err.message : 'No se pudieron cargar las salsas.')
+        }
+      })
+      .finally(() => {
         if (active) setLoading(false)
-      }
-    }
+      })
 
-    run()
     return () => {
       active = false
     }
@@ -264,4 +257,3 @@ export function SaucesDrawer({
     document.body
   )
 }
-

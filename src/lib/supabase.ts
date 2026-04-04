@@ -7,15 +7,25 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/env/supabase'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder'
+function resolveSupabasePublic(): { url: string; anonKey: string } {
+  try {
+    return { url: getSupabaseUrl(), anonKey: getSupabaseAnonKey() }
+  } catch {
+    return {
+      url: 'https://placeholder.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder',
+    }
+  }
+}
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+const { url: supabaseUrl, anonKey: supabaseAnonKey } = resolveSupabasePublic()
+
+if (supabaseUrl.includes('placeholder')) {
   console.error(
     '❌ ERROR: Credenciales de Supabase no configuradas.\n' +
-    'Por favor configura el archivo .env.local con tus credenciales.\n' +
-    'Ver ENV_CONFIG.md para instrucciones.'
+    'Por favor configura el archivo .env.local con tus credenciales (ver .env.example).'
   )
 }
 

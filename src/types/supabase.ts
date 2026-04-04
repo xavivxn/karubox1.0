@@ -14,6 +14,7 @@ export interface Database {
           descripcion: string | null
           orden: number
           activa: boolean
+          mostrar_en_pos: boolean
           created_at: string
           updated_at: string
         }
@@ -23,6 +24,7 @@ export interface Database {
           descripcion?: string | null
           orden?: number
           activa?: boolean
+          mostrar_en_pos?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -32,6 +34,7 @@ export interface Database {
           descripcion?: string | null
           orden?: number
           activa?: boolean
+          mostrar_en_pos?: boolean
           created_at?: string
           updated_at?: string
         }
