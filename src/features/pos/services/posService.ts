@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
-import type { Categoria, Producto, ComboItemDB } from '../types/pos.types'
+import type { Categoria, Producto, ComboItemDB, SauceProduct } from '../types/pos.types'
+
+const SAUCES_CATEGORY_NAME = 'Salsas'
 
 interface ComboItemRow {
   combo_id: string
@@ -115,5 +117,34 @@ export const posService = {
       map.set(row.combo_id, items)
     }
     return map
-  }
+  },
+
+  /**
+   * Salsas del tenant (categoría "Salsas"), aunque esté oculta en el catálogo POS.
+   * Misma lógica que el drawer de salsas del carrito.
+   */
+  async loadSauceProducts(tenantId: string): Promise<SauceProduct[]> {
+    const supabase = createClient()
+    const { data: cat, error: catErr } = await supabase
+      .from('categorias')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('nombre', SAUCES_CATEGORY_NAME)
+      .maybeSingle()
+
+    if (catErr) throw catErr
+    if (!cat?.id) return []
+
+    const { data: prods, error: prodErr } = await supabase
+      .from('productos')
+      .select('id, nombre, descripcion, precio')
+      .eq('tenant_id', tenantId)
+      .eq('categoria_id', cat.id)
+      .eq('is_deleted', false)
+      .eq('disponible', true)
+      .order('nombre')
+
+    if (prodErr) throw prodErr
+    return (prods ?? []) as SauceProduct[]
+  },
 }

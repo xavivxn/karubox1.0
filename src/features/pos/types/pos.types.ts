@@ -12,6 +12,14 @@ export interface ComboItemDB {
   producto: { id: string; nombre: string; tiene_receta: boolean }
 }
 
+/** Productos de la categoría operativa "Salsas" (drawer del carrito; puede estar oculta en el grid POS). */
+export interface SauceProduct {
+  id: string
+  nombre: string
+  descripcion: string | null
+  precio: number
+}
+
 export interface Producto {
   id: string
   nombre: string
