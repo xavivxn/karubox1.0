@@ -12,7 +12,9 @@ import {
   invalidateUsuariosDelTenantCache,
   loadUsuariosDelTenantCached,
 } from '@/lib/cache/usuariosDelTenantCache'
+import Image from 'next/image'
 import { PreprodBadge } from '@/components/PreprodBadge'
+import { LOGO_SISTEMA_2026_PATH } from '@/config/branding'
 
 const ROL_LABELS: Record<string, string> = {
   admin: 'Administrador',
@@ -105,9 +107,15 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
         <div className="flex flex-row items-center justify-between gap-2 md:gap-4">
           {/* Logo + título — compacto en móvil */}
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 md:gap-4">
-            <div className="h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-orange-500/30 sm:h-10 sm:w-10 sm:text-xl md:h-12 md:w-12 md:rounded-2xl">
-              🍔
-            </div>
+            <Image
+              src={LOGO_SISTEMA_2026_PATH}
+              alt="Sistema 2026"
+              width={256}
+              height={256}
+              className="h-9 w-auto shrink-0 sm:h-10 md:h-12"
+              sizes="48px"
+              priority={false}
+            />
             <div className="min-w-0 flex-1">
               <p className="mb-0.5 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest text-orange-500 sm:mb-1 sm:text-xs sm:tracking-[0.35em]">
                 <span>{LOGIN_STRINGS.LOGIN_TITLE}</span>

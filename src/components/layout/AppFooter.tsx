@@ -28,7 +28,7 @@ export function AppFooter({
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex flex-col items-center justify-center leading-snug py-3">
-        <p>KarúBox by ARDENTIUM® 2025</p>
+        <p>KarúBox by ARDENTIUM Software Technologies® 2025</p>
         {showVersionLabel && (
           <p className="mt-0.5 text-xs text-inherit opacity-80">
             {APP_VERSION_LABEL}

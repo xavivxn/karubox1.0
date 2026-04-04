@@ -10,6 +10,11 @@ import type { ClienteConVisita } from '../types/clientes.types'
 import { formatearFecha, getNivel } from './clientes.utils'
 import { formatGuaranies } from '@/lib/utils/format'
 import { PDF_FOOTER_TEXT } from './pdf.constants'
+import {
+  drawPdfSistemaLogo,
+  loadPdfSistemaLogo,
+  type PdfSistemaLogoPayload,
+} from './pdfLogo'
 
 const MARGIN = 16
 const HEADER_HEIGHT = 32
@@ -42,21 +47,31 @@ function formatFechaReporte() {
   })
 }
 
-function addHeader(doc: jsPDF, tenantNombre?: string, fechaReporte?: string) {
+function addHeader(
+  doc: jsPDF,
+  tenantNombre?: string,
+  fechaReporte?: string,
+  logo?: PdfSistemaLogoPayload | null
+) {
   const pageWidth = doc.internal.pageSize.getWidth()
 
   doc.setFillColor(...ORANGE_HEADER)
   doc.rect(0, 0, pageWidth, HEADER_HEIGHT, 'F')
 
+  const titleX = MARGIN + drawPdfSistemaLogo(doc, logo ?? null, {
+    headerHeightMm: HEADER_HEIGHT,
+    marginLeftMm: MARGIN,
+  })
+
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(18)
   doc.setFont('helvetica', 'bold')
-  doc.text('REPORTE DE CLIENTES', MARGIN, 14)
+  doc.text('REPORTE DE CLIENTES', titleX, 14)
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
   doc.setTextColor(255, 248, 240)
-  if (fechaReporte) doc.text(`Generado: ${fechaReporte}`, MARGIN, 22)
+  if (fechaReporte) doc.text(`Generado: ${fechaReporte}`, titleX, 22)
 
   if (tenantNombre) {
     doc.setFontSize(10)
@@ -147,15 +162,16 @@ function drawBadgeNivel(
  * Genera el PDF del reporte de clientes y dispara la descarga.
  * Acepta ClienteLocal o ClienteConVisita; si tiene total_gastado/ultima_visita/total_pedidos los muestra.
  */
-export function generarPdfClientes(
+export async function generarPdfClientes(
   clientes: (ClienteLocal | ClienteConVisita)[],
   opciones: OpcionesPdfClientes = {}
-): void {
+): Promise<void> {
   const { tenantNombre } = opciones
+  const logo = await loadPdfSistemaLogo()
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
   const fechaReporteStr = formatFechaReporte()
-  addHeader(doc, tenantNombre, fechaReporteStr)
+  addHeader(doc, tenantNombre, fechaReporteStr, logo)
 
   let y = HEADER_HEIGHT + 12
 
@@ -172,7 +188,7 @@ export function generarPdfClientes(
   for (let i = 0; i < clientes.length; i++) {
     if (y + ROW_HEIGHT > yMax) {
       doc.addPage()
-      addHeader(doc, tenantNombre, fechaReporteStr)
+      addHeader(doc, tenantNombre, fechaReporteStr, logo)
       y = HEADER_HEIGHT + 10
     }
 
@@ -235,7 +251,7 @@ export function generarPdfClientes(
   let boxY = y + 12
   if (boxY + 14 > pageHeight - 22) {
     doc.addPage()
-    addHeader(doc, tenantNombre, fechaReporteStr)
+    addHeader(doc, tenantNombre, fechaReporteStr, logo)
     boxY = HEADER_HEIGHT + 10
   }
 

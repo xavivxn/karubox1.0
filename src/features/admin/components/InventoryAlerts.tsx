@@ -24,7 +24,7 @@ export const InventoryAlerts = ({
 }: InventoryAlertsProps) => {
   const handlePdf = () => {
     if (inventory.length === 0) return
-    generarPdfInventario(inventory, { tenantNombre })
+    void generarPdfInventario(inventory, { tenantNombre })
   }
 
   return (

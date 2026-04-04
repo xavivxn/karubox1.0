@@ -6,13 +6,17 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { SesionCaja } from '../types/caja.types'
-import { PDF_LOGO_URL, PDF_FOOTER_TEXT } from '@/features/clientes/utils/pdf.constants'
+import { PDF_FOOTER_TEXT } from '@/features/clientes/utils/pdf.constants'
+import {
+  drawPdfSistemaLogo,
+  loadPdfSistemaLogo,
+  type PdfSistemaLogoPayload,
+} from '@/features/clientes/utils/pdfLogo'
 import { formatGuaranies } from '@/lib/utils/format'
 
-const LOGO_PLACEHOLDER = '🍔'
+const HEADER_HEIGHT_MM = 28
 const MARGIN = 16
 const PAGE_WIDTH = 210
-const PAGE_HEIGHT = 297
 
 // Colores (RGB)
 const ORANGE_HEADER = [234, 88, 12] as [number, number, number]   // orange-600
@@ -38,23 +42,33 @@ function formatFecha(iso: string) {
   })
 }
 
-function addHeader(doc: jsPDF, tenantNombre?: string, fechaCierre?: string) {
+function addHeader(
+  doc: jsPDF,
+  tenantNombre?: string,
+  fechaCierre?: string,
+  logo?: PdfSistemaLogoPayload | null
+) {
   const pageWidth = doc.internal.pageSize.getWidth()
 
   // Barra superior naranja
   doc.setFillColor(...ORANGE_HEADER)
-  doc.rect(0, 0, pageWidth, 28, 'F')
+  doc.rect(0, 0, pageWidth, HEADER_HEIGHT_MM, 'F')
+
+  const titleX = MARGIN + drawPdfSistemaLogo(doc, logo ?? null, {
+    headerHeightMm: HEADER_HEIGHT_MM,
+    marginLeftMm: MARGIN,
+  })
 
   // Título en blanco
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(16)
   doc.setFont('helvetica', 'bold')
-  doc.text('REPORTE DE CIERRE DE CAJA', MARGIN, 14)
+  doc.text('REPORTE DE CIERRE DE CAJA', titleX, 14)
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
   doc.setTextColor(255, 255, 255)
-  if (fechaCierre) doc.text(`Cierre: ${fechaCierre}`, MARGIN, 21)
+  if (fechaCierre) doc.text(`Cierre: ${fechaCierre}`, titleX, 21)
 
   if (tenantNombre) {
     doc.setFontSize(10)
@@ -66,7 +80,7 @@ function addHeader(doc: jsPDF, tenantNombre?: string, fechaCierre?: string) {
   // Línea bajo el header
   doc.setDrawColor(...GRAY_BORDER)
   doc.setLineWidth(0.3)
-  doc.line(0, 28, pageWidth, 28)
+  doc.line(0, HEADER_HEIGHT_MM, pageWidth, HEADER_HEIGHT_MM)
 }
 
 function addFooter(doc: jsPDF) {
@@ -91,15 +105,16 @@ function addFooter(doc: jsPDF) {
 /**
  * Genera el PDF del reporte de cierre de caja y dispara la descarga.
  */
-export function generarPdfCierreCaja(
+export async function generarPdfCierreCaja(
   sesion: SesionCaja,
   opciones: OpcionesPdfCierreCaja = {}
-): void {
+): Promise<void> {
   const { tenantNombre } = opciones
+  const logo = await loadPdfSistemaLogo()
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
   const fechaCierreStr = sesion.cierre_at ? formatFecha(sesion.cierre_at) : null
-  addHeader(doc, tenantNombre, fechaCierreStr ?? undefined)
+  addHeader(doc, tenantNombre, fechaCierreStr ?? undefined, logo)
 
   let startY = 36
 

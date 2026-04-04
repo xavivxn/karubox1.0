@@ -3,7 +3,8 @@
  * Muestra última visita, días sin visitar, total pedidos y estado visual por segmento
  */
 
-import { Eye, Edit2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { ChevronLeft, ChevronRight, Eye, Edit2 } from 'lucide-react'
 import type { ClienteConVisita } from '../types/clientes.types'
 import { getSegmento } from '../types/clientes.types'
 import { formatearFecha, getNivel } from '../utils/clientes.utils'
@@ -46,6 +47,8 @@ function diasLabel(dias: number | null): string {
   return `Hace ${dias} d`
 }
 
+const PAGE_SIZE_OPTIONS = [10, 25, 50] as const
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export const ClientesTableRich = ({
@@ -55,6 +58,29 @@ export const ClientesTableRich = ({
   onRowClick,
   onEdit,
 }: ClientesTableRichProps) => {
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(10)
+
+  const total = clientes.length
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+
+  useEffect(() => {
+    setPage(1)
+  }, [searchTerm])
+
+  useEffect(() => {
+    setPage((p) => Math.min(p, totalPages))
+  }, [totalPages])
+
+  const currentPage = Math.min(page, totalPages)
+  const { pageClientes, rangeFrom, rangeTo } = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    const slice = clientes.slice(start, start + pageSize)
+    const from = total === 0 ? 0 : start + 1
+    const to = start + slice.length
+    return { pageClientes: slice, rangeFrom: from, rangeTo: to }
+  }, [clientes, currentPage, pageSize, total])
+
   if (loading) {
     return (
       <div className="bg-white dark:bg-gray-800/80 rounded-2xl shadow-sm dark:shadow-black/20 border border-gray-200 dark:border-gray-700 p-12 text-center">
@@ -101,7 +127,7 @@ export const ClientesTableRich = ({
           </thead>
 
           <tbody className="divide-y divide-gray-100 dark:divide-gray-600">
-            {clientes.length === 0 ? (
+            {total === 0 ? (
               <tr>
                 <td colSpan={9} className="px-5 py-14 text-center text-gray-400 dark:text-gray-500">
                   {searchTerm
@@ -110,7 +136,7 @@ export const ClientesTableRich = ({
                 </td>
               </tr>
             ) : (
-              clientes.map((cliente) => {
+              pageClientes.map((cliente) => {
                 const segmento = getSegmento(cliente.dias_sin_visita)
                 const badge = SEGMENTO_BADGE[segmento]
                 const dot = SEGMENTO_DOT[segmento]
@@ -221,11 +247,63 @@ export const ClientesTableRich = ({
         </table>
       </div>
 
-      {/* Footer contador */}
-      {clientes.length > 0 && (
-        <div className="px-5 py-3 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-400">
-          {clientes.length} cliente{clientes.length !== 1 ? 's' : ''}
-          {searchTerm && ' encontrados'}
+      {/* Paginación + contador */}
+      {total > 0 && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-600">
+          <p className="text-xs text-gray-500 dark:text-gray-400 order-2 sm:order-1">
+            Mostrando{' '}
+            <span className="font-semibold text-gray-700 dark:text-gray-300">
+              {rangeFrom}–{rangeTo}
+            </span>{' '}
+            de{' '}
+            <span className="font-semibold text-gray-700 dark:text-gray-300">{total}</span>
+            {total !== 1 ? ' clientes' : ' cliente'}
+            {searchTerm ? ' encontrados' : ''}
+          </p>
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 order-1 sm:order-2 justify-between sm:justify-end w-full sm:w-auto">
+            <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <span className="whitespace-nowrap">Por página</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])
+                  setPage(1)
+                }}
+                className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-xs font-medium py-1.5 pl-2 pr-7 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:focus:ring-orange-500"
+              >
+                {PAGE_SIZE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                aria-label="Página anterior"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="min-w-[5.5rem] text-center text-xs font-medium text-gray-600 dark:text-gray-300 tabular-nums px-1">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                aria-label="Página siguiente"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

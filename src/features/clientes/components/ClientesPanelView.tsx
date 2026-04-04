@@ -229,7 +229,7 @@ export const ClientesPanelView = () => {
           <div className="flex flex-shrink-0 items-center gap-2 min-w-0 flex-wrap">
             <button
               type="button"
-              onClick={() => generarPdfClientes(filteredClientes, { tenantNombre: tenant.nombre })}
+              onClick={() => void generarPdfClientes(filteredClientes, { tenantNombre: tenant.nombre })}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               title="Descargar reporte en PDF"
             >

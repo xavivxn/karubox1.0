@@ -7,9 +7,15 @@ import autoTable from 'jspdf-autotable'
 import type { InventoryRecord } from '../types/admin.types'
 import { sortInventoryByCriticality } from './admin.utils'
 import { PDF_FOOTER_TEXT } from '@/features/clientes/utils/pdf.constants'
+import {
+  drawPdfSistemaLogo,
+  loadPdfSistemaLogo,
+  type PdfSistemaLogoPayload,
+} from '@/features/clientes/utils/pdfLogo'
 
 const MARGIN = 16
 const PAGE_WIDTH = 210
+const HEADER_HEIGHT_MM = 28
 
 const ORANGE_HEADER = [234, 88, 12] as [number, number, number]
 const GRAY_LIGHT = [248, 250, 252] as [number, number, number]
@@ -37,17 +43,28 @@ function estadoLabel(stock: number, minimo: number): 'Crítico' | 'En límite' |
   return 'OK'
 }
 
-function addHeader(doc: jsPDF, tenantNombre?: string, fechaReporte?: string) {
+function addHeader(
+  doc: jsPDF,
+  tenantNombre?: string,
+  fechaReporte?: string,
+  logo?: PdfSistemaLogoPayload | null
+) {
   const pageWidth = doc.internal.pageSize.getWidth()
   doc.setFillColor(...ORANGE_HEADER)
-  doc.rect(0, 0, pageWidth, 28, 'F')
+  doc.rect(0, 0, pageWidth, HEADER_HEIGHT_MM, 'F')
+
+  const titleX = MARGIN + drawPdfSistemaLogo(doc, logo ?? null, {
+    headerHeightMm: HEADER_HEIGHT_MM,
+    marginLeftMm: MARGIN,
+  })
+
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(16)
   doc.setFont('helvetica', 'bold')
-  doc.text('INVENTARIO DE MATERIAS PRIMAS', MARGIN, 14)
+  doc.text('INVENTARIO DE MATERIAS PRIMAS', titleX, 14)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
-  if (fechaReporte) doc.text(`Generado: ${fechaReporte}`, MARGIN, 21)
+  if (fechaReporte) doc.text(`Generado: ${fechaReporte}`, titleX, 21)
   if (tenantNombre) {
     doc.setFontSize(10)
     doc.text(tenantNombre, pageWidth - MARGIN, 14, { align: 'right' })
@@ -56,7 +73,7 @@ function addHeader(doc: jsPDF, tenantNombre?: string, fechaReporte?: string) {
   }
   doc.setDrawColor(...GRAY_BORDER)
   doc.setLineWidth(0.3)
-  doc.line(0, 28, pageWidth, 28)
+  doc.line(0, HEADER_HEIGHT_MM, pageWidth, HEADER_HEIGHT_MM)
 }
 
 function addFooter(doc: jsPDF) {
@@ -76,12 +93,13 @@ function addFooter(doc: jsPDF) {
   )
 }
 
-export function generarPdfInventario(
+export async function generarPdfInventario(
   items: InventoryRecord[],
   opciones: OpcionesPdfInventario = {}
-): void {
+): Promise<void> {
   const { tenantNombre } = opciones
   const sorted = sortInventoryByCriticality(items)
+  const logo = await loadPdfSistemaLogo()
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
   const fechaReporte = new Date().toLocaleString('es-PY', {
@@ -91,7 +109,7 @@ export function generarPdfInventario(
     hour: '2-digit',
     minute: '2-digit',
   })
-  addHeader(doc, tenantNombre, fechaReporte)
+  addHeader(doc, tenantNombre, fechaReporte, logo)
 
   const startY = 36
   doc.setFontSize(10)
@@ -138,9 +156,9 @@ export function generarPdfInventario(
       fontSize: 9,
     },
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center' },
+      0: { cellWidth: 16, halign: 'center' },
       1: { cellWidth: 48 },
-      2: { cellWidth: 18 },
+      2: { cellWidth: 24 },
       3: { halign: 'right' },
       4: { halign: 'right' },
       5: { halign: 'right' },

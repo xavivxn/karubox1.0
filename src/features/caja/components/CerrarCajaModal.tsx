@@ -123,7 +123,7 @@ export function CerrarCajaModal({
   }
 
   const handleDescargarPdf = () => {
-    if (sesionCerrada) generarPdfCierreCaja(sesionCerrada, { tenantNombre })
+    if (sesionCerrada) void generarPdfCierreCaja(sesionCerrada, { tenantNombre })
   }
 
   if (!open) return null
