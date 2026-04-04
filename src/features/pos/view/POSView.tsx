@@ -232,7 +232,7 @@ export default function POSView() {
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div
           ref={scrollRef}
-          className="h-full flex-1 overflow-y-auto min-h-0 px-4 pb-[calc(9rem+env(safe-area-inset-bottom,0px))] md:px-6 md:pb-[calc(10rem+env(safe-area-inset-bottom,0px))] lg:pb-[calc(3rem+env(safe-area-inset-bottom,0px))]"
+          className="h-full flex-1 overflow-y-auto min-h-0 px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:px-6 md:pb-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:pb-8"
         >
           <div className="flex-shrink-0 pt-2 md:pt-3">
             <div className={searchOverlayOpen ? 'opacity-0 pointer-events-none' : ''}>
@@ -484,21 +484,17 @@ export default function POSView() {
             )}
           </div>
 
-          <div id={CART_SECTION_ID} className="lg:col-span-1 scroll-mt-4 self-start w-full">
-            <div className="lg:sticky lg:top-6 lg:z-10">
-              <div className="max-h-none lg:max-h-[calc(100dvh-200px)]">
-                <Cart
-                  onOpenClientModal={() => setIsClientModalOpen(true)}
-                  onConfirmOrder={onConfirmOrder}
-                  isProcessing={isProcessing || facturaPrefModalOpen}
-                  darkMode={darkMode}
-                  onEditItem={(itemId) => setEditingItemId(itemId)}
-                />
-              </div>
-            </div>
+          <div id={CART_SECTION_ID} className="lg:col-span-1 scroll-mt-4 self-start w-full min-w-0">
+            <Cart
+              onOpenClientModal={() => setIsClientModalOpen(true)}
+              onConfirmOrder={onConfirmOrder}
+              isProcessing={isProcessing || facturaPrefModalOpen}
+              darkMode={darkMode}
+              onEditItem={(itemId) => setEditingItemId(itemId)}
+            />
           </div>
         </div>
-        <div className="pt-6 mt-2 lg:mt-4 pb-2 relative z-20">
+        <div className="pt-8 mt-6">
           <AppFooter isDark={darkMode} variant="default" />
         </div>
       </div>
