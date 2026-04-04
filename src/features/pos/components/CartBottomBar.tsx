@@ -33,7 +33,7 @@ export function CartBottomBar({ darkMode }: Props) {
     <div
       className={`
         lg:hidden fixed bottom-0 left-0 right-0 z-40
-        flex items-center justify-between gap-3 px-4 py-3
+        flex items-center justify-between gap-3 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]
         shadow-[0_-4px_20px_rgba(0,0,0,0.15)]
         border-t
         ${darkMode

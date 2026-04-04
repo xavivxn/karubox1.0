@@ -130,6 +130,13 @@ export default function POSView() {
     setTimeout(() => searchCircleRef.current?.focus(), 0)
   }
 
+  /** Al cambiar de categoría, salir del modo búsqueda para mostrar el top de esa categoría */
+  const handleSelectCategory = (id: string | null) => {
+    setSelectedCategory(id)
+    setSearchTerm('')
+    setSearchOverlayOpen(false)
+  }
+
   // Merge feedback from data loading
   const currentFeedback = feedback || dataFeedback
 
@@ -225,7 +232,7 @@ export default function POSView() {
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div
           ref={scrollRef}
-          className="h-full flex-1 overflow-y-auto min-h-0 px-4 pb-24 md:px-6 lg:pb-6"
+          className="h-full flex-1 overflow-y-auto min-h-0 px-4 pb-[calc(9rem+env(safe-area-inset-bottom,0px))] md:px-6 md:pb-[calc(10rem+env(safe-area-inset-bottom,0px))] lg:pb-[calc(3rem+env(safe-area-inset-bottom,0px))]"
         >
           <div className="flex-shrink-0 pt-2 md:pt-3">
             <div className={searchOverlayOpen ? 'opacity-0 pointer-events-none' : ''}>
@@ -414,7 +421,7 @@ export default function POSView() {
             <CategoryList
               categories={categorias}
               selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
+              onSelectCategory={handleSelectCategory}
               darkMode={darkMode}
             />
 
@@ -477,8 +484,8 @@ export default function POSView() {
             )}
           </div>
 
-          <div id={CART_SECTION_ID} className="lg:col-span-1 scroll-mt-4">
-            <div className="lg:sticky lg:top-6">
+          <div id={CART_SECTION_ID} className="lg:col-span-1 scroll-mt-4 self-start w-full">
+            <div className="lg:sticky lg:top-6 lg:z-10">
               <div className="max-h-none lg:max-h-[calc(100dvh-200px)]">
                 <Cart
                   onOpenClientModal={() => setIsClientModalOpen(true)}
@@ -491,7 +498,7 @@ export default function POSView() {
             </div>
           </div>
         </div>
-        <div className="pt-6">
+        <div className="pt-6 mt-2 lg:mt-4 pb-2 relative z-20">
           <AppFooter isDark={darkMode} variant="default" />
         </div>
       </div>
