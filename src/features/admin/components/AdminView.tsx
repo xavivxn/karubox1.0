@@ -193,10 +193,12 @@ export const AdminView = () => {
       {/* <AdditionalKpis stats={stats} /> */}
 
       {/* Tendencia semanal y alertas de inventario */}
-      <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
         <WeeklyTrend stats={displayStats} animationKey={selectedPreset} />
         <InventoryAlerts
           lowStockItems={lowStockItems}
+          inventory={inventory}
+          tenantNombre={tenant.nombre ?? ''}
           onOpenStockDrawer={() => setShowStockDrawer(true)}
         />
       </section>

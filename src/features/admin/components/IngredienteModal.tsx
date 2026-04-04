@@ -282,11 +282,14 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
               />
             </div>
 
-            {/* Precio público con prefijo Gs. */}
+            {/* precio_publico: recargo POS por cada +1 de extra (no es costo de bolsa/kg) */}
             <div className="w-full sm:w-1/2">
               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Precio de compra
+                Precio extra en carrito
               </label>
+              <p className="mb-1.5 text-xs text-gray-500 dark:text-gray-400">
+                Guaraníes que se suman al producto por cada incremento (+1) de este ingrediente como extra en el POS. No uses aquí el precio de un paquete entero (por ejemplo 1 kg).
+              </p>
               <div className="flex rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 overflow-hidden focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition">
                 <span className="flex items-center px-3.5 text-sm font-semibold text-gray-400 border-r border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700/60 select-none whitespace-nowrap">
                   Gs.
