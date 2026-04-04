@@ -8,6 +8,7 @@ import { Breadcrumb } from './Breadcrumb'
 import { LOGIN_STRINGS } from '@/utils/strings'
 import { ROUTES } from '@/config/routes'
 import { listUsuariosMyTenant, updateNombreUsuarioMyTenant, type UsuarioDelTenant } from '@/app/actions/tenant'
+import { PreprodBadge } from '@/components/PreprodBadge'
 
 const ROL_LABELS: Record<string, string> = {
   admin: 'Administrador',
@@ -77,8 +78,9 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
               🍔
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] uppercase tracking-widest text-orange-500 mb-0.5 sm:text-xs sm:tracking-[0.35em] sm:mb-1">
-                {LOGIN_STRINGS.LOGIN_TITLE}
+              <p className="mb-0.5 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest text-orange-500 sm:mb-1 sm:text-xs sm:tracking-[0.35em]">
+                <span>{LOGIN_STRINGS.LOGIN_TITLE}</span>
+                <PreprodBadge />
               </p>
               <div className="flex items-center gap-1.5 text-xs sm:gap-2 sm:text-sm flex-wrap">
                 <span className={`truncate font-semibold sm:text-base md:text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { getSupabaseServiceRoleKey, getSupabaseUrl } from '@/lib/env/supabase'
 
 /** Lee el claim `role` del JWT de Supabase (anon / authenticated / service_role). */
 function supabaseJwtRole(jwt: string): string | null {
@@ -20,12 +21,8 @@ function supabaseJwtRole(jwt: string): string | null {
  * Bypassa RLS y permite operaciones de administración como crear usuarios.
  */
 export function createAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!url || !serviceKey) {
-    throw new Error('Faltan variables de entorno: SUPABASE_SERVICE_ROLE_KEY')
-  }
+  const url = getSupabaseUrl()
+  const serviceKey = getSupabaseServiceRoleKey()
 
   const role = supabaseJwtRole(serviceKey.trim())
   if (role === 'anon' || role === 'authenticated') {
