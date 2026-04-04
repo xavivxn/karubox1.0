@@ -7,6 +7,9 @@ interface DatePresetPillsProps {
   selected: AdminDatePreset
   onChange: (preset: AdminDatePreset) => void
   disabled?: boolean
+  /** Evita colisión de layout con otro grupo de pills (p. ej. header vs gráfico) */
+  layoutId?: string
+  className?: string
 }
 
 const PRESETS: Array<{ value: AdminDatePreset; label: string }> = [
@@ -19,10 +22,16 @@ const PRESETS: Array<{ value: AdminDatePreset; label: string }> = [
   { value: 'historico', label: 'Histórico' }
 ]
 
-export const DatePresetPills = ({ selected, onChange, disabled }: DatePresetPillsProps) => {
+export const DatePresetPills = ({
+  selected,
+  onChange,
+  disabled,
+  layoutId = 'adminDatePill',
+  className = '',
+}: DatePresetPillsProps) => {
   return (
     <div
-      className="flex gap-1 overflow-x-auto scrollbar-none p-1 rounded-2xl bg-gray-100/80 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/50"
+      className={`flex gap-1 overflow-x-auto scrollbar-none p-1 rounded-2xl bg-gray-100/80 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/50 ${className}`}
       role="radiogroup"
       aria-label="Seleccionar período"
     >
@@ -47,7 +56,7 @@ export const DatePresetPills = ({ selected, onChange, disabled }: DatePresetPill
           >
             {isActive && (
               <motion.span
-                layoutId="adminDatePill"
+                layoutId={layoutId}
                 className="absolute inset-0 rounded-xl bg-orange-500 dark:bg-orange-600 shadow-lg shadow-orange-500/25"
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               />

@@ -7,7 +7,11 @@ import { useTenant } from '@/contexts/TenantContext'
 import { Breadcrumb } from './Breadcrumb'
 import { LOGIN_STRINGS } from '@/utils/strings'
 import { ROUTES } from '@/config/routes'
-import { listUsuariosMyTenant, updateNombreUsuarioMyTenant, type UsuarioDelTenant } from '@/app/actions/tenant'
+import { updateNombreUsuarioMyTenant, type UsuarioDelTenant } from '@/app/actions/tenant'
+import {
+  invalidateUsuariosDelTenantCache,
+  loadUsuariosDelTenantCached,
+} from '@/lib/cache/usuariosDelTenantCache'
 import { PreprodBadge } from '@/components/PreprodBadge'
 
 const ROL_LABELS: Record<string, string> = {
@@ -32,6 +36,13 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
   const [editingNombre, setEditingNombre] = useState('')
   const [savingNombre, setSavingNombre] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const prevTenantIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const prev = prevTenantIdRef.current
+    if (prev && tenant?.id && prev !== tenant.id) invalidateUsuariosDelTenantCache(prev)
+    prevTenantIdRef.current = tenant?.id ?? null
+  }, [tenant?.id])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -50,18 +61,38 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
     }
   }, [showMenu])
 
+  /** Precarga al tener tenant; reutiliza caché en aperturas del menú (sin red si sigue vigente). */
   useEffect(() => {
-    if (!showMenu) return
-    listUsuariosMyTenant().then(({ usuarios: list }) => setUsuarios(list))
-  }, [showMenu])
+    if (!tenant?.id) {
+      setUsuarios([])
+      return
+    }
+    let cancelled = false
+    loadUsuariosDelTenantCached(tenant.id).then(({ usuarios: list }) => {
+      if (!cancelled) setUsuarios(list)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [tenant?.id])
+
+  /** Al abrir el menú, sincroniza por si la caché se actualizó en otro sitio o expiró el TTL. */
+  useEffect(() => {
+    if (!showMenu || !tenant?.id) return
+    loadUsuariosDelTenantCached(tenant.id).then(({ usuarios: list }) => setUsuarios(list))
+  }, [showMenu, tenant?.id])
 
   const handleSaveNombre = async (id: string) => {
-    if (editingNombre.trim() === '') return
+    if (editingNombre.trim() === '' || !tenant?.id) return
     setSavingNombre(true)
     const { error } = await updateNombreUsuarioMyTenant(id, editingNombre.trim())
     setSavingNombre(false)
     setEditingId(null)
-    if (!error) listUsuariosMyTenant().then(({ usuarios: list }) => setUsuarios(list))
+    if (!error) {
+      invalidateUsuariosDelTenantCache(tenant.id)
+      const { usuarios: list } = await loadUsuariosDelTenantCached(tenant.id, { force: true })
+      setUsuarios(list)
+    }
   }
 
   return (

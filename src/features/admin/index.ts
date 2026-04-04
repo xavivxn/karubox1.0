@@ -12,6 +12,7 @@ export { DailySummary } from './components/DailySummary'
 export { MonthlyBalance } from './components/MonthlyBalance'
 export { AdditionalKpis } from './components/AdditionalKpis'
 export { WeeklyTrend } from './components/WeeklyTrend'
+export { RevenueCandlestickChart } from './components/RevenueCandlestickChart'
 export { InventoryAlerts } from './components/InventoryAlerts'
 export { TopClients } from './components/TopClients'
 export { TopProducts } from './components/TopProducts'
@@ -35,10 +36,13 @@ export type {
   ProductRanking,
   IngredientUsage,
   WeeklyTrendItem,
+  CandlestickTrendItem,
   ChannelSplit,
-  DashboardStats
+  DashboardStats,
+  TrendGranularity
 } from './types/admin.types'
 
 // Utils
 export * from './utils/admin.utils'
 export * from './utils/date.utils'
+export { getTrendGranularity, processTrendSeries, processCandleSeries } from './utils/trendSeries'

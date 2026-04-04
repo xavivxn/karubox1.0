@@ -76,7 +76,15 @@ export const getDateRangeLabel = (preset: AdminDatePreset): string => {
 
 export const resolveAdminDateRange = (
   preset: AdminDatePreset,
-  options?: { turnStartAt?: string | null; now?: Date }
+  options?: {
+    turnStartAt?: string | null
+    /**
+     * Sin sesión abierta: acotar consultas al último turno cerrado (mismos pedidos que el cierre de caja).
+     * `cierre_at` se usa como límite exclusivo en queries (lt).
+     */
+    lastClosedTurn?: { apertura_at: string; cierre_at: string } | null
+    now?: Date
+  }
 ): AdminDateRange => {
   const now = options?.now ? new Date(options.now) : new Date()
   const todayStart = getDayStart(now)
@@ -84,10 +92,27 @@ export const resolveAdminDateRange = (
   switch (preset) {
     case 'turno_actual': {
       const turnStartAt = options?.turnStartAt ?? null
+      if (turnStartAt) {
+        return {
+          preset,
+          label: getDateRangeLabel(preset),
+          from: turnStartAt,
+          to: null
+        }
+      }
+      const last = options?.lastClosedTurn
+      if (last?.apertura_at && last?.cierre_at) {
+        return {
+          preset,
+          label: 'Último turno cerrado',
+          from: last.apertura_at,
+          to: last.cierre_at
+        }
+      }
       return {
         preset,
         label: getDateRangeLabel(preset),
-        from: turnStartAt ?? todayStart.toISOString(),
+        from: todayStart.toISOString(),
         to: null
       }
     }
@@ -165,6 +190,14 @@ export const buildTrendContextLabel = (
     return `Desde ${formatShortDate(new Date(range.from))} hasta hoy`
   }
   if (range.from && range.to) {
+    if (range.preset === 'turno_actual') {
+      const from = new Date(range.from)
+      const toExclusive = new Date(range.to)
+      const toInclusive = new Date(toExclusive.getTime() - 1)
+      const dOpts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+      const tOpts: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' }
+      return `${from.toLocaleDateString('es-PY', dOpts)} · ${from.toLocaleTimeString('es-PY', tOpts)} – ${toInclusive.toLocaleTimeString('es-PY', tOpts)}`
+    }
     const toDateExclusive = new Date(range.to)
     const toDateInclusive = addDays(getDayStart(toDateExclusive), -1)
     return `${formatShortDate(new Date(range.from))} - ${formatShortDate(toDateInclusive)}`

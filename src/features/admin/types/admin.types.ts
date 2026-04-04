@@ -59,6 +59,16 @@ export interface WeeklyTrendItem {
   value: number
 }
 
+/** Vela por bucket temporal: primer/último pedido y rango de tickets; volume = suma ingresos. */
+export interface CandlestickTrendItem {
+  label: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
 export type AdminDatePreset =
   | 'turno_actual'
   | 'hoy'
@@ -83,6 +93,8 @@ export interface ChannelSplit {
   para_llevar: number
 }
 
+export type TrendGranularity = 'hour' | 'day'
+
 export interface DashboardStats {
   todayOrders: number
   todayRevenue: number
@@ -97,6 +109,10 @@ export interface DashboardStats {
   activeClients: number
   loyaltyPoints: number
   weeklyTrend: WeeklyTrendItem[]
+  /** Misma rejilla que weeklyTrend; OHLC por pedidos en el bucket */
+  candleTrend: CandlestickTrendItem[]
+  /** Eje temporal del gráfico de ingresos (por hora vs por día) */
+  trendGranularity: TrendGranularity
   channelSplit: ChannelSplit
   trendContextLabel?: string
 }

@@ -21,6 +21,7 @@ import {
   estimateCostFromAmount
 } from '../utils/admin.utils'
 import { buildTrendContextLabel, resolveAdminDateRange } from '../utils/date.utils'
+import { getTrendGranularity, processCandleSeries, processTrendSeries } from '../utils/trendSeries'
 
 /** Misma categoría que `loadSauceProducts` / SalsasDrawer (productos vasito). */
 const SAUCES_CATEGORY_NAME = 'Salsas'
@@ -280,60 +281,6 @@ export const processMonthlyStats = (pedidos: PedidoRecord[]) => {
 }
 
 /**
- * Procesa la tendencia semanal de ventas
- */
-const buildTrendLabelsForRange = (dateRange: AdminDateRange): Array<{ label: string; date: string }> => {
-  const labels: Array<{ label: string; date: string }> = []
-  const now = new Date()
-  const endDate = dateRange.to
-    ? (() => {
-        const toExclusive = new Date(dateRange.to)
-        toExclusive.setDate(toExclusive.getDate() - 1)
-        toExclusive.setHours(0, 0, 0, 0)
-        return toExclusive
-      })()
-    : (() => {
-        const current = new Date(now)
-        current.setHours(0, 0, 0, 0)
-        return current
-      })()
-
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date(endDate)
-    date.setDate(endDate.getDate() - i)
-    date.setHours(0, 0, 0, 0)
-    labels.push({
-      label: date.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase(),
-      date: date.toISOString()
-    })
-  }
-
-  return labels
-}
-
-export const processWeeklyTrend = (
-  pedidos: PedidoRecord[],
-  dateRange: AdminDateRange
-): WeeklyTrendItem[] => {
-  const weeklyLabels = buildTrendLabelsForRange(dateRange)
-  
-  return weeklyLabels.map((slot) => {
-    const value = pedidos
-      .filter(
-        (pedido) =>
-          new Date(pedido.created_at).toLocaleDateString() ===
-          new Date(slot.date).toLocaleDateString()
-      )
-      .reduce((sum, pedido) => sum + normalizeNumber(pedido.total), 0)
-    
-    return {
-      label: slot.label,
-      value
-    }
-  })
-}
-
-/**
  * Procesa la distribución por canal de venta
  */
 export const processChannelSplit = (pedidos: PedidoRecord[]): ChannelSplit => {
@@ -480,7 +427,9 @@ export const fetchDashboardData = async (
     console.log('🧮 Procesando estadísticas...')
     const dailyStats = processDailyStats(pedidos)
     const monthlyStats = processMonthlyStats(pedidos)
-    const weeklyTrend = processWeeklyTrend(pedidos, dateRange)
+    const weeklyTrend = processTrendSeries(pedidos, dateRange)
+    const candleTrend = processCandleSeries(pedidos, dateRange)
+    const trendGranularity = getTrendGranularity(dateRange.preset)
     const channelSplit = processChannelSplit(pedidos)
     const topProducts = processTopProducts(items, sauceProductIds)
     const itemsMetrics = processItemsMetrics(items, pedidos)
@@ -504,6 +453,8 @@ export const fetchDashboardData = async (
       activeClients,
       loyaltyPoints: monthlyStats.loyaltyPoints,
       weeklyTrend,
+      candleTrend,
+      trendGranularity,
       channelSplit,
       trendContextLabel: buildTrendContextLabel(dateRange)
     }
