@@ -2,6 +2,8 @@ export interface Categoria {
   id: string
   nombre: string
   orden: number
+  /** false = no aparece en pestañas del POS (ni productos de esa categoria en el catalogo POS) */
+  mostrar_en_pos?: boolean
 }
 
 export interface ComboItemDB {
@@ -19,7 +21,7 @@ export interface Producto {
   disponible: boolean
   tiene_receta: boolean
   combo_items?: ComboItemDB[]
-  /** Puntos bonus adicionales que el admin asignó a este producto (por unidad) */
+  /** Puntos bonus adicionales que el admin asigno a este producto (por unidad) */
   puntos_extra?: number
 }
 

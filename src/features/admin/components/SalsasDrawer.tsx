@@ -170,6 +170,7 @@ export function SalsasDrawer({ open, onClose, tenantId, onSaved }: SalsasDrawerP
         descripcion: 'Salsas por vasitos (extras)',
         orden: 98,
         activa: true,
+        mostrar_en_pos: false,
       })
       .select('id')
       .single()

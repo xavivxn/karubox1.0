@@ -18,6 +18,7 @@ interface CategoriaExistente {
   descripcion: string | null
   orden: number
   activa: boolean
+  mostrar_en_pos: boolean
 }
 
 interface EditState {
@@ -46,6 +47,8 @@ export function CategoriaModal({ open, onClose, tenantId, onSaved }: CategoriaMo
   const [savingId, setSavingId] = useState<string | null>(null)
   const [editError, setEditError] = useState<Record<string, string>>({})
   const [editSuccess, setEditSuccess] = useState<string | null>(null)
+  const [togglingPosId, setTogglingPosId] = useState<string | null>(null)
+  const [posVisibilityError, setPosVisibilityError] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -57,11 +60,16 @@ export function CategoriaModal({ open, onClose, tenantId, onSaved }: CategoriaMo
       const supabase = createClient()
       const { data, error } = await supabase
         .from('categorias')
-        .select('id, nombre, descripcion, orden, activa')
+        .select('id, nombre, descripcion, orden, activa, mostrar_en_pos')
         .eq('tenant_id', tenantId)
         .order('orden', { ascending: true })
       if (error) throw error
-      setCategorias(data ?? [])
+      setCategorias(
+        (data ?? []).map((row) => ({
+          ...row,
+          mostrar_en_pos: row.mostrar_en_pos !== false,
+        }))
+      )
     } catch {
       // silently fail; user can retry by switching tabs
     } finally {
@@ -80,6 +88,8 @@ export function CategoriaModal({ open, onClose, tenantId, onSaved }: CategoriaMo
       setEditStates({})
       setEditError({})
       setEditSuccess(null)
+      setTogglingPosId(null)
+      setPosVisibilityError(null)
       setCategorias([])
       setActiveTab('existentes')
     } else {
@@ -102,6 +112,29 @@ export function CategoriaModal({ open, onClose, tenantId, onSaved }: CategoriaMo
           orden: String(cat.orden),
         },
       }))
+    }
+  }
+
+  const handleToggleMostrarEnPos = async (cat: CategoriaExistente, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (togglingPosId) return
+    setPosVisibilityError(null)
+    const next = !cat.mostrar_en_pos
+    setTogglingPosId(cat.id)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('categorias')
+        .update({ mostrar_en_pos: next })
+        .eq('id', cat.id)
+        .eq('tenant_id', tenantId)
+      if (error) throw error
+      setCategorias((prev) => prev.map((c) => (c.id === cat.id ? { ...c, mostrar_en_pos: next } : c)))
+      onSaved?.()
+    } catch {
+      setPosVisibilityError('No se pudo actualizar la visibilidad en POS. Reintentá.')
+    } finally {
+      setTogglingPosId(null)
     }
   }
 
@@ -187,6 +220,7 @@ export function CategoriaModal({ open, onClose, tenantId, onSaved }: CategoriaMo
           descripcion: descripcion.trim() || null,
           orden: parseInt(orden) || 0,
           activa: true,
+          mostrar_en_pos: true,
         })
 
       if (error) throw error
@@ -269,6 +303,12 @@ export function CategoriaModal({ open, onClose, tenantId, onSaved }: CategoriaMo
                 </div>
               )}
 
+              {posVisibilityError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-3">
+                  <p className="text-sm font-medium text-red-800 dark:text-red-300">{posVisibilityError}</p>
+                </div>
+              )}
+
               {loadingCategorias ? (
                 <div className="flex items-center justify-center py-10">
                   <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
@@ -290,33 +330,62 @@ export function CategoriaModal({ open, onClose, tenantId, onSaved }: CategoriaMo
                       className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
                     >
                       {/* Row header */}
-                      <button
-                        type="button"
-                        onClick={() => handleExpand(cat)}
-                        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 transition text-left"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-orange-500/10 text-orange-500 text-xs font-bold shrink-0">
-                            {cat.orden}
-                          </span>
-                          <span className="font-semibold text-gray-900 dark:text-white truncate">
-                            {cat.nombre}
-                          </span>
-                          {cat.descripcion && (
-                            <span className="hidden sm:block text-xs text-gray-400 truncate">
-                              — {cat.descripcion}
+                      <div className="flex items-stretch min-h-[48px]">
+                        <button
+                          type="button"
+                          onClick={() => handleExpand(cat)}
+                          className="flex-1 flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 transition text-left min-w-0"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-orange-500/10 text-orange-500 text-xs font-bold shrink-0">
+                              {cat.orden}
                             </span>
-                          )}
+                            <span className="font-semibold text-gray-900 dark:text-white truncate">
+                              {cat.nombre}
+                            </span>
+                            {cat.descripcion && (
+                              <span className="hidden sm:block text-xs text-gray-400 truncate">
+                                — {cat.descripcion}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            <Pencil className="h-3.5 w-3.5 text-gray-400" />
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 text-gray-400" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-gray-400" />
+                            )}
+                          </div>
+                        </button>
+                        <div
+                          className="flex items-center gap-2 px-3 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          role="presentation"
+                        >
+                          <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline whitespace-nowrap">
+                            POS
+                          </span>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={cat.mostrar_en_pos}
+                            aria-label="Mostrar en POS y carta"
+                            disabled={togglingPosId === cat.id}
+                            onClick={(e) => handleToggleMostrarEnPos(cat, e)}
+                            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500/30 ${
+                              cat.mostrar_en_pos ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                            } disabled:opacity-50`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                                cat.mostrar_en_pos ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0 ml-2">
-                          <Pencil className="h-3.5 w-3.5 text-gray-400" />
-                          {isExpanded ? (
-                            <ChevronUp className="h-4 w-4 text-gray-400" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
-                          )}
-                        </div>
-                      </button>
+                      </div>
 
                       {/* Edit form */}
                       {isExpanded && state && (

@@ -364,6 +364,77 @@ export interface CreateProductoOwnerData {
   inventario_id?: string  // ingrediente_id para sin_receta
 }
 
+export type RecetaLineaProductoOwner = {
+  ingrediente_id: string
+  cantidad: number
+  unidad: string
+  obligatorio: boolean
+}
+
+export type RecetaLineaProductoOwnerConNombre = RecetaLineaProductoOwner & {
+  nombre: string
+}
+
+/**
+ * Obtiene la receta de un producto con receta (owner/admin del tenant).
+ */
+export async function getRecetaProductoOwner(tenantId: string, productoId: string) {
+  const { error: authError } = await assertOwnerOrAdminForTenant(tenantId)
+  if (authError) return { error: authError, lineas: [] as RecetaLineaProductoOwnerConNombre[] }
+
+  const adminClient = createAdminClient()
+  const { data: producto, error: prodError } = await adminClient
+    .from('productos')
+    .select('id, tiene_receta')
+    .eq('id', productoId)
+    .eq('tenant_id', tenantId)
+    .neq('is_deleted', true)
+    .maybeSingle()
+
+  if (prodError || !producto) {
+    return { error: 'Producto no encontrado', lineas: [] as RecetaLineaProductoOwnerConNombre[] }
+  }
+  if (!producto.tiene_receta) {
+    return { error: 'Este producto no tiene receta', lineas: [] as RecetaLineaProductoOwnerConNombre[] }
+  }
+
+  const { data: rows, error: recError } = await adminClient
+    .from('recetas_producto')
+    .select(
+      `
+      ingrediente_id,
+      cantidad,
+      unidad,
+      obligatorio,
+      ingrediente:ingrediente_id ( nombre, unidad )
+    `
+    )
+    .eq('tenant_id', tenantId)
+    .eq('producto_id', productoId)
+    .order('ingrediente_id')
+
+  if (recError) {
+    console.error('[getRecetaProductoOwner]', recError)
+    return { error: 'Error al cargar la receta', lineas: [] as RecetaLineaProductoOwnerConNombre[] }
+  }
+
+  type IngRow = { nombre?: string; unidad?: string } | null
+  const lineas: RecetaLineaProductoOwnerConNombre[] = (rows ?? []).map((row: Record<string, unknown>) => {
+    const ing = row.ingrediente as IngRow
+    const nombre = ing?.nombre ?? 'Ingrediente'
+    const unidadRow = (row.unidad as string | null) ?? ing?.unidad ?? 'unidad'
+    return {
+      ingrediente_id: row.ingrediente_id as string,
+      cantidad: Number(row.cantidad),
+      unidad: unidadRow,
+      obligatorio: Boolean(row.obligatorio ?? true),
+      nombre,
+    }
+  })
+
+  return { error: null, lineas }
+}
+
 /**
  * Obtiene los datos básicos de un tenant (para mostrar en el header de la página de productos).
  */
@@ -616,6 +687,7 @@ export async function deleteProductoOwner(productoId: string, tenantId: string) 
 
 /**
  * Actualiza los campos básicos de un producto (nombre, descripcion, precio, disponible, imagen_url, categoria_id).
+ * Si `receta` está definido, reemplaza por completo las filas en `recetas_producto` (solo si el producto tiene `tiene_receta`).
  */
 export async function updateProductoOwner(
   productoId: string,
@@ -628,6 +700,8 @@ export async function updateProductoOwner(
     imagen_url?: string | null
     categoria_id?: string | null
     puntos_extra?: number | null
+    /** Si se envía, debe ser el snapshot completo de la receta (productos con receta). */
+    receta?: RecetaLineaProductoOwner[]
   }
 ) {
   const { error: authError } = await assertOwnerOrAdminForTenant(tenantId)
@@ -637,7 +711,64 @@ export async function updateProductoOwner(
   if (!Number.isFinite(data.precio) || data.precio < 0) return { error: 'El precio no es válido' }
 
   const adminClient = createAdminClient()
-  const { error } = await adminClient
+
+  const { data: producto, error: prodFetchError } = await adminClient
+    .from('productos')
+    .select('id, tiene_receta')
+    .eq('id', productoId)
+    .eq('tenant_id', tenantId)
+    .neq('is_deleted', true)
+    .maybeSingle()
+
+  if (prodFetchError || !producto) {
+    return { error: 'Producto no encontrado' }
+  }
+
+  if (data.receta !== undefined) {
+    if (!producto.tiene_receta) {
+      return { error: 'Este producto no tiene receta; no se puede editar la receta aquí' }
+    }
+    if (!data.receta.length) {
+      return { error: 'Debes agregar al menos un ingrediente a la receta' }
+    }
+    const ids = data.receta.map((r) => r.ingrediente_id)
+    if (new Set(ids).size !== ids.length) {
+      return { error: 'No podés repetir el mismo ingrediente en la receta' }
+    }
+    for (const line of data.receta) {
+      if (!line.ingrediente_id?.trim()) return { error: 'Ingrediente inválido en la receta' }
+      if (!Number.isFinite(line.cantidad) || line.cantidad <= 0) {
+        return { error: 'Cada ingrediente debe tener una cantidad mayor a cero' }
+      }
+      if (!line.unidad?.trim()) return { error: 'Cada línea de receta debe tener unidad' }
+    }
+
+    const { data: ingRows, error: ingErr } = await adminClient
+      .from('ingredientes')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .in('id', ids)
+
+    if (ingErr || !ingRows || ingRows.length !== ids.length) {
+      return { error: 'Uno o más ingredientes no son válidos para este negocio' }
+    }
+  }
+
+  const { data: backupRows, error: backupErr } =
+    data.receta !== undefined
+      ? await adminClient
+          .from('recetas_producto')
+          .select('ingrediente_id, cantidad, unidad, obligatorio')
+          .eq('tenant_id', tenantId)
+          .eq('producto_id', productoId)
+      : { data: null as null, error: null }
+
+  if (backupErr) {
+    console.error('[updateProductoOwner] backup receta', backupErr)
+    return { error: 'Error al preparar la actualización de la receta' }
+  }
+
+  const { error: updateError } = await adminClient
     .from('productos')
     .update({
       nombre: data.nombre.trim(),
@@ -651,7 +782,51 @@ export async function updateProductoOwner(
     .eq('id', productoId)
     .eq('tenant_id', tenantId)
 
-  if (error) return { error: 'Error al actualizar el producto. Inténtalo de nuevo.' }
+  if (updateError) return { error: 'Error al actualizar el producto. Inténtalo de nuevo.' }
+
+  if (data.receta !== undefined && producto.tiene_receta) {
+    const { error: delError } = await adminClient
+      .from('recetas_producto')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('producto_id', productoId)
+
+    if (delError) {
+      console.error('[updateProductoOwner] delete receta', delError)
+      return { error: 'Error al actualizar la receta del producto' }
+    }
+
+    const recetaItems = data.receta.map((item) => ({
+      tenant_id: tenantId,
+      producto_id: productoId,
+      ingrediente_id: item.ingrediente_id,
+      cantidad: item.cantidad,
+      unidad: item.unidad.trim(),
+      obligatorio: item.obligatorio,
+    }))
+
+    const { error: insError } = await adminClient.from('recetas_producto').insert(recetaItems)
+
+    if (insError) {
+      console.error('[updateProductoOwner] insert receta', insError)
+      if (backupRows?.length) {
+        const restore = backupRows.map((row) => ({
+          tenant_id: tenantId,
+          producto_id: productoId,
+          ingrediente_id: row.ingrediente_id,
+          cantidad: row.cantidad,
+          unidad: row.unidad ?? 'unidad',
+          obligatorio: row.obligatorio ?? true,
+        }))
+        const { error: restoreErr } = await adminClient.from('recetas_producto').insert(restore)
+        if (restoreErr) {
+          console.error('[updateProductoOwner] restore receta CRÍTICO', restoreErr)
+        }
+      }
+      return { error: 'Error al guardar la receta del producto. Los datos del producto sí se actualizaron.' }
+    }
+  }
+
   return { error: null }
 }
 
