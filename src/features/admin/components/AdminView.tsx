@@ -217,6 +217,8 @@ export const AdminView = () => {
       {/* Grid completo de inventario */}
       <InventoryGrid
         inventory={inventory}
+        totalInventoryItems={totalInventoryItems}
+        lowStockCount={lowStockItems.length}
         onOpenIngredienteModal={() => setShowIngredienteModal(true)}
         onOpenStockDrawer={() => setShowStockDrawer(true)}
         onOpenProductModal={canManageProducts ? () => setShowOwnerProductModal(true) : undefined}

@@ -23,6 +23,10 @@ export interface InventoryRecord {
   productos?: {
     nombre?: string | null
   } | null
+  /** Nombre en columna inventario (puede coincidir o no con el nombre mostrado) */
+  nombre_inventario?: string | null
+  /** Categoría del producto vinculado, si existe */
+  producto_categoria?: string | null
 }
 
 export interface ClientRanking {
