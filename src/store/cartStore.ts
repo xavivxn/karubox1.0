@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { IngredientRequirement } from '@/types/ingredients'
 import type { Cliente } from '@/types/supabase'
+import { calcularPuntos, VALOR_PUNTO_GS } from '@/features/pos/utils/pos.utils'
 
 export interface ExtraIngredientSelection extends IngredientRequirement {
   unitPrice: number
@@ -72,7 +73,7 @@ interface CartState {
   // Computed
   getTotal: () => number
   getItemCount: () => number
-  /** Calcula puntos del carrito actual: automáticos (1 pto/100 Gs) + bonus por producto */
+  /** Puntos del carrito: automáticos (5% del total, igual que al confirmar) + bonus por producto */
   getTotalPuntos: () => { puntosAuto: number; puntosExtra: number; total: number; valorGs: number }
 }
 
@@ -416,13 +417,13 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   getTotalPuntos: () => {
     const total = get().getTotal()
-    const puntosAuto = Math.floor(total / 100)
+    const puntosAuto = calcularPuntos(total)
     const puntosExtra = get().items.reduce(
       (sum, item) => sum + ((item.puntos_extra ?? 0) * item.cantidad),
       0
     )
     const totalPuntos = puntosAuto + puntosExtra
-    return { puntosAuto, puntosExtra, total: totalPuntos, valorGs: totalPuntos * 5 }
+    return { puntosAuto, puntosExtra, total: totalPuntos, valorGs: totalPuntos * VALOR_PUNTO_GS }
   }
 }))
 

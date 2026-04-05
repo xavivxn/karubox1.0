@@ -64,7 +64,7 @@ export function SalsasDrawer({ open, onClose, tenantId, onSaved }: SalsasDrawerP
         const supabase = createClient()
         const { data, error } = await supabase
           .from('ingredientes')
-          .select('id, tenant_id, slug, nombre, unidad, tipo_inventario, icono, precio_publico, stock_actual, stock_minimo, stock_minimo_sugerido, controlar_stock, descripcion, activo, permite_extra_en_carrito')
+          .select('id, tenant_id, slug, nombre, unidad, tipo_inventario, icono, precio_publico, tipo_recargo_extra, stock_actual, stock_minimo, stock_minimo_sugerido, controlar_stock, descripcion, activo, permite_extra_en_carrito')
           .eq('tenant_id', tenantId)
           .eq('activo', true)
           .order('nombre')

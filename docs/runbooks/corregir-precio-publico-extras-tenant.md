@@ -10,6 +10,15 @@ Un error frecuente al dar de alta un tenant es cargar en ese campo el **costo de
 
 **Inventario:** el descuento de stock por extras usa las cantidades de receta y los “clics” de extra según la lógica en código; ajustar precios en BD **no altera** automáticamente reglas de gramos por extra. Si además necesitás alinear stock con porciones, revisá recetas y política de negocio aparte.
 
+### Política por bandas (tier estándar vs proteína)
+
+Migración: [`database/25_extras_tipo_recargo_tenant.sql`](../../database/25_extras_tipo_recargo_tenant.sql).
+
+- `ingredientes.tipo_recargo_extra`: `estandar` | `proteina` | `NULL`. Con `NULL`, el POS usa solo `precio_publico` más el redondeo opcional (`NEXT_PUBLIC_EXTRAS_PRECIO_REDONDE_*`).
+- `tenants.extra_precio_min_estandar`, `extra_precio_max_estandar`, `extra_precio_min_proteina`: límites por local (valores por defecto típicos 2.000 / 3.000 / 6.000 Gs).
+
+El tier se asigna desde el admin al habilitar “extra en carrito” (alta de materia prima o carga de stock), o con `UPDATE` en SQL. Consulta de auditoría: [`database/queries/auditar_precios_extras_tenant.sql`](../../database/queries/auditar_precios_extras_tenant.sql).
+
 ---
 
 ## Tenant de referencia (Atlas Burger)

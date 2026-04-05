@@ -45,6 +45,7 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
   const [stockMin, setStockMin] = useState<number>(0)
   const [controlStock, setControlStock] = useState(true)
   const [permiteExtraEnCarrito, setPermiteExtraEnCarrito] = useState(false)
+  const [tipoRecargoExtra, setTipoRecargoExtra] = useState<'' | 'estandar' | 'proteina'>('')
   const [note, setNote] = useState('')
   const [currentStock, setCurrentStock] = useState<number | null>(null)
   const [currentProductId, setCurrentProductId] = useState<string | null>(null)
@@ -69,7 +70,7 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
       const { data, error } = await supabase
         .from('ingredientes')
         .select(
-          'id, tenant_id, slug, nombre, unidad, tipo_inventario, icono, precio_publico, stock_actual, stock_minimo, stock_minimo_sugerido, controlar_stock, descripcion, activo, permite_extra_en_carrito'
+          'id, tenant_id, slug, nombre, unidad, tipo_inventario, icono, precio_publico, tipo_recargo_extra, stock_actual, stock_minimo, stock_minimo_sugerido, controlar_stock, descripcion, activo, permite_extra_en_carrito'
         )
         .eq('tenant_id', tenantId)
         .eq('activo', true)
@@ -110,6 +111,7 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
       setStockMin(0)
       setControlStock(true)
       setPermiteExtraEnCarrito(false)
+      setTipoRecargoExtra('')
       setNote('')
       setErrorMessage(null)
       setSearch('')
@@ -176,6 +178,12 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
         setStockMin(Number(selectedIngredient.stock_minimo ?? selectedIngredient.stock_minimo_sugerido ?? 0))
         setControlStock(Boolean(selectedIngredient.controlar_stock ?? true))
         setPermiteExtraEnCarrito(Boolean(selectedIngredient.permite_extra_en_carrito))
+        setTipoRecargoExtra(
+          selectedIngredient.tipo_recargo_extra === 'estandar' ||
+            selectedIngredient.tipo_recargo_extra === 'proteina'
+            ? selectedIngredient.tipo_recargo_extra
+            : ''
+        )
         setLoadingInventory(false)
         return
       }
@@ -195,11 +203,23 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
         setStockMin(Number(selectedIngredient.stock_minimo ?? data.stock_minimo ?? selectedIngredient.stock_minimo_sugerido ?? 0))
         setControlStock(Boolean(data.controlar_stock))
         setPermiteExtraEnCarrito(Boolean(selectedIngredient.permite_extra_en_carrito))
+        setTipoRecargoExtra(
+          selectedIngredient.tipo_recargo_extra === 'estandar' ||
+            selectedIngredient.tipo_recargo_extra === 'proteina'
+            ? selectedIngredient.tipo_recargo_extra
+            : ''
+        )
       } else {
         setCurrentStock(Number(selectedIngredient.stock_actual ?? 0))
         setStockMin(Number(selectedIngredient.stock_minimo ?? selectedIngredient.stock_minimo_sugerido ?? 0))
         setControlStock(Boolean(selectedIngredient.controlar_stock ?? true))
         setPermiteExtraEnCarrito(Boolean(selectedIngredient.permite_extra_en_carrito))
+        setTipoRecargoExtra(
+          selectedIngredient.tipo_recargo_extra === 'estandar' ||
+            selectedIngredient.tipo_recargo_extra === 'proteina'
+            ? selectedIngredient.tipo_recargo_extra
+            : ''
+        )
       }
 
       setLoadingInventory(false)
@@ -218,10 +238,16 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
       return
     }
 
+    const tipoOriginal =
+      selectedIngredient.tipo_recargo_extra === 'estandar' ||
+      selectedIngredient.tipo_recargo_extra === 'proteina'
+        ? selectedIngredient.tipo_recargo_extra
+        : ''
     const ingredientConfigChanged =
       Boolean(selectedIngredient.permite_extra_en_carrito) !== permiteExtraEnCarrito ||
       Number(selectedIngredient.stock_minimo ?? selectedIngredient.stock_minimo_sugerido ?? 0) !== stockMin ||
-      Boolean(selectedIngredient.controlar_stock ?? true) !== controlStock
+      Boolean(selectedIngredient.controlar_stock ?? true) !== controlStock ||
+      tipoOriginal !== tipoRecargoExtra
     const hasStockMovement = operation === 'ajuste'
       ? quantity !== (currentStock ?? 0)
       : quantity > 0
@@ -242,7 +268,8 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
             stock_minimo: stockMin,
             stock_minimo_sugerido: stockMin,
             controlar_stock: controlStock,
-            permite_extra_en_carrito: permiteExtraEnCarrito
+            permite_extra_en_carrito: permiteExtraEnCarrito,
+            tipo_recargo_extra: permiteExtraEnCarrito ? tipoRecargoExtra || null : null
           })
           .eq('id', selectedIngredient.id)
           .eq('tenant_id', tenantId)
@@ -296,7 +323,8 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
           stock_minimo: stockMin,
           stock_minimo_sugerido: stockMin,
           controlar_stock: controlStock,
-          permite_extra_en_carrito: permiteExtraEnCarrito
+          permite_extra_en_carrito: permiteExtraEnCarrito,
+          tipo_recargo_extra: permiteExtraEnCarrito ? tipoRecargoExtra || null : null
         })
         .eq('id', selectedIngredient.id)
         .eq('tenant_id', tenantId)
@@ -578,13 +606,40 @@ export function InventoryDrawer({ open, onClose, tenantId, usuarioId, onSaved }:
               id="permite-extra-carrito"
               type="checkbox"
               checked={permiteExtraEnCarrito}
-              onChange={(e) => setPermiteExtraEnCarrito(e.target.checked)}
+              onChange={(e) => {
+                const on = e.target.checked
+                setPermiteExtraEnCarrito(on)
+                if (!on) setTipoRecargoExtra('')
+              }}
               className="h-5 w-5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
             />
             <label htmlFor="permite-extra-carrito" className="text-sm text-gray-600 dark:text-gray-300">
               Permitir esta materia prima como extra en carrito
             </label>
           </div>
+
+          {permiteExtraEnCarrito && (
+            <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/80 dark:bg-amber-950/20 px-4 py-3 space-y-2">
+              <label className="block text-sm font-medium text-amber-900 dark:text-amber-200">
+                Banda de precio en POS
+              </label>
+              <select
+                value={tipoRecargoExtra}
+                onChange={(e) =>
+                  setTipoRecargoExtra(e.target.value as '' | 'estandar' | 'proteina')
+                }
+                disabled={isSaving}
+                className="w-full rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40 disabled:opacity-50"
+              >
+                <option value="">Sin banda</option>
+                <option value="estandar">Est&aacute;ndar (2k–3k t&iacute;p.)</option>
+                <option value="proteina">Prote&iacute;na (~6k m&iacute;n.)</option>
+              </select>
+              <p className="text-[11px] text-amber-800/90 dark:text-amber-200/80">
+                El precio extra sigue carg&aacute;ndose en la ficha del ingrediente; la banda ajusta al rango del local.
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">

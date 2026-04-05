@@ -5,8 +5,14 @@ import { X, Loader2, Minus, Plus, Check, ChevronLeft, ChevronRight } from 'lucid
 import { useCartStore, type ComboProductItem, type CartItemCustomization } from '@/store/cartStore'
 import { fetchProductRecipe, fetchTenantIngredients } from '@/lib/api/ingredients'
 import type { IngredientDefinition, IngredientRequirement } from '@/types/ingredients'
-import { formatGuaranies, roundGuaraniesToStep } from '@/lib/utils/format'
+import { formatGuaranies } from '@/lib/utils/format'
 import { getExtrasPrecioRedondeModo, getExtrasPrecioRedondePaso } from '@/lib/env/posExtras'
+import {
+  type ExtrasPrecioTenantPolicy,
+  extrasPolicyFromTenantRow,
+  parseTipoRecargoExtra,
+  resolvePrecioExtraPOS,
+} from '@/lib/pos/extraPrecioPolicy'
 import { useTenant } from '@/contexts/TenantContext'
 
 interface ItemCustomizationDrawerProps {
@@ -24,7 +30,8 @@ function useIngredientEditor(
   tenantId: string | undefined,
   productoId: string | undefined,
   existingCustomization: CartItemCustomization | undefined,
-  isActive: boolean
+  isActive: boolean,
+  extrasPolicy: ExtrasPrecioTenantPolicy
 ) {
   const [baseRecipe, setBaseRecipe] = useState<IngredientRequirement[]>([])
   const [catalog, setCatalog] = useState<IngredientDefinition[]>([])
@@ -97,11 +104,16 @@ function useIngredientEditor(
     const mode = getExtrasPrecioRedondeModo()
     catalog.forEach((ing) => {
       const raw = ing.precio_publico ?? 0
-      map[ing.slug] =
-        step > 0 ? roundGuaraniesToStep(raw, step, mode) : raw
+      map[ing.slug] = resolvePrecioExtraPOS({
+        raw,
+        tipoRecargo: parseTipoRecargoExtra(ing.tipo_recargo_extra),
+        step,
+        mode,
+        policy: extrasPolicy,
+      })
     })
     return map
-  }, [catalog])
+  }, [catalog, extrasPolicy])
 
   const extraCostPerUnit = useMemo(() => {
     let sum = 0
@@ -380,6 +392,7 @@ function IngredientEditorUI({
 
 export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: ItemCustomizationDrawerProps) {
   const { tenant } = useTenant()
+  const extrasPolicy = useMemo(() => extrasPolicyFromTenantRow(tenant), [tenant])
   const item = useCartStore((state) => state.items.find((it) => it.id === itemId))
   const updateCustomization = useCartStore((state) => state.updateItemCustomization)
   const updateComboProductCustomization = useCartStore((state) => state.updateComboProductCustomization)
@@ -409,7 +422,8 @@ export function ItemCustomizationDrawer({ open, itemId, onClose, darkMode }: Ite
     tenant?.id,
     activeProductId,
     activeCustomization,
-    open && Boolean(activeProductId)
+    open && Boolean(activeProductId),
+    extrasPolicy
   )
 
   const { reset } = editor

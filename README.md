@@ -12,10 +12,10 @@ Sistema completo de Punto de Venta (POS) diseñado específicamente para lomiter
 
 ### 💳 **Sistema de Puntos Automático**
 
-- 1 punto por cada 100 Guaraníes de compra
-- Acreditación automática al entregar pedido
+- Acumulación: **5 %** del total de la compra en puntos (`floor(total × 0,05)`), más puntos bonus opcionales por producto
+- Canje: **1 punto = 1 Gs** de crédito (fácil de explicar al cliente)
+- Acreditación al confirmar la venta en el POS (con cliente asignado)
 - Historial completo de transacciones
-- Canje de puntos por productos
 
 ### 📦 **Gestión de Inventario**
 

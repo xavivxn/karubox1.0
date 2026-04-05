@@ -1,5 +1,8 @@
 export type IngredientUnit = 'unidad' | 'g' | 'kg' | 'ml' | 'l'
 
+/** Política POS para clamp de precio extra (columna `ingredientes.tipo_recargo_extra`). */
+export type TipoRecargoExtraIngrediente = 'estandar' | 'proteina'
+
 export interface IngredientDefinition {
   id: string
   tenant_id: string
@@ -9,6 +12,8 @@ export interface IngredientDefinition {
   tipo_inventario?: 'discreto' | 'fraccionable'
   icono: string | null
   precio_publico: number
+  /** Tier para bandas de precio en POS; null = solo precio_publico + redondeo */
+  tipo_recargo_extra?: TipoRecargoExtraIngrediente | null
   stock_actual?: number
   stock_minimo?: number
   stock_minimo_sugerido: number | null
