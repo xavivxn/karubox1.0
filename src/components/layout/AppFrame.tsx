@@ -143,7 +143,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <InactiveTenantOverlay />
       <main
         className={`flex flex-col ${isAuthLikePage ? '' : 'flex-1 min-h-0 min-w-0'} ${
-          pageInfo.fullWidth ? ((isPosPage || isKitchenPage) ? 'py-0' : 'py-4') : 'px-4 py-6'
+          isAuthLikePage
+            ? 'min-w-0 px-0'
+            : pageInfo.fullWidth
+              ? (isPosPage || isKitchenPage ? 'py-0' : 'py-4')
+              : 'px-4 py-6'
         } ${!isAuthLikePage && (isPosPage || isKitchenPage) ? 'overflow-hidden' : ''}`}
         style={isAuthLikePage ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}
       >
