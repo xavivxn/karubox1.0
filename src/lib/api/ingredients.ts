@@ -18,7 +18,7 @@ export async function fetchTenantIngredients(tenantId: string): Promise<Ingredie
   const { data, error } = await supabase
     .from('ingredientes')
     .select(
-      'id, tenant_id, slug, nombre, unidad, icono, precio_publico, stock_minimo_sugerido, descripcion, activo, permite_extra_en_carrito'
+      'id, tenant_id, slug, nombre, unidad, icono, precio_publico, tipo_recargo_extra, stock_minimo_sugerido, descripcion, activo, permite_extra_en_carrito'
     )
     .eq('tenant_id', tenantId)
     .eq('activo', true)

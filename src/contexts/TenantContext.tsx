@@ -22,6 +22,12 @@ interface Tenant {
   razon_social?: string
   /** Actividad económica del negocio */
   actividad_economica?: string
+  /** POS extras tier estándar: piso (Gs) */
+  extra_precio_min_estandar?: number | string | null
+  /** POS extras tier estándar: techo (Gs) */
+  extra_precio_max_estandar?: number | string | null
+  /** POS extras tier proteína: piso mínimo (Gs) */
+  extra_precio_min_proteina?: number | string | null
 }
 
 interface Usuario {

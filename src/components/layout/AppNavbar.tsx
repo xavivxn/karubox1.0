@@ -103,10 +103,10 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
         darkMode ? 'bg-gray-950/80 border-gray-800' : 'bg-white/80 border-orange-100'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-3 py-2.5 sm:px-4 sm:py-3 md:py-4">
-        <div className="flex flex-row items-center justify-between gap-2 md:gap-4">
+      <div className="mx-auto max-w-7xl px-1.5 py-1 sm:px-2.5 sm:py-1.5 md:py-2">
+        <div className="flex flex-row items-center justify-between gap-2 md:gap-3">
           {/* Logo + título — compacto en móvil */}
-          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 md:gap-4">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2 md:gap-3">
             <Image
               src={LOGO_SISTEMA_2026_PATH}
               alt="Sistema 2026"
@@ -117,10 +117,12 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
               priority={false}
             />
             <div className="min-w-0 flex-1">
-              <p className="mb-0.5 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest text-orange-500 sm:mb-1 sm:text-xs sm:tracking-[0.35em]">
-                <span>{LOGIN_STRINGS.LOGIN_TITLE}</span>
+              <div className="mb-0 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="text-xs font-heading font-bold tracking-tight text-orange-500 sm:text-sm md:text-base">
+                  {LOGIN_STRINGS.LOGIN_TITLE}
+                </span>
                 <PreprodBadge />
-              </p>
+              </div>
               <div className="flex items-center gap-1.5 text-xs sm:gap-2 sm:text-sm flex-wrap">
                 <span className={`truncate font-semibold sm:text-base md:text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                   {pageTitle}

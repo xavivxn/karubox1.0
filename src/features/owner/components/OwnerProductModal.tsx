@@ -9,6 +9,7 @@ import {
   listProductosOwner,
   createProductoOwner,
 } from '@/app/actions/owner'
+import { calcularPuntos } from '@/features/pos/utils/pos.utils'
 
 interface RecetaItem {
   ingrediente_id: string
@@ -542,7 +543,7 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                   <span className="text-xs text-yellow-600 dark:text-yellow-400 font-normal">(opcional)</span>
                 </div>
                 <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                  Además de la acumulación automática (1 pto / 100 Gs), podés asignar puntos extra para incentivar este producto.
+                  Además de la acumulación automática (5 % del total del pedido), podés asignar puntos extra para incentivar este producto.
                 </p>
                 <div className="flex rounded-xl border border-yellow-300 dark:border-yellow-700 bg-white dark:bg-gray-800 overflow-hidden focus-within:border-yellow-500 focus-within:ring-2 focus-within:ring-yellow-400/20 transition">
                   <span className="flex items-center px-3.5 text-sm font-semibold text-yellow-600 border-r border-yellow-200 dark:border-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 select-none whitespace-nowrap">pts</span>
@@ -560,7 +561,9 @@ export function OwnerProductModal({ open, onClose, tenantId, onSaved }: OwnerPro
                 </div>
                 {puntosExtra > 0 && (
                   <p className="text-xs font-medium text-yellow-700 dark:text-yellow-300">
-                    Este producto dará {puntosExtra} pts bonus + los puntos automáticos por precio (≈ {Math.floor((parseInt(precio.replace(/\./g,''),10)||0) / 100)} pts)
+                    Este producto dará {puntosExtra} pts bonus + automáticos por precio (≈{' '}
+                    {calcularPuntos(parseInt(precio.replace(/\./g, ''), 10) || 0)} pts si el pedido fuera solo 1× esta
+                    unidad a este precio).
                   </p>
                 )}
               </div>
