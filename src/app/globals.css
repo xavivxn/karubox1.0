@@ -34,6 +34,12 @@
     --scrollbar-color-track: rgb(107 114 128);
     --scrollbar-width: thin;
     --scrollbar-width-legacy: 10px;
+    --primary-light: 22 89.7% 58.2%;
+    --primary-dark: 21 88.7% 41.8%;
+    --secondary-light: 35 100% 63.9%;
+    --secondary-dark: 33 91.1% 43.9%;
+    --accent-light: 46 100% 65.5%;
+    --accent-dark: 38 100% 50%;
   }
 
   html.dark,
@@ -68,6 +74,18 @@
     --scrollbar-width: thin;
     --scrollbar-width-legacy: 10px;
   }
+}
+
+.landing-theme {
+  --primary: 22 88.1% 49.6%;
+  --primary-light: 22 89.7% 58.2%;
+  --primary-dark: 21 88.7% 41.8%;
+  --secondary: 32 93.1% 54.3%;
+  --secondary-light: 35 100% 63.9%;
+  --secondary-dark: 33 91.1% 43.9%;
+  --accent: 45 100% 51.4%;
+  --accent-light: 46 100% 65.5%;
+  --accent-dark: 38 100% 50%;
 }
 
 @layer base {
@@ -360,14 +378,9 @@
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
 }
-@keyframes loginFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
 .animate-login-card { animation: loginCardIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .animate-login-panel { animation: loginPanelSlide 0.45s ease-out 0.1s both; }
 .animate-login-form { animation: loginFormSlide 0.45s ease-out 0.15s both; }
-.animate-login-float { animation: loginFloat 3s ease-in-out infinite; }
 .animate-login-field-1 { animation: fadeInUp 0.4s ease-out 0.2s both; }
 .animate-login-field-2 { animation: fadeInUp 0.4s ease-out 0.3s both; }
 .animate-login-field-3 { animation: fadeInUp 0.4s ease-out 0.4s both; }

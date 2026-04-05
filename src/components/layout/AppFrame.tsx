@@ -15,7 +15,7 @@ type PageInfo = {
   fullWidth?: boolean
 }
 
-const NAV_EXCLUDED_PATHS = ['/']
+const NAV_EXCLUDED_PATHS = ['/', ROUTES.PUBLIC.LOGIN]
 const NAV_EXCLUDED_PREFIXES = ['/carta/']
 
 const PAGE_MAP: Array<{ test: (pathname: string) => boolean; info: PageInfo }> = [
@@ -106,44 +106,54 @@ export function AppFrame({ children }: { children: ReactNode }) {
     PAGE_MAP.find((entry) => entry.test(pathname))?.info ??
     DEFAULT_INFO
 
-  const isLoginPage = pathname === '/'
+  const isLandingPage = pathname === '/'
+  const isLoginPage = pathname === ROUTES.PUBLIC.LOGIN
   const isPublicCartaPage = pathname.startsWith('/carta/')
+  const isAuthLikePage = isLandingPage || isLoginPage || isPublicCartaPage
+
+  const frameBackgroundClass = isLandingPage
+    ? THEME_CONFIG.LIGHT.background
+    : hideNavbar
+      ? THEME_CONFIG.DARK.background
+      : darkMode
+        ? THEME_CONFIG.DARK.background
+        : THEME_CONFIG.LIGHT.background
+
+  const frameTextClass = isLandingPage
+    ? THEME_CONFIG.LIGHT.text
+    : darkMode
+      ? THEME_CONFIG.DARK.text
+      : THEME_CONFIG.LIGHT.text
 
   return (
     <div
-      className={`flex flex-col ${
-        isLoginPage || isPublicCartaPage
+      className={`flex w-full min-w-0 flex-col ${
+        isAuthLikePage
           ? 'min-h-[100dvh] min-h-screen overflow-y-auto'
           : isPosPage
             ? 'h-[100dvh] min-h-0 overflow-hidden'
             : isKitchenPage
               ? 'h-[100dvh] min-h-0 overflow-hidden'
             : 'min-h-screen'
-      } ${
-        hideNavbar
-          ? THEME_CONFIG.DARK.background
-          : darkMode
-          ? THEME_CONFIG.DARK.background
-          : THEME_CONFIG.LIGHT.background
-      } ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+      } ${frameBackgroundClass} ${frameTextClass}`}
     >
       {!hideNavbar && (
         <AppNavbar pageTitle={pageInfo.title} pageSubtitle={pageInfo.subtitle} />
       )}
       <InactiveTenantOverlay />
       <main
-        className={`flex flex-col ${isLoginPage || isPublicCartaPage ? '' : 'flex-1 min-h-0 min-w-0'} ${
+        className={`flex flex-col ${isAuthLikePage ? '' : 'flex-1 min-h-0 min-w-0'} ${
           pageInfo.fullWidth ? ((isPosPage || isKitchenPage) ? 'py-0' : 'py-4') : 'px-4 py-6'
-        } ${!isLoginPage && !isPublicCartaPage && (isPosPage || isKitchenPage) ? 'overflow-hidden' : ''}`}
-        style={isLoginPage || isPublicCartaPage ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}
+        } ${!isAuthLikePage && (isPosPage || isKitchenPage) ? 'overflow-hidden' : ''}`}
+        style={isAuthLikePage ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}
       >
-        {pageInfo.fullWidth ? (
+        {pageInfo.fullWidth || isLandingPage ? (
           children
         ) : (
           <div className="w-full min-w-0 max-w-7xl mx-auto space-y-10 overflow-x-hidden">{children}</div>
         )}
       </main>
-      {!isWorkspacePage && (
+      {!isWorkspacePage && !isLandingPage && (
         <AppFooter
           isDark={hideNavbar || darkMode}
           variant={isLoginPage ? 'login' : 'default'}

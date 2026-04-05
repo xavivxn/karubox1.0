@@ -1,7 +1,9 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { isMarketingLightDomPath } from '@/config/routes'
 import { signOut as signOutAction } from '@/app/actions/auth'
 import { User } from '@supabase/supabase-js'
 import { prefetchPOSCatalog } from '@/features/pos/lib/catalogCache'
@@ -51,6 +53,7 @@ interface TenantContextType {
 const TenantContext = createContext<TenantContextType | undefined>(undefined)
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [tenant, setTenant] = useState<Tenant | null>(null)
@@ -66,12 +69,16 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   // Guardar dark mode en localStorage y aplicar clase al documento
   useEffect(() => {
     localStorage.setItem('darkMode', darkMode.toString())
+    if (isMarketingLightDomPath(pathname)) {
+      document.documentElement.classList.remove('dark')
+      return
+    }
     if (darkMode) {
       document.documentElement.classList.add('dark')
     } else {
       document.documentElement.classList.remove('dark')
     }
-  }, [darkMode])
+  }, [darkMode, pathname])
 
   const toggleDarkMode = () => {
     setDarkMode(prev => !prev)
