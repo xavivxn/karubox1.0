@@ -14,6 +14,7 @@ export interface Ingrediente {
   stock_minimo: number
   icono?: string
   precio_publico?: number
+  tipo_recargo_extra?: 'estandar' | 'proteina' | null
   controlar_stock: boolean
   permite_extra_en_carrito?: boolean
   descripcion?: string

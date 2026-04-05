@@ -29,6 +29,8 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
   const [precioPublico, setPrecioPublico] = useState('')
   const [controlarStock, setControlarStock] = useState(true)
   const [permiteExtraEnCarrito, setPermiteExtraEnCarrito] = useState(false)
+  /** '' = sin tier (solo precio + redondeo); 'estandar' | 'proteina' = bandas tenant */
+  const [tipoRecargoExtra, setTipoRecargoExtra] = useState<'' | 'estandar' | 'proteina'>('')
   const [icono, setIcono] = useState('')
 
   // Detectar cuando el componente está montado en el cliente
@@ -48,6 +50,7 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
       setPrecioPublico('')
       setControlarStock(true)
       setPermiteExtraEnCarrito(false)
+      setTipoRecargoExtra('')
       setIcono('')
       setSuccessMessage(null)
       setErrorMessage(null)
@@ -105,6 +108,8 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
         precio_publico: parseInt(precioPublico.replace(/\./g, ''), 10) || 0,
         controlar_stock: controlarStock,
         permite_extra_en_carrito: permiteExtraEnCarrito,
+        tipo_recargo_extra:
+          permiteExtraEnCarrito && tipoRecargoExtra ? tipoRecargoExtra : null,
         icono: icono.trim() || undefined,
         activo: true
       }
@@ -474,7 +479,11 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
                 <input
                   type="checkbox"
                   checked={permiteExtraEnCarrito}
-                  onChange={(e) => setPermiteExtraEnCarrito(e.target.checked)}
+                  onChange={(e) => {
+                    const on = e.target.checked
+                    setPermiteExtraEnCarrito(on)
+                    if (!on) setTipoRecargoExtra('')
+                  }}
                   disabled={isSaving}
                   className="sr-only peer"
                 />
@@ -490,6 +499,30 @@ export function IngredienteModal({ open, onClose, tenantId, onSaved }: Ingredien
                 </p>
               </div>
             </label>
+
+            {permiteExtraEnCarrito && (
+              <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/80 dark:bg-amber-950/20 px-4 py-3 space-y-2">
+                <label className="block text-sm font-medium text-amber-900 dark:text-amber-200">
+                  Banda de precio en POS (extras)
+                </label>
+                <select
+                  value={tipoRecargoExtra}
+                  onChange={(e) =>
+                    setTipoRecargoExtra(e.target.value as '' | 'estandar' | 'proteina')
+                  }
+                  disabled={isSaving}
+                  className="w-full rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40 disabled:opacity-50"
+                >
+                  <option value="">Sin banda (solo precio cargado + redondeo .env)</option>
+                  <option value="estandar">Est&aacute;ndar (t&iacute;p. 2.000–3.000 Gs seg&uacute;n tenant)</option>
+                  <option value="proteina">Prote&iacute;na / extra carne (m&iacute;n. ~6.000 Gs seg&uacute;n tenant)</option>
+                </select>
+                <p className="text-[11px] text-amber-800/90 dark:text-amber-200/80">
+                  Los rangos se configuran por local en la tabla <code className="text-[10px]">tenants</code> (migraci&oacute;n 25). Sin banda, el POS usa &uacute;nicamente el precio extra y{' '}
+                  <code className="text-[10px]">NEXT_PUBLIC_EXTRAS_PRECIO_REDONDE_*</code>.
+                </p>
+              </div>
+            )}
           </section>
         </div>
 

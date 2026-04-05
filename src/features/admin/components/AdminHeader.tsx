@@ -86,7 +86,7 @@ export const AdminHeader = ({
           Operación integral de {tenantName}
         </h1>
         <p className="text-gray-500 dark:text-gray-300">
-          Ka&apos;u Manager centraliza ventas, inventario, clientes y caja en un único panel.
+          KarúBox centraliza ventas, inventario, clientes y caja en un único panel.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
           <div className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
