@@ -5,6 +5,7 @@ import FeaturesSection from "@/features/landing/FeaturesSection";
 import HowItWorksSection from "@/features/landing/HowItWorksSection";
 import SetupRequirementsSection from "@/features/landing/SetupRequirementsSection";
 import BenefitsSection from "@/features/landing/BenefitsSection";
+import PricingSection from "@/features/landing/PricingSection";
 import FinalCTASection from "@/features/landing/FinalCTASection";
 import LocalTrustSection from "@/features/landing/LocalTrustSection";
 import Footer from "@/features/landing/Footer";
@@ -40,6 +41,7 @@ export default function LandingPage() {
       <HowItWorksSection />
       <SetupRequirementsSection />
       <BenefitsSection />
+      <PricingSection />
       <FinalCTASection />
       <LocalTrustSection />
       <Footer />

@@ -1,7 +1,16 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ShoppingCart, BarChart3, FileText, Users, ChefHat, Loader2, Store, Wallet } from 'lucide-react'
+import {
+  ShoppingCart,
+  BarChart3,
+  FileText,
+  Users,
+  ChefHat,
+  Loader2,
+  Store,
+  Wallet,
+} from 'lucide-react'
 
 export type AppDashboardCardColor = 'orange' | 'blue' | 'green' | 'purple' | 'red'
 

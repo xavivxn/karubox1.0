@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/config/routes";
-import { Menu, X } from "lucide-react";
+import { Loader2, Menu, X } from "lucide-react";
 import gsap from "gsap";
 import { getWhatsAppHref } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
@@ -31,11 +31,31 @@ export default function Navigation() {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [loginPending, setLoginPending] = useState(false);
   const logoRef = useRef<HTMLDivElement>(null);
+
+  const handleLoginClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (loginPending) {
+      e.preventDefault();
+      return;
+    }
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+      return;
+    }
+    setLoginPending(true);
+    setIsMobileMenuOpen(false);
+  };
 
   useEffect(() => {
     router.prefetch(LOGIN_HREF);
   }, [router]);
+
+  /** Si la navegación no termina, volver a habilitar el botón */
+  useEffect(() => {
+    if (!loginPending) return;
+    const t = window.setTimeout(() => setLoginPending(false), 12_000);
+    return () => window.clearTimeout(t);
+  }, [loginPending]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -140,13 +160,35 @@ export default function Navigation() {
             >
               Beneficios
             </button>
+            <button
+              onClick={() => scrollToSection("precio")}
+              className="text-gray-700 dark:text-gray-300 hover:text-primary transition-colors"
+            >
+              Precio
+            </button>
             <div className="flex items-center gap-4">
               <Link
                 href={LOGIN_HREF}
                 prefetch
-                className={navLoginOutlineClass}
+                onClick={handleLoginClick}
+                aria-busy={loginPending}
+                className={cn(
+                  navLoginOutlineClass,
+                  "inline-flex min-w-[11.5rem] items-center justify-center gap-2",
+                  loginPending && "pointer-events-none opacity-90"
+                )}
               >
-                Iniciar sesión
+                {loginPending ? (
+                  <>
+                    <Loader2
+                      className="h-5 w-5 shrink-0 animate-spin"
+                      aria-hidden
+                    />
+                    <span>Cargando…</span>
+                  </>
+                ) : (
+                  "Iniciar sesión"
+                )}
               </Link>
               <a
                 href={waHref}
@@ -199,14 +241,35 @@ export default function Navigation() {
             >
               Beneficios
             </button>
+            <button
+              onClick={() => scrollToSection("precio")}
+              className="block w-full text-left text-gray-700 dark:text-gray-300 hover:text-primary transition-colors py-2"
+            >
+              Precio
+            </button>
             <div className="flex flex-col gap-4 pt-1">
               <Link
                 href={LOGIN_HREF}
                 prefetch
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={cn(navLoginOutlineClass, "w-full text-xl")}
+                onClick={handleLoginClick}
+                aria-busy={loginPending}
+                className={cn(
+                  navLoginOutlineClass,
+                  "inline-flex w-full items-center justify-center gap-2 text-xl",
+                  loginPending && "pointer-events-none opacity-90"
+                )}
               >
-                Iniciar sesión
+                {loginPending ? (
+                  <>
+                    <Loader2
+                      className="h-5 w-5 shrink-0 animate-spin"
+                      aria-hidden
+                    />
+                    <span>Cargando…</span>
+                  </>
+                ) : (
+                  "Iniciar sesión"
+                )}
               </Link>
               <a
                 href={waHref}
