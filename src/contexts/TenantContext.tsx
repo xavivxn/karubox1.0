@@ -1,14 +1,15 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { isMarketingLightDomPath } from '@/config/routes'
+import { getLogoutRoute } from '@/config'
 import { signOut as signOutAction } from '@/app/actions/auth'
 import { User } from '@supabase/supabase-js'
 import { prefetchPOSCatalog } from '@/features/pos/lib/catalogCache'
 
-interface Tenant {
+export interface Tenant {
   id: string
   nombre: string
   slug: string
@@ -30,6 +31,8 @@ interface Tenant {
   extra_precio_max_estandar?: number | string | null
   /** POS extras tier proteína: piso mínimo (Gs) */
   extra_precio_min_proteina?: number | string | null
+  /** Retorno en puntos sobre ventas: 1, 5 o 10 (% del total). */
+  puntos_retorno_pct?: number
 }
 
 interface Usuario {
@@ -54,6 +57,8 @@ interface TenantContextType {
   isCocinero: boolean
   isRepartidor: boolean
   isTenantActive: boolean
+  /** Vuelve a cargar usuario + tenant desde Supabase (p. ej. tras cambiar configuración). */
+  reloadTenant: () => Promise<void>
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined)
@@ -90,37 +95,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     setDarkMode(prev => !prev)
   }
 
-  useEffect(() => {
-    const supabase = createClient()
-
-    // Verificar sesión actual
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        loadUserData(session.user.id)
-      } else {
-        setLoading(false)
-      }
-    })
-
-    // Escuchar cambios de autenticación
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        loadUserData(session.user.id)
-      } else {
-        setUsuario(null)
-        setTenant(null)
-        setLoading(false)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const loadUserData = async (authUserId: string) => {
+  const loadUserData = useCallback(async (authUserId: string) => {
     try {
       setLoading(true)
       const supabase = createClient()
@@ -182,12 +157,51 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  const reloadTenant = useCallback(async () => {
+    const supabase = createClient()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    const uid = session?.user?.id
+    if (uid) {
+      await loadUserData(uid)
+    }
+  }, [loadUserData])
+
+  useEffect(() => {
+    const supabase = createClient()
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        loadUserData(session.user.id)
+      } else {
+        setLoading(false)
+      }
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        loadUserData(session.user.id)
+      } else {
+        setUsuario(null)
+        setTenant(null)
+        setLoading(false)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [loadUserData])
 
   const signOut = async () => {
     await signOutAction()
-    // Forzar recarga completa para sincronizar cookies
-    window.location.href = '/'
+    // Recarga completa para sincronizar cookies de sesión (Supabase SSR)
+    window.location.href = getLogoutRoute()
   }
 
   const value: TenantContextType = {
@@ -203,6 +217,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     isCocinero: usuario?.rol === 'cocinero',
     isRepartidor: usuario?.rol === 'repartidor',
     isTenantActive: tenant?.activo ?? true,
+    reloadTenant,
   }
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>

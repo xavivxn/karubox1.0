@@ -5,21 +5,21 @@ import { getClientePorId, actualizarPuntosCliente } from './clientes'
 /**
  * Calcular puntos según monto usando la función de base de datos
  */
-export async function calcularPuntos(monto: number, diaSemana?: number) {
+export async function calcularPuntos(monto: number, diaSemana?: number, tenantId?: string | null) {
   const supabase = createClient()
   const dia = diaSemana ?? new Date().getDay()
-  
+
   const { data, error } = await supabase.rpc('calcular_puntos', {
     monto,
-    dia_semana: dia
+    dia_semana: dia,
+    p_tenant_id: tenantId ?? null,
   })
-  
+
   if (error) {
-    // Fallback: cálculo simple si la función falla
     console.warn('Error al calcular puntos con función DB:', error)
     return Math.floor(monto * 0.05)
   }
-  
+
   return data
 }
 

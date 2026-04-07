@@ -110,6 +110,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const isLoginPage = pathname === ROUTES.PUBLIC.LOGIN
   const isPublicCartaPage = pathname.startsWith('/carta/')
   const isAuthLikePage = isLandingPage || isLoginPage || isPublicCartaPage
+  /** Login/carta: main crece para dejar el footer al fondo del viewport (sticky visual). */
+  const mainFillsViewportAboveFooter =
+    isAuthLikePage && !isLandingPage
 
   const frameBackgroundClass = isLandingPage
     ? THEME_CONFIG.LIGHT.background
@@ -142,7 +145,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
       )}
       <InactiveTenantOverlay />
       <main
-        className={`flex flex-col ${isAuthLikePage ? '' : 'flex-1 min-h-0 min-w-0'} ${
+        className={`flex flex-col ${
+          mainFillsViewportAboveFooter || !isAuthLikePage
+            ? 'flex-1 min-h-0 min-w-0'
+            : ''
+        } ${
           isAuthLikePage
             ? 'min-w-0 px-0'
             : pageInfo.fullWidth
@@ -151,7 +158,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         } ${!isAuthLikePage && (isPosPage || isKitchenPage) ? 'overflow-hidden' : ''}`}
         style={isAuthLikePage ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}
       >
-        {pageInfo.fullWidth || isLandingPage ? (
+        {pageInfo.fullWidth || isLandingPage || isLoginPage ? (
           children
         ) : (
           <div className="w-full min-w-0 max-w-7xl mx-auto space-y-10 overflow-x-hidden">{children}</div>

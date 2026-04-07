@@ -9,7 +9,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import type { Cliente } from '@/types/supabase'
 import type { Producto } from '../types/pos.types'
 import { normalizarParaBusqueda } from '@/features/clientes/utils/clientes.utils'
-import { VALOR_PUNTO_GS } from '../utils/pos.utils'
+import { normalizePuntosRetornoPct, VALOR_PUNTO_GS } from '../utils/pos.utils'
 import { formatGuaranies } from '@/lib/utils/format'
 import { orderService } from '../services/orderService'
 import type { TipoPedido, FeedbackState, FeedbackDetail } from '../types/pos.types'
@@ -228,6 +228,8 @@ export default function CanjePuntosModal({ open, onClose, darkMode, productos }:
       const total = canjeItems.reduce((s, i) => s + (i.subtotal ?? 0), 0)
       const tipo: TipoPedido = tipoCanje
 
+      const puntosRetornoPct = normalizePuntosRetornoPct(tenant.puntos_retorno_pct)
+
       const result = await orderService.confirmOrder({
         tenantId: tenant.id,
         usuarioId: usuario.id,
@@ -240,6 +242,7 @@ export default function CanjePuntosModal({ open, onClose, darkMode, productos }:
         emitirFactura: false,
         facturaALNombreDelCliente: false,
         facturaMostrarNombreYCI: false,
+        puntosRetornoPct,
       })
 
       const details: FeedbackDetail[] = result.successDetails ?? []

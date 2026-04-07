@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ROUTES } from "@/config/routes";
 import { Menu, X } from "lucide-react";
 import gsap from "gsap";
 import { getWhatsAppHref } from "@/lib/whatsapp";
@@ -23,10 +25,17 @@ const navLoginOutlineClass = cn(
   "dark:focus-visible:ring-offset-gray-900"
 );
 
+const LOGIN_HREF = ROUTES.PUBLIC.LOGIN;
+
 export default function Navigation() {
+  const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const logoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    router.prefetch(LOGIN_HREF);
+  }, [router]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -132,7 +141,11 @@ export default function Navigation() {
               Beneficios
             </button>
             <div className="flex items-center gap-4">
-              <Link href="/login" className={navLoginOutlineClass}>
+              <Link
+                href={LOGIN_HREF}
+                prefetch
+                className={navLoginOutlineClass}
+              >
                 Iniciar sesión
               </Link>
               <a
@@ -188,7 +201,8 @@ export default function Navigation() {
             </button>
             <div className="flex flex-col gap-4 pt-1">
               <Link
-                href="/login"
+                href={LOGIN_HREF}
+                prefetch
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(navLoginOutlineClass, "w-full text-xl")}
               >

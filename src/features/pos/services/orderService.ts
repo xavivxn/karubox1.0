@@ -5,13 +5,15 @@ import type { CartItem } from '@/store/cartStore'
 import type { Cliente } from '@/types/supabase'
 import type { TipoPedido, FeedbackDetail } from '../types/pos.types'
 import {
-  calcularPuntos,
+  calcularPuntosAutomaticos,
+  normalizePuntosRetornoPct,
   formatTipoPedido,
   formatItemModificacionesForTicket,
   clienteTieneRucParaFactura,
   RECEPTOR_FACTURA_GENERICO_NOMBRE,
   RECEPTOR_FACTURA_GENERICO_RUC,
   RECEPTOR_FACTURA_GENERICO_CI,
+  type PuntosRetornoPct,
 } from '../utils/pos.utils'
 import { formatGuaranies } from '@/lib/utils/format'
 import { printService } from './printService'
@@ -44,6 +46,8 @@ interface ConfirmOrderParams {
    * Ignorado si `facturaALNombreDelCliente` es true.
    */
   facturaMostrarNombreYCI?: boolean
+  /** % entero (1, 5 o 10) de retorno en puntos sobre el total cobrado. */
+  puntosRetornoPct: PuntosRetornoPct
 }
 
 export const orderService = {
@@ -61,7 +65,10 @@ export const orderService = {
       emitirFactura = true,
       facturaALNombreDelCliente,
       facturaMostrarNombreYCI = false,
+      puntosRetornoPct,
     } = params
+
+    const retornoPct = normalizePuntosRetornoPct(puntosRetornoPct)
 
     if (!tipo) {
       throw new Error('El tipo de pedido es requerido')
@@ -84,7 +91,7 @@ export const orderService = {
       })
       .map(({ item }) => item)
 
-    const puntosAuto = calcularPuntos(total)
+    const puntosAuto = calcularPuntosAutomaticos(total, retornoPct)
     const puntosBonus = items.reduce((sum, item) => sum + ((item.puntos_extra ?? 0) * item.cantidad), 0)
     const puntosGenerados = puntosAuto + puntosBonus
 
