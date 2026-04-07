@@ -105,8 +105,30 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .select(`
-          *,
-          tenants!inner (*)
+          id,
+          tenant_id,
+          nombre,
+          email,
+          rol,
+          activo,
+          tenants!inner (
+            id,
+            nombre,
+            slug,
+            logo_url,
+            direccion,
+            telefono,
+            email,
+            config_impresion,
+            activo,
+            ruc,
+            razon_social,
+            actividad_economica,
+            extra_precio_min_estandar,
+            extra_precio_max_estandar,
+            extra_precio_min_proteina,
+            puntos_retorno_pct
+          )
         `)
         .eq('auth_user_id', authUserId)
         .eq('is_deleted', false)
@@ -148,10 +170,16 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         activo: userData.activo,
       })
 
-      setTenant(userData.tenants as Tenant)
-      console.log('✅ Tenant cargado:', userData.tenants)
+      const tenantRow = Array.isArray(userData.tenants)
+        ? userData.tenants[0]
+        : userData.tenants
+      if (!tenantRow) {
+        throw new Error('Tenant no encontrado para el usuario')
+      }
+      setTenant(tenantRow as Tenant)
+      console.log('✅ Tenant cargado:', tenantRow)
       // Única carga del catálogo POS (categorías + productos) por sesión; el POS solo lee de cache
-      prefetchPOSCatalog((userData.tenants as Tenant).id)
+      prefetchPOSCatalog((tenantRow as Tenant).id)
     } catch (error) {
       console.error('❌ Error cargando datos del usuario:', error)
     } finally {

@@ -33,9 +33,8 @@ export function usePOSData() {
 
     async function loadData() {
       try {
-        const [cats, prods, comboMap, salsas] = await Promise.all([
-          posService.loadCategorias(tenantId),
-          posService.loadProductos(tenantId),
+        const [{ categorias: cats, productos: prods }, comboMap, salsas] = await Promise.all([
+          posService.loadCatalog(tenantId),
           posService.loadComboItems(tenantId),
           posService.loadSauceProducts(tenantId).catch((): SauceProduct[] => [])
         ])

@@ -10,6 +10,13 @@ interface ComboItemRow {
   producto: { id: string; nombre: string; tiene_receta: boolean }
 }
 
+interface CategoriaRow {
+  id: string
+  nombre: string
+  orden: number
+  mostrar_en_pos: boolean | null
+}
+
 /** Map producto_id -> total unidades vendidas (pedidos no cancelados) */
 async function loadVentasPorProducto(tenantId: string): Promise<Map<string, number>> {
   const supabase = createClient()
@@ -39,33 +46,15 @@ async function loadVentasPorCategoria(tenantId: string): Promise<Map<string, num
 }
 
 export const posService = {
-  async loadCategorias(tenantId: string): Promise<Categoria[]> {
+  async loadCatalog(tenantId: string): Promise<{ categorias: Categoria[]; productos: Producto[] }> {
     const supabase = createClient()
-    const [catRes, ventasMap] = await Promise.all([
+
+    const [catRes, prodRes, ventasCategoria, ventasProducto] = await Promise.all([
       supabase
         .from('categorias')
         .select('id,nombre,orden,mostrar_en_pos')
         .eq('tenant_id', tenantId)
-        .eq('activa', true)
-        .order('orden'),
-      loadVentasPorCategoria(tenantId)
-    ])
-    if (catRes.error) throw catRes.error
-    const categorias = ((catRes.data || []) as Categoria[]).filter((c) => c.mostrar_en_pos !== false)
-    // Más pedidos primero; mismo nivel: respetar orden luego nombre
-    categorias.sort((a, b) => {
-      const va = ventasMap.get(a.id) ?? 0
-      const vb = ventasMap.get(b.id) ?? 0
-      if (vb !== va) return vb - va
-      if (a.orden !== b.orden) return a.orden - b.orden
-      return (a.nombre || '').localeCompare(b.nombre || '')
-    })
-    return categorias
-  },
-
-  async loadProductos(tenantId: string): Promise<Producto[]> {
-    const supabase = createClient()
-    const [prodRes, ventasMap, catVis] = await Promise.all([
+        .eq('activa', true),
       supabase
         .from('productos')
         .select('id,nombre,descripcion,precio,categoria_id,disponible,tiene_receta,puntos_extra')
@@ -73,26 +62,54 @@ export const posService = {
         .eq('disponible', true)
         .neq('is_deleted', true)
         .order('nombre'),
+      loadVentasPorCategoria(tenantId),
       loadVentasPorProducto(tenantId),
-      supabase.from('categorias').select('id,mostrar_en_pos').eq('tenant_id', tenantId),
     ])
+
+    if (catRes.error) throw catRes.error
     if (prodRes.error) throw prodRes.error
-    if (catVis.error) throw catVis.error
+
+    const categoriaRows = (catRes.data || []) as CategoriaRow[]
+    const categorias: Categoria[] = categoriaRows
+      .filter((c) => c.mostrar_en_pos !== false)
+      .map((c) => ({
+        ...c,
+        mostrar_en_pos: c.mostrar_en_pos ?? true,
+      }))
+    categorias.sort((a, b) => {
+      const va = ventasCategoria.get(a.id) ?? 0
+      const vb = ventasCategoria.get(b.id) ?? 0
+      if (vb !== va) return vb - va
+      if (a.orden !== b.orden) return a.orden - b.orden
+      return (a.nombre || '').localeCompare(b.nombre || '')
+    })
+
     const hiddenCatIds = new Set(
-      (catVis.data || [])
-        .filter((row: { mostrar_en_pos: boolean | null }) => row.mostrar_en_pos === false)
-        .map((row: { id: string }) => row.id)
+      categoriaRows
+        .filter((row) => row.mostrar_en_pos === false)
+        .map((row) => row.id)
     )
+
     const productos = ((prodRes.data || []) as Producto[]).filter(
       (p) => !p.categoria_id || !hiddenCatIds.has(p.categoria_id)
     )
-    // Más pedidos primero; mismo nivel: orden por nombre
     productos.sort((a, b) => {
-      const va = ventasMap.get(a.id) ?? 0
-      const vb = ventasMap.get(b.id) ?? 0
+      const va = ventasProducto.get(a.id) ?? 0
+      const vb = ventasProducto.get(b.id) ?? 0
       if (vb !== va) return vb - va
       return (a.nombre || '').localeCompare(b.nombre || '')
     })
+
+    return { categorias, productos }
+  },
+
+  async loadCategorias(tenantId: string): Promise<Categoria[]> {
+    const { categorias } = await this.loadCatalog(tenantId)
+    return categorias
+  },
+
+  async loadProductos(tenantId: string): Promise<Producto[]> {
+    const { productos } = await this.loadCatalog(tenantId)
     return productos
   },
 
