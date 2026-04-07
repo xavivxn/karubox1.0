@@ -15,15 +15,15 @@ export default function WhatsAppFloat() {
   const href = getWhatsAppHref();
 
   return (
-    <div className="fixed bottom-[6.25rem] right-4 z-[100] flex flex-col items-end gap-1.5 sm:bottom-5 sm:right-5 sm:gap-2 md:bottom-5">
+    <div className="fixed bottom-[6.25rem] right-4 z-[100] flex flex-row items-center gap-2 sm:bottom-5 sm:right-5 md:bottom-5">
       <AnimatePresence>
         {showTip && (
           <motion.div
-            initial={{ opacity: 0, x: 8, scale: 0.95 }}
+            initial={{ opacity: 0, x: 12, scale: 0.95 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 8 }}
+            exit={{ opacity: 0, x: 12 }}
             transition={{ duration: 0.25 }}
-            className="max-w-[148px] sm:max-w-[220px] rounded-md sm:rounded-lg bg-white/95 dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-[11px] leading-snug sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 shadow-md sm:shadow-lg border border-gray-200 dark:border-gray-600"
+            className="max-w-[min(148px,calc(100vw-7rem))] sm:max-w-[220px] shrink rounded-md sm:rounded-lg bg-white/95 dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-[11px] leading-snug sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 shadow-md sm:shadow-lg border border-gray-200 dark:border-gray-600"
             role="status"
           >
             ¿Dudas? Escríbeme aquí
@@ -35,7 +35,7 @@ export default function WhatsAppFloat() {
         target="_blank"
         rel="noopener noreferrer"
         onMouseEnter={() => setShowTip(true)}
-        className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#25D366]"
+        className="shrink-0 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#25D366]"
         style={{ backgroundColor: "#25D366" }}
         aria-label="Escribir por WhatsApp a KarúBox"
       >

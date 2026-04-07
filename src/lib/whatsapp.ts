@@ -3,7 +3,7 @@ const DEFAULT_MESSAGE =
 
 /** Número en formato internacional sin + (ej. 595981234567). Configurar NEXT_PUBLIC_WHATSAPP_NUMBER en .env.local */
 export function getWhatsAppHref(): string {
-  const raw = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "595000000000";
+  const raw = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "595982906021";
   const n = raw.replace(/\D/g, "");
   const text = encodeURIComponent(DEFAULT_MESSAGE);
   return `https://wa.me/${n}?text=${text}`;

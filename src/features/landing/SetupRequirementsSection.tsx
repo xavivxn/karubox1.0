@@ -14,13 +14,13 @@ const requirements = [
     icon: Printer,
     title: "Impresora térmica Epson",
     description:
-      "Para tickets de cocina y comandas. Si tenés otro modelo térmico, consultanos por compatibilidad.",
+      "Conectada por USB o red a tu PC o laptop central en el local. Tomás el pedido desde donde quieras; el agente imprime en esa impresora. Otros modelos térmicos: consultanos.",
   },
   {
     icon: Wifi,
     title: "WiFi estable",
     description:
-      "Internet en el local para sincronizar ventas, inventario y puntos de fidelidad en tiempo real.",
+      "Red en el local para sincronizar pedidos con la PC central y que la impresión remota llegue a la impresora conectada ahí.",
   },
 ];
 

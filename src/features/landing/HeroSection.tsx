@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import Image from "next/image";
 import {
   motion,
   useReducedMotion,
@@ -13,9 +12,10 @@ import {
   Pizza,
   Coffee,
   ChefHat,
+  Hamburger,
   Sparkles,
   MonitorSmartphone,
-  Package,
+  Printer,
   HeartHandshake,
   type LucideIcon,
 } from "lucide-react";
@@ -24,12 +24,33 @@ import DemoVideoCard from "./DemoVideoCard";
 import HeroTypewriterBanner from "./HeroTypewriterBanner";
 import { cn } from "@/lib/utils";
 
-const TRUST_AVATARS = [
-  "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=128&h=128&fit=crop&crop=faces&q=80",
-  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=128&h=128&fit=crop&crop=faces&q=80",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&fit=crop&crop=faces&q=80",
-  "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=128&h=128&fit=crop&crop=faces&q=80",
-] as const;
+/** Iconos en lugar de fotos genéricas: encaja con pizzerías, burgers, lomiterías y cocina. */
+const TRUST_STACK: { icon: LucideIcon; label: string; className: string }[] = [
+  {
+    icon: Pizza,
+    label: "Pizzería",
+    className:
+      "bg-orange-100 text-orange-700 dark:bg-orange-950/55 dark:text-orange-300",
+  },
+  {
+    icon: Hamburger,
+    label: "Hamburguesería",
+    className:
+      "bg-amber-100 text-amber-800 dark:bg-amber-950/55 dark:text-amber-300",
+  },
+  {
+    icon: UtensilsCrossed,
+    label: "Lomitería y comidas",
+    className:
+      "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300",
+  },
+  {
+    icon: ChefHat,
+    label: "Cocina y restaurante",
+    className:
+      "bg-orange-50 text-orange-600 dark:bg-orange-950/45 dark:text-orange-400",
+  },
+];
 
 const TITLE_PARTS: { text: string; highlight?: boolean }[] = [
   { text: "Gestiona" },
@@ -50,13 +71,15 @@ const BENEFIT_CARDS: {
 }[] = [
   {
     icon: MonitorSmartphone,
-    title: "POS en cualquier lugar",
-    description: "Tablet, PC o móvil. Interfaz clara para turnos rápidos.",
+    title: "Pedido donde esté el cliente",
+    description:
+      "Celular, tablet o PC: cargás la orden en la vereda, en el auto o en la mesa.",
   },
   {
-    icon: Package,
-    title: "Stock bajo control",
-    description: "Inventario y recetas alineados con cada pedido.",
+    icon: Printer,
+    title: "Impresión remota",
+    description:
+      "La impresora térmica va conectada a tu PC o laptop central: el ticket sale ahí aunque tomes el pedido en otro dispositivo.",
   },
   {
     icon: HeartHandshake,
@@ -307,7 +330,7 @@ export default function HeroSection() {
             className="order-1 mb-5 inline-flex max-w-[95vw] items-center gap-2 rounded-full border border-orange-200/60 bg-white/55 px-3 py-2 text-xs font-medium text-primary shadow-sm backdrop-blur-md dark:border-orange-400/25 dark:bg-gray-900/50 dark:text-primary-light md:mb-6 md:px-4 md:py-2.5 md:text-sm"
           >
             <span aria-hidden>🔥</span>
-            <span>12 nuevas lomiterías se unieron este mes</span>
+            <span>3 nuevos locales se unieron este mes</span>
           </motion.div>
 
           <motion.h1
@@ -402,22 +425,21 @@ export default function HeroSection() {
             animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: reduceMotion ? 0 : 0.92 }}
             className="hero-trust order-8 mb-1 flex cursor-default flex-wrap items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400"
-            title="Dueños reales, resultados reales"
+            title="Pizzerías, hamburgueserías, lomiterías y más"
+            aria-label="Tipos de locales que usan KarúBox: pizzería, hamburguesería, lomitería y cocina"
           >
-            <div className="-space-x-3 flex items-center">
-              {TRUST_AVATARS.map((src) => (
+            <div className="-space-x-3 flex items-center" aria-hidden>
+              {TRUST_STACK.map(({ icon: Icon, label, className }) => (
                 <div
-                  key={src}
-                  className="relative z-[1] h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-white bg-stone-200 shadow-sm first:z-[4] [&:nth-child(2)]:z-[3] [&:nth-child(3)]:z-[2] dark:border-gray-900"
+                  key={label}
+                  title={label}
+                  className={cn(
+                    "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white shadow-sm dark:border-gray-900",
+                    "first:z-[4] [&:nth-child(2)]:z-[3] [&:nth-child(3)]:z-[2] [&:nth-child(4)]:z-[1]",
+                    className
+                  )}
                 >
-                  <Image
-                    src={src}
-                    alt=""
-                    width={80}
-                    height={80}
-                    className="h-full w-full object-cover"
-                    sizes="40px"
-                  />
+                  <Icon className="h-[1.15rem] w-[1.15rem]" strokeWidth={2} />
                 </div>
               ))}
             </div>

@@ -1,26 +1,35 @@
 "use client";
 
-import { Tablet, Printer, ChefHat, Users, BarChart3, ArrowRight } from "lucide-react";
+import {
+  Car,
+  Printer,
+  ChefHat,
+  Users,
+  BarChart3,
+  ArrowRight,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
 const steps = [
   {
-    icon: Tablet,
-    title: "Cajero toma pedido",
+    icon: Car,
+    title: "Pedido en el auto o en la vereda",
     description:
-      "El personal registra el pedido en el POS desde cualquier dispositivo",
+      "Tu equipo carga el pedido en KarúBox desde el celular o cualquier dispositivo. El cliente puede esperar en el vehículo frente al local.",
     color: "from-primary to-primary-light",
   },
   {
     icon: Printer,
-    title: "Ticket se imprime automáticamente",
-    description: "El ticket de cocina se imprime instantáneamente sin intervención manual",
+    title: "Impresión remota al instante",
+    description:
+      "Ticket, comanda y factura salen por la impresora térmica conectada a la PC o laptop central. No hace falta estar al lado de esa máquina para tomar el pedido.",
     color: "from-secondary to-secondary-light",
   },
   {
     icon: ChefHat,
-    title: "Cocinero prepara",
-    description: "El cocinero recibe el ticket y prepara el pedido",
+    title: "Cocina prepara con el ticket",
+    description:
+      "El ticket ya salió en la impresora de la PC central; cocina prepara y caja cobra con la misma información.",
     color: "from-accent to-accent-light",
   },
   {
@@ -55,7 +64,8 @@ export default function HowItWorksSection() {
             Flujo de trabajo centralizado y eficiente
           </h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-            Diseñado para restaurantes, cafeterías y cualquier negocio de comida
+            Pedidos desde cualquier dispositivo; impresión en la PC o laptop
+            central donde está conectada la impresora térmica.
           </p>
         </motion.div>
 

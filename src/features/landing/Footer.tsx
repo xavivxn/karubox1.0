@@ -1,7 +1,11 @@
 "use client";
 
-import { Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
+import Image from "next/image";
+import { Instagram, MessageCircle } from "lucide-react";
 import { getWhatsAppHref } from "@/lib/whatsapp";
+
+const INSTAGRAM_HREF =
+  "https://www.instagram.com/karuboxpy?igsh=emE0eWVmZTB3YXN5&utm_source=qr";
 
 export default function Footer() {
   const waHref = getWhatsAppHref();
@@ -102,48 +106,70 @@ export default function Footer() {
             <h3 className="text-white font-heading font-bold text-lg mb-4">
               Síguenos
             </h3>
-            <div className="flex space-x-4">
+            <div className="flex flex-wrap gap-4">
               <a
-                href="#"
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 rounded-lg bg-gray-800 hover:bg-primary flex items-center justify-center transition-colors"
-                aria-label="Facebook"
+                aria-label="WhatsApp +595 982 906021"
               >
-                <Facebook className="w-5 h-5" />
+                <MessageCircle className="w-5 h-5" />
               </a>
               <a
-                href="#"
+                href={INSTAGRAM_HREF}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 rounded-lg bg-gray-800 hover:bg-primary flex items-center justify-center transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 rounded-lg bg-gray-800 hover:bg-primary flex items-center justify-center transition-colors"
-                aria-label="Instagram"
+                aria-label="Instagram KarúBox"
               >
                 <Instagram className="w-5 h-5" />
               </a>
-              <a
-                href="#"
-                className="w-10 h-10 rounded-lg bg-gray-800 hover:bg-primary flex items-center justify-center transition-colors"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="w-5 h-5" />
-              </a>
             </div>
+            <p className="mt-6 text-sm text-gray-500 leading-relaxed max-w-xs">
+              Novedades, tips de operación y mejoras del producto. También
+              respondemos consultas por los mismos canales.
+            </p>
           </div>
         </div>
 
         <div className="border-t border-gray-800 pt-8 mt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 text-sm mb-4 md:mb-0">
-              © 2024 KarúBox. Todos los derechos reservados.
-            </p>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">Hecho con</span>
-              <span className="text-red-500">❤️</span>
-              <span className="text-sm text-gray-400">en Paraguay</span>
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+            <div className="text-center lg:text-left space-y-2">
+              <p className="flex flex-wrap justify-center lg:justify-start items-center gap-2 text-sm text-gray-400">
+                <span>Desarrollado con</span>
+                <span className="text-red-500" aria-hidden>
+                  ❤️
+                </span>
+                <span>en Paraguay</span>
+              </p>
+              <p className="text-xs text-gray-500 max-w-md mx-auto lg:mx-0">
+                Hecho para lomiterías, pizzerías y hamburgueserías que quieren
+                pedidos, cocina y caja en un solo lugar.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center gap-4 lg:items-end text-center lg:text-right lg:max-w-sm lg:pr-14 xl:pr-20">
+              <p className="text-gray-400 text-sm order-2 lg:order-1">
+                KarúBox by ARDENTIUM Software Technologies® 2025
+              </p>
+              <div className="order-1 lg:order-2 w-full max-w-xs rounded-xl border border-gray-800 bg-gray-800/35 px-4 py-3 flex items-center gap-3 text-left">
+                <Image
+                  src="/karubox-logo.png"
+                  alt="KarúBox"
+                  width={44}
+                  height={44}
+                  className="rounded-lg shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white font-heading">
+                    KarúBox
+                  </p>
+                  <p className="text-xs text-gray-400 leading-snug">
+                    POS en la nube · Cocina en tiempo real · Reportes claros
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

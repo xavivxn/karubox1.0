@@ -45,10 +45,10 @@ const features = [
   },
   {
     icon: Printer,
-    title: "Impresión Automática",
+    title: "Impresión remota automática",
     description:
-      "Los tickets de cocina se imprimen automáticamente cuando se confirma un pedido. Sin intervención manual.",
-    benefit: "Flujo de trabajo optimizado",
+      "La impresora térmica va conectada a una PC o laptop central en el local. Podés tomar el pedido en el celular en la calle o con el cliente en el auto; al confirmar, ticket de cocina, comanda y factura salen por esa impresora, sin que tengas que volver al mostrador.",
+    benefit: "Un solo flujo, sin ir y venir con papeles",
     color: "from-secondary to-accent",
   },
   {
