@@ -59,6 +59,14 @@ export interface WeeklyTrendItem {
   value: number
 }
 
+export interface TrendBucketItem {
+  label: string
+  timestamp: string
+  revenue: number
+  orders: number
+  avgTicket: number
+}
+
 /** Vela por bucket temporal: primer/último pedido y rango de tickets; volume = suma ingresos. */
 export interface CandlestickTrendItem {
   label: string
@@ -109,6 +117,8 @@ export interface DashboardStats {
   activeClients: number
   loyaltyPoints: number
   weeklyTrend: WeeklyTrendItem[]
+  /** Serie normalizada por bucket para selector de métrica del panel */
+  trendBuckets: TrendBucketItem[]
   /** Misma rejilla que weeklyTrend; OHLC por pedidos en el bucket */
   candleTrend: CandlestickTrendItem[]
   /** Eje temporal del gráfico de ingresos (por hora vs por día) */

@@ -3,9 +3,10 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
-import { Activity, Hand, History, Info, Loader2, Maximize2, Minimize2, Sparkles } from 'lucide-react'
+import { Activity, CandlestickChart, ChartColumnIncreasing, Hand, History, Info, Loader2, Maximize2, Minimize2, Sparkles } from 'lucide-react'
 import { formatGuaranies } from '@/lib/utils/format'
 import { RevenueCandlestickChart } from './RevenueCandlestickChart'
+import { RevenueBarTrendChart } from './RevenueBarTrendChart'
 import { DatePresetPills } from './DatePresetPills'
 import type { AdminDatePreset, DashboardStats } from '../types/admin.types'
 
@@ -30,6 +31,8 @@ export const WeeklyTrend = ({
   datosUltimoTurno = false,
 }: WeeklyTrendProps) => {
   const [expanded, setExpanded] = useState(false)
+  const [viewMode, setViewMode] = useState<'simple' | 'advanced'>('simple')
+  const [metricMode, setMetricMode] = useState<'revenue' | 'orders' | 'avgTicket'>('revenue')
 
   useEffect(() => {
     if (!expanded) return
@@ -45,15 +48,42 @@ export const WeeklyTrend = ({
     }
   }, [expanded])
 
-  const seriesTotal = useMemo(
-    () => stats.weeklyTrend.reduce((s, p) => s + p.value, 0),
-    [stats.weeklyTrend]
-  )
-
   const granularity = stats.trendGranularity ?? 'day'
   const candles = stats.candleTrend ?? []
+  const trendBuckets = stats.trendBuckets ?? []
+  const metricValues = useMemo(
+    () =>
+      trendBuckets.map((bucket) =>
+        metricMode === 'revenue' ? bucket.revenue : metricMode === 'orders' ? bucket.orders : bucket.avgTicket
+      ),
+    [trendBuckets, metricMode]
+  )
+  const seriesTotal = useMemo(() => metricValues.reduce((sum, value) => sum + value, 0), [metricValues])
+  const peakInsight = useMemo(() => {
+    if (!trendBuckets.length) return null
+    const best = trendBuckets.reduce((prev, curr) => (curr.revenue > prev.revenue ? curr : prev), trendBuckets[0])
+    return { label: best.label, revenue: best.revenue }
+  }, [trendBuckets])
+  const bestTicketInsight = useMemo(() => {
+    if (!trendBuckets.length) return null
+    const best = trendBuckets.reduce((prev, curr) => (curr.avgTicket > prev.avgTicket ? curr : prev), trendBuckets[0])
+    return { label: best.label, avgTicket: best.avgTicket }
+  }, [trendBuckets])
 
   const { title, explainer } = useMemo(() => {
+    if (viewMode === 'simple') {
+      const metricTitle =
+        metricMode === 'revenue'
+          ? 'Ingresos por bloque'
+          : metricMode === 'orders'
+            ? 'Pedidos por bloque'
+            : 'Ticket medio por bloque'
+      return {
+        title: metricTitle,
+        explainer:
+          'Lectura rápida del período: barras más altas representan mejor desempeño del bloque. Pasá el mouse para ver ingresos, pedidos, ticket medio y variación frente al bloque anterior.',
+      }
+    }
     if (granularity === 'hour') {
       return {
         title: 'Por horas del día',
@@ -66,7 +96,7 @@ export const WeeklyTrend = ({
       explainer:
         'Cada barra es un día completo: comparás volumen total y cómo se movieron los montos de los pedidos. Pasá el cursor sobre una barra para ver números exactos.',
     }
-  }, [granularity])
+  }, [granularity, metricMode, viewMode])
 
   const shellClasses = `
         overflow-hidden rounded-3xl border-2 shadow-sm backdrop-blur-sm
@@ -224,17 +254,29 @@ export const WeeklyTrend = ({
             }`}
           >
             <p className={`text-[10px] font-medium uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              Suma del período elegido
+              {metricMode === 'revenue'
+                ? 'Suma del período elegido'
+                : metricMode === 'orders'
+                  ? 'Pedidos acumulados del período'
+                  : 'Suma de tickets promedio por bloque'}
             </p>
             <p
               className={`text-lg font-semibold tabular-nums tracking-tight ${
                 darkMode ? 'text-orange-50' : 'text-orange-700'
               }`}
             >
-              {formatGuaranies(seriesTotal)}
+              {metricMode === 'revenue'
+                ? formatGuaranies(seriesTotal)
+                : metricMode === 'orders'
+                  ? `${Math.round(seriesTotal)} pedidos`
+                  : formatGuaranies(seriesTotal)}
             </p>
             <p className={`mt-1 text-[10px] ${darkMode ? 'text-teal-400/90' : 'text-teal-700/90'}`}>
-              Guaraníes · todos los pedidos del filtro
+              {metricMode === 'revenue'
+                ? 'Guaraníes · todos los pedidos del filtro'
+                : metricMode === 'orders'
+                  ? 'Cantidad total de pedidos del filtro'
+                  : 'Suma de ticket medio en cada bloque del filtro'}
             </p>
           </motion.div>
         </div>
@@ -251,41 +293,136 @@ export const WeeklyTrend = ({
           <p className="text-[12px] leading-snug">{explainer}</p>
         </div>
 
-        {/* Leyenda rápida con color */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className={`text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-            Leyenda
+            Modo visual
           </span>
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium shadow-sm ${
-              darkMode
-                ? 'border-orange-500/45 bg-orange-500/14 text-orange-100 shadow-orange-900/20'
-                : 'border-orange-300/90 bg-orange-50 text-orange-950 shadow-orange-200/50'
+          <button
+            type="button"
+            onClick={() => setViewMode('simple')}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium transition ${
+              viewMode === 'simple'
+                ? darkMode
+                  ? 'border-orange-400/65 bg-orange-500/22 text-orange-50'
+                  : 'border-orange-300/90 bg-orange-50 text-orange-900'
+                : darkMode
+                  ? 'border-slate-600 bg-slate-800/70 text-slate-300'
+                  : 'border-slate-200 bg-white text-slate-600'
             }`}
           >
-            <span className="h-2.5 w-2 rounded-sm bg-gradient-to-b from-amber-300 to-orange-600 shadow-[0_0_6px_rgba(251,146,60,0.55)]" aria-hidden />
-            Mejor cierre que apertura
-          </span>
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium shadow-sm ${
-              darkMode
-                ? 'border-rose-500/45 bg-rose-500/14 text-rose-100 shadow-rose-900/25'
-                : 'border-rose-300/90 bg-rose-50 text-rose-950 shadow-rose-200/45'
+            <ChartColumnIncreasing className="h-3 w-3" aria-hidden />
+            Simple
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('advanced')}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium transition ${
+              viewMode === 'advanced'
+                ? darkMode
+                  ? 'border-violet-400/65 bg-violet-500/18 text-violet-50'
+                  : 'border-violet-300/90 bg-violet-50 text-violet-900'
+                : darkMode
+                  ? 'border-slate-600 bg-slate-800/70 text-slate-300'
+                  : 'border-slate-200 bg-white text-slate-600'
             }`}
           >
-            <span className="h-2.5 w-2 rounded-sm bg-gradient-to-b from-rose-300 to-rose-600 shadow-[0_0_6px_rgba(244,63,94,0.45)]" aria-hidden />
-            Menor cierre que apertura
-          </span>
-          <span
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-medium shadow-sm ${
-              darkMode
-                ? 'border-teal-500/40 bg-teal-500/14 text-teal-100 shadow-teal-900/20'
-                : 'border-teal-300/90 bg-teal-50 text-teal-950 shadow-teal-200/45'
-            }`}
-          >
-            <Hand className="h-3 w-3 opacity-90" aria-hidden />
-            Pasá el mouse sobre las barras
-          </span>
+            <CandlestickChart className="h-3 w-3" aria-hidden />
+            Avanzado
+          </button>
+          {viewMode === 'simple' && (
+            <>
+              <span className={`ml-1 text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                Métrica
+              </span>
+              {[
+                { key: 'revenue', label: 'Ingresos' },
+                { key: 'orders', label: 'Pedidos' },
+                { key: 'avgTicket', label: 'Ticket medio' },
+              ].map((mode) => (
+                <button
+                  key={mode.key}
+                  type="button"
+                  onClick={() => setMetricMode(mode.key as 'revenue' | 'orders' | 'avgTicket')}
+                  className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-medium transition ${
+                    metricMode === mode.key
+                      ? darkMode
+                        ? 'border-teal-400/60 bg-teal-500/20 text-teal-50'
+                        : 'border-teal-300/90 bg-teal-50 text-teal-900'
+                      : darkMode
+                        ? 'border-slate-600 bg-slate-800/70 text-slate-300'
+                        : 'border-slate-200 bg-white text-slate-600'
+                  }`}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {viewMode === 'advanced' ? (
+            <>
+              <span className={`text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                Leyenda
+              </span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium shadow-sm ${
+                  darkMode
+                    ? 'border-orange-500/45 bg-orange-500/14 text-orange-100 shadow-orange-900/20'
+                    : 'border-orange-300/90 bg-orange-50 text-orange-950 shadow-orange-200/50'
+                }`}
+              >
+                <span className="h-2.5 w-2 rounded-sm bg-gradient-to-b from-amber-300 to-orange-600 shadow-[0_0_6px_rgba(251,146,60,0.55)]" aria-hidden />
+                Mejor cierre que apertura
+              </span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium shadow-sm ${
+                  darkMode
+                    ? 'border-rose-500/45 bg-rose-500/14 text-rose-100 shadow-rose-900/25'
+                    : 'border-rose-300/90 bg-rose-50 text-rose-950 shadow-rose-200/45'
+                }`}
+              >
+                <span className="h-2.5 w-2 rounded-sm bg-gradient-to-b from-rose-300 to-rose-600 shadow-[0_0_6px_rgba(244,63,94,0.45)]" aria-hidden />
+                Menor cierre que apertura
+              </span>
+            </>
+          ) : (
+            <>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-medium shadow-sm ${
+                  darkMode
+                    ? 'border-teal-500/40 bg-teal-500/14 text-teal-100 shadow-teal-900/20'
+                    : 'border-teal-300/90 bg-teal-50 text-teal-950 shadow-teal-200/45'
+                }`}
+              >
+                <Hand className="h-3 w-3 opacity-90" aria-hidden />
+                Pasá el mouse sobre las barras
+              </span>
+              {peakInsight && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-medium shadow-sm ${
+                    darkMode
+                      ? 'border-amber-500/45 bg-amber-500/14 text-amber-100'
+                      : 'border-amber-300/90 bg-amber-50 text-amber-900'
+                  }`}
+                >
+                  Hora pico: {peakInsight.label} · {formatGuaranies(peakInsight.revenue)}
+                </span>
+              )}
+              {bestTicketInsight && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-medium shadow-sm ${
+                    darkMode
+                      ? 'border-violet-500/45 bg-violet-500/14 text-violet-100'
+                      : 'border-violet-300/90 bg-violet-50 text-violet-900'
+                  }`}
+                >
+                  Mejor ticket: {bestTicketInsight.label} · {formatGuaranies(bestTicketInsight.avgTicket)}
+                </span>
+              )}
+            </>
+          )}
         </div>
 
         <div className="mt-4">
@@ -332,13 +469,24 @@ export const WeeklyTrend = ({
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)]" aria-hidden />
               Interactivo
             </motion.div>
-            <RevenueCandlestickChart
-              data={candles}
-              animationKey={animationKey}
-              granularity={granularity}
-              isDark={darkMode}
-              fillContainer={expanded}
-            />
+            {viewMode === 'simple' ? (
+              <RevenueBarTrendChart
+                data={trendBuckets}
+                metricMode={metricMode}
+                animationKey={animationKey}
+                granularity={granularity}
+                isDark={darkMode}
+                fillContainer={expanded}
+              />
+            ) : (
+              <RevenueCandlestickChart
+                data={candles}
+                animationKey={animationKey}
+                granularity={granularity}
+                isDark={darkMode}
+                fillContainer={expanded}
+              />
+            )}
           </div>
 
           {isRefreshing && (

@@ -21,7 +21,7 @@ import {
   estimateCostFromAmount
 } from '../utils/admin.utils'
 import { buildTrendContextLabel, resolveAdminDateRange } from '../utils/date.utils'
-import { getTrendGranularity, processCandleSeries, processTrendSeries } from '../utils/trendSeries'
+import { getTrendGranularity, processCandleSeries, processTrendBuckets, processTrendSeries } from '../utils/trendSeries'
 
 /** Misma categoría que `loadSauceProducts` / SalsasDrawer (productos vasito). */
 const SAUCES_CATEGORY_NAME = 'Salsas'
@@ -427,6 +427,7 @@ export const fetchDashboardData = async (
     console.log('🧮 Procesando estadísticas...')
     const dailyStats = processDailyStats(pedidos)
     const monthlyStats = processMonthlyStats(pedidos)
+    const trendBuckets = processTrendBuckets(pedidos, dateRange)
     const weeklyTrend = processTrendSeries(pedidos, dateRange)
     const candleTrend = processCandleSeries(pedidos, dateRange)
     const trendGranularity = getTrendGranularity(dateRange.preset)
@@ -453,6 +454,7 @@ export const fetchDashboardData = async (
       activeClients,
       loyaltyPoints: monthlyStats.loyaltyPoints,
       weeklyTrend,
+      trendBuckets,
       candleTrend,
       trendGranularity,
       channelSplit,

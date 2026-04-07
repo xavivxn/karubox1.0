@@ -32,6 +32,7 @@ export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [loginPending, setLoginPending] = useState(false);
+  const [isNavigatingLogin, setIsNavigatingLogin] = useState(false);
   const logoRef = useRef<HTMLDivElement>(null);
 
   const handleLoginClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -170,22 +171,18 @@ export default function Navigation() {
               <Link
                 href={LOGIN_HREF}
                 prefetch
-                onClick={handleLoginClick}
-                aria-busy={loginPending}
+                onClick={() => setIsNavigatingLogin(true)}
+                aria-busy={isNavigatingLogin}
                 className={cn(
                   navLoginOutlineClass,
-                  "inline-flex min-w-[11.5rem] items-center justify-center gap-2",
-                  loginPending && "pointer-events-none opacity-90"
+                  isNavigatingLogin && "bg-primary text-white border-primary pointer-events-none"
                 )}
               >
-                {loginPending ? (
-                  <>
-                    <Loader2
-                      className="h-5 w-5 shrink-0 animate-spin"
-                      aria-hidden
-                    />
-                    <span>Cargando…</span>
-                  </>
+                {isNavigatingLogin ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Cargando...
+                  </span>
                 ) : (
                   "Iniciar sesión"
                 )}
@@ -251,22 +248,22 @@ export default function Navigation() {
               <Link
                 href={LOGIN_HREF}
                 prefetch
-                onClick={handleLoginClick}
-                aria-busy={loginPending}
+                onClick={() => {
+                  setIsNavigatingLogin(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                aria-busy={isNavigatingLogin}
                 className={cn(
                   navLoginOutlineClass,
-                  "inline-flex w-full items-center justify-center gap-2 text-xl",
-                  loginPending && "pointer-events-none opacity-90"
+                  "w-full text-xl",
+                  isNavigatingLogin && "bg-primary text-white border-primary pointer-events-none"
                 )}
               >
-                {loginPending ? (
-                  <>
-                    <Loader2
-                      className="h-5 w-5 shrink-0 animate-spin"
-                      aria-hidden
-                    />
-                    <span>Cargando…</span>
-                  </>
+                {isNavigatingLogin ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin text-orange-100" />
+                    Cargando...
+                  </span>
                 ) : (
                   "Iniciar sesión"
                 )}

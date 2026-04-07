@@ -144,8 +144,7 @@ export default function Footer() {
                 <span>en Paraguay</span>
               </p>
               <p className="text-xs text-gray-500 max-w-md mx-auto lg:mx-0">
-                Hecho para lomiterías, pizzerías y hamburgueserías que quieren
-                pedidos, cocina y caja en un solo lugar.
+                Hecho para locales gastronómicos que buscan centralizar pedidos, cocina y caja en un solo lugar.
               </p>
             </div>
 
