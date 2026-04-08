@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { LoginCredentials, AuthResponse } from '../types/auth.types'
+import { toParaguayanLoginError } from '../utils/loginErrorMessages'
 
 export const authService = {
   async signIn({ email, password }: LoginCredentials): Promise<AuthResponse> {
@@ -11,12 +12,13 @@ export const authService = {
       })
       
       if (error) {
-        return { error: error.message }
+        return { error: toParaguayanLoginError(error.message) }
       }
-      
+
       return { data, error: undefined }
-    } catch (err: any) {
-      return { error: err.message || 'Error al iniciar sesión' }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : ''
+      return { error: toParaguayanLoginError(msg) }
     }
   },
 
@@ -25,11 +27,16 @@ export const authService = {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) {
-        return { error: error.message }
+        return { error: toParaguayanLoginError(error.message) }
       }
       return {}
-    } catch (err: any) {
-      return { error: err.message || 'Error al cerrar sesión' }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : ''
+      return {
+        error: msg
+          ? toParaguayanLoginError(msg)
+          : 'No pudimos cerrar la sesión. Intentá de nuevo.',
+      }
     }
   },
 
@@ -38,11 +45,12 @@ export const authService = {
     try {
       const { data: { user }, error } = await supabase.auth.getUser()
       if (error) {
-        return { user: null, error: error.message }
+        return { user: null, error: toParaguayanLoginError(error.message) }
       }
       return { user, error: undefined }
-    } catch (err: any) {
-      return { user: null, error: err.message }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : ''
+      return { user: null, error: toParaguayanLoginError(msg) }
     }
   }
 }

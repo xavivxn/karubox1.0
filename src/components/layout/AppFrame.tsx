@@ -155,6 +155,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
             : pageInfo.fullWidth
               ? (isPosPage || isKitchenPage ? 'py-0' : 'py-4')
               : 'px-4 py-6'
+        }         ${
+          isLoginPage
+            ? 'overflow-y-auto overflow-x-hidden overscroll-y-auto scrollbar-none'
+            : ''
         } ${!isAuthLikePage && (isPosPage || isKitchenPage) ? 'overflow-hidden' : ''}`}
         style={isAuthLikePage ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}
       >

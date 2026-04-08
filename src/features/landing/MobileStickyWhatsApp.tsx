@@ -15,22 +15,28 @@ export default function MobileStickyWhatsApp() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const safeBarStyle = {
+    paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))",
+    paddingLeft: "max(1rem, env(safe-area-inset-left, 0px))",
+    paddingRight: "max(1rem, env(safe-area-inset-right, 0px))",
+  } as const;
+
   return (
     <div
       className={`fixed inset-x-0 bottom-0 z-[96] md:hidden transition-transform duration-300 ease-out ${
         visible ? "translate-y-0" : "translate-y-full pointer-events-none"
       }`}
-      style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      style={safeBarStyle}
     >
-      <div className="px-3 pt-2 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-gray-900 dark:via-gray-900/95 pb-1">
+      <div className="pointer-events-none pb-1 pt-2">
         <a
           href={wa}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-lg font-semibold text-white shadow-[0_4px_24px_rgba(238,95,15,0.45)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] hover:shadow-[0_6px_32px_rgba(238,95,15,0.55)]"
+          className="pointer-events-auto flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-lg font-semibold text-white transition-shadow duration-300 [-webkit-tap-highlight-color:transparent] shadow-[0_4px_20px_rgba(0,0,0,0.22)] hover:shadow-[0_6px_24px_rgba(0,0,0,0.28)] active:shadow-[0_2px_12px_rgba(0,0,0,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
         >
           Agendar Asesoría por WhatsApp
-          <ArrowRight className="h-5 w-5 shrink-0" />
+          <ArrowRight className="h-5 w-5 shrink-0" aria-hidden />
         </a>
       </div>
     </div>

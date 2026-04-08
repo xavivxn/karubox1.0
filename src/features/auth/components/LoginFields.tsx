@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface LoginFieldsProps {
   email: string
@@ -9,14 +10,23 @@ interface LoginFieldsProps {
   onEmailChange: (email: string) => void
   onPasswordChange: (password: string) => void
   disabled?: boolean
+  compact?: boolean
 }
+
+const labelClass = 'block font-medium text-zinc-400'
+const inputClass = cn(
+  'w-full rounded-xl border border-white/[0.1] bg-zinc-950/50 text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none transition-all duration-200',
+  'placeholder:text-zinc-500',
+  'focus:border-orange-400/40 focus:bg-zinc-900/40 focus:ring-2 focus:ring-orange-500/20 focus:shadow-[0_0_0_1px_hsl(var(--primary)_/_0.18)]'
+)
 
 export function LoginFields({
   email,
   password,
   onEmailChange,
   onPasswordChange,
-  disabled = false
+  disabled = false,
+  compact = false,
 }: LoginFieldsProps) {
   const [showPassword, setShowPassword] = useState(false)
 
@@ -25,7 +35,7 @@ export function LoginFields({
       <div className="animate-login-field-1">
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-gray-700 mb-1.5"
+          className={cn(labelClass, compact ? 'mb-1 text-xs' : 'mb-1.5 text-sm')}
         >
           Correo electrónico
         </label>
@@ -36,7 +46,12 @@ export function LoginFields({
           onChange={(e) => onEmailChange(e.target.value)}
           required
           autoComplete="email"
-          className="w-full px-4 py-3 rounded-xl border border-orange-200 bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400"
+          className={cn(
+            inputClass,
+            compact
+              ? 'min-h-10 px-3 py-2 text-base sm:min-h-0 sm:text-sm'
+              : 'min-h-11 px-4 py-3 text-base sm:min-h-0'
+          )}
           placeholder="tu@email.com"
           disabled={disabled}
         />
@@ -45,7 +60,7 @@ export function LoginFields({
       <div className="animate-login-field-2">
         <label
           htmlFor="password"
-          className="block text-sm font-medium text-gray-700 mb-1.5"
+          className={cn(labelClass, compact ? 'mb-1 text-xs' : 'mb-1.5 text-sm')}
         >
           Contraseña
         </label>
@@ -57,7 +72,13 @@ export function LoginFields({
             onChange={(e) => onPasswordChange(e.target.value)}
             required
             autoComplete="current-password"
-            className="w-full px-4 py-3 pr-12 rounded-xl border border-orange-200 bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400"
+            className={cn(
+              inputClass,
+              'pr-12',
+              compact
+                ? 'min-h-10 px-3 py-2 pr-11 text-base sm:min-h-0 sm:text-sm'
+                : 'min-h-11 px-4 py-3 pr-12 text-base sm:min-h-0'
+            )}
             placeholder="••••••••"
             disabled={disabled}
           />
@@ -65,14 +86,19 @@ export function LoginFields({
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             disabled={disabled}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-200/80 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:ring-offset-0 transition-colors"
+            className={cn(
+              'absolute top-1/2 flex -translate-y-1/2 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-orange-500/10 hover:text-orange-100/90 focus:outline-none focus:ring-2 focus:ring-orange-400/30 focus:ring-offset-0',
+              compact
+                ? 'right-1.5 h-10 w-10 p-0 sm:right-2 sm:h-auto sm:w-auto sm:p-1'
+                : 'right-2 h-11 w-11 p-0 sm:right-3 sm:h-auto sm:w-auto sm:p-1.5'
+            )}
             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             tabIndex={-1}
           >
             {showPassword ? (
-              <EyeOff className="w-5 h-5" aria-hidden />
+              <EyeOff className={compact ? 'h-4 w-4' : 'h-5 w-5'} aria-hidden />
             ) : (
-              <Eye className="w-5 h-5" aria-hidden />
+              <Eye className={compact ? 'h-4 w-4' : 'h-5 w-5'} aria-hidden />
             )}
           </button>
         </div>

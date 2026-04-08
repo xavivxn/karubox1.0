@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getPostLoginRoute } from '@/config'
 import type { UserRole } from '@/config/routing'
+import { toParaguayanLoginError } from '@/features/auth/utils/loginErrorMessages'
 
 /**
  * Server Action para iniciar sesión
@@ -18,7 +19,7 @@ export async function signIn(email: string, password: string) {
   })
 
   if (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: toParaguayanLoginError(error.message) }
   }
 
   // Obtener el rol del usuario para determinar la ruta
