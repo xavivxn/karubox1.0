@@ -2,12 +2,12 @@ import { create } from 'zustand'
 import type { IngredientRequirement } from '@/types/ingredients'
 import type { Cliente } from '@/types/supabase'
 import {
+  calcularPuntos,
   calcularPuntosAutomaticos,
   normalizePuntosRetornoPct,
   VALOR_PUNTO_GS,
   type PuntosRetornoPct,
 } from '@/features/pos/utils/pos.utils'
-import { calcularPuntos, VALOR_PUNTO_GS } from '@/features/pos/utils/pos.utils'
 
 export interface ExtraIngredientSelection extends IngredientRequirement {
   unitPrice: number

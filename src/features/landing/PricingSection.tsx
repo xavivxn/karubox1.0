@@ -154,7 +154,7 @@ export default function PricingSection() {
                 <div className="mb-2 flex items-center gap-2 text-amber-200/90">
                   <Zap className="h-5 w-5" aria-hidden />
                   <span className="text-sm font-semibold uppercase tracking-widest">
-                    Desde
+                    KarúBox Full
                   </span>
                 </div>
 

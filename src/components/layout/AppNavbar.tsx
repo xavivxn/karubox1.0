@@ -39,12 +39,17 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
   const [savingNombre, setSavingNombre] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const prevTenantIdRef = useRef<string | null>(null)
+  const [tenantLogoFailed, setTenantLogoFailed] = useState(false)
 
   useEffect(() => {
     const prev = prevTenantIdRef.current
     if (prev && tenant?.id && prev !== tenant.id) invalidateUsuariosDelTenantCache(prev)
     prevTenantIdRef.current = tenant?.id ?? null
   }, [tenant?.id])
+
+  useEffect(() => {
+    setTenantLogoFailed(false)
+  }, [tenant?.logo_url])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -146,21 +151,19 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
                 {/* Foto del local + nombre del negocio */}
                 {tenant && (
                   <>
-                    {tenant.logo_url ? (
-                      <img
+                    {tenant.logo_url && !tenantLogoFailed ? (
+                      <Image
                         src={tenant.logo_url}
                         alt=""
+                        width={36}
+                        height={36}
                         className="w-8 h-8 md:w-9 md:h-9 rounded-lg object-cover border border-gray-200 dark:border-gray-600 flex-shrink-0 bg-gray-100 dark:bg-gray-700"
-                        onError={(e) => {
-                          const el = e.currentTarget
-                          el.style.display = 'none'
-                          const fallback = el.nextElementSibling
-                          if (fallback instanceof HTMLElement) fallback.style.display = 'flex'
-                        }}
+                        sizes="36px"
+                        onError={() => setTenantLogoFailed(true)}
                       />
                     ) : null}
                     <span
-                      className={`w-8 h-8 md:w-9 md:h-9 rounded-lg bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600 dark:text-orange-400 font-bold text-sm flex-shrink-0 ${tenant.logo_url ? 'hidden' : ''}`}
+                      className={`w-8 h-8 md:w-9 md:h-9 rounded-lg bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600 dark:text-orange-400 font-bold text-sm flex-shrink-0 ${tenant.logo_url && !tenantLogoFailed ? 'hidden' : ''}`}
                     >
                       {(tenant.nombre ?? 'N').charAt(0).toUpperCase()}
                     </span>

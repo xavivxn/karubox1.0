@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Tag, Loader2, Pencil, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -54,7 +54,7 @@ export function CategoriaModal({ open, onClose, tenantId, onSaved }: CategoriaMo
     setMounted(true)
   }, [])
 
-  const loadCategorias = async () => {
+  const loadCategorias = useCallback(async () => {
     setLoadingCategorias(true)
     try {
       const supabase = createClient()
@@ -75,7 +75,7 @@ export function CategoriaModal({ open, onClose, tenantId, onSaved }: CategoriaMo
     } finally {
       setLoadingCategorias(false)
     }
-  }
+  }, [tenantId])
 
   useEffect(() => {
     if (!open) {
@@ -93,9 +93,9 @@ export function CategoriaModal({ open, onClose, tenantId, onSaved }: CategoriaMo
       setCategorias([])
       setActiveTab('existentes')
     } else {
-      loadCategorias()
+      void loadCategorias()
     }
-  }, [open])
+  }, [open, loadCategorias])
 
   const handleExpand = (cat: CategoriaExistente) => {
     if (expandedId === cat.id) {
