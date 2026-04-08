@@ -185,7 +185,7 @@ export function TenantCard({ tenant, onStatusChange }: TenantCardProps) {
           {loadingAction === 'toggle' ? 'Actualizando...' : tenant.activo ? 'Desactivar' : 'Activar'}
         </button>
 
-        {deletable && (
+        {/* {deletable && (
           <button
             type="button"
             onClick={() => setShowDeleteModal(true)}
@@ -195,7 +195,7 @@ export function TenantCard({ tenant, onStatusChange }: TenantCardProps) {
             <Trash2 className="w-4 h-4 shrink-0" aria-hidden />
             Eliminar local y todos sus datos
           </button>
-        )}
+        )} */}
       </div>
 
       <DeleteTenantModal
