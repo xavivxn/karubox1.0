@@ -31,7 +31,7 @@ const features = [
     icon: Star,
     title: "Puntos de Fidelidad",
     description:
-      "Sistema automático de puntos: 1 punto = 1 Guaraní. Los clientes pueden canjear puntos por productos.",
+      "Sistema automático de puntos. Los clientes pueden canjear puntos por productos.",
     benefit: "Fideliza a tus clientes automáticamente",
     color: "from-accent to-accent-light",
   },
@@ -47,7 +47,7 @@ const features = [
     icon: Printer,
     title: "Impresión remota automática",
     description:
-      "La impresora térmica va conectada a una PC o laptop central en el local. Podés tomar el pedido en el celular en la calle o con el cliente en el auto; al confirmar, ticket de cocina, comanda y factura salen por esa impresora, sin que tengas que volver al mostrador.",
+      "Atendé en mesa, calle o auto: tomás el pedido desde el celular y KarúBox imprime tickets y facturas en el mostrador al instante. Más agilidad, sin vueltas innecesarias.",
     benefit: "Un solo flujo, sin ir y venir con papeles",
     color: "from-secondary to-accent",
   },

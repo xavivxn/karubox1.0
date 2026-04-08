@@ -10,18 +10,14 @@ import {
   Zap,
 } from "lucide-react";
 import { getWhatsAppHref } from "@/lib/whatsapp";
+import {
+  LANDING_MONTHLY_PRICE_GS,
+  LANDING_PRICING_INCLUDES,
+} from "@/config/landingPricing";
 import { cn } from "@/lib/utils";
 import { PricingFireworks } from "./PricingFireworks";
 
-/** Precio público mensual en guaraníes (landing). */
-export const LANDING_MONTHLY_PRICE_GS = 299_000;
-
-const INCLUDES = [
-  "Software completo: POS, cocina y gestión",
-  "Carta digital y pedidos en tiempo real",
-  "Soporte y actualizaciones incluidas",
-  "Un precio claro, sin sorpresas",
-];
+export { LANDING_MONTHLY_PRICE_GS } from "@/config/landingPricing";
 
 export default function PricingSection() {
   const reduceMotion = useReducedMotion();
@@ -189,7 +185,7 @@ export default function PricingSection() {
               </div>
 
               <ul className="mx-auto mt-10 max-w-md space-y-3 text-left">
-                {INCLUDES.map((line, i) => (
+                {LANDING_PRICING_INCLUDES.map((line, i) => (
                   <motion.li
                     key={line}
                     initial={reduceMotion ? false : { opacity: 0, x: -12 }}

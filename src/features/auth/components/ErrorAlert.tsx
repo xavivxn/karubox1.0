@@ -7,7 +7,7 @@ export function ErrorAlert({ message }: ErrorAlertProps) {
 
   return (
     <div
-      className="animate-login-field-1 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl text-sm"
+      className="animate-login-field-1 rounded-xl border border-red-500/25 bg-red-950/35 px-4 py-3 text-sm text-red-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
       role="alert"
     >
       <p>{message}</p>

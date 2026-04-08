@@ -455,6 +455,116 @@
 .animate-login-field-4 { animation: fadeInUp 0.4s ease-out 0.5s both; }
 .animate-login-field-5 { animation: fadeInUp 0.4s ease-out 0.6s both; }
 
+@keyframes loginWarmGlow {
+  0%, 100% { opacity: 0.38; transform: scale(1); }
+  50% { opacity: 0.58; transform: scale(1.04); }
+}
+.animate-login-warm-glow {
+  animation: loginWarmGlow 11s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-login-warm-glow {
+    animation: none;
+    opacity: 0.48;
+    transform: none;
+  }
+}
+
+/* Fondo login — siluetas con deriva lenta */
+@keyframes loginBgShapeDrift0 {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(12px, -16px); }
+  50% { transform: translate(-8px, 10px); }
+  75% { transform: translate(14px, 6px); }
+}
+@keyframes loginBgShapeDrift1 {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(-14px, 12px); }
+  66% { transform: translate(10px, -10px); }
+}
+@keyframes loginBgShapeDrift2 {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(8px, 14px); }
+  40% { transform: translate(-12px, -8px); }
+  60% { transform: translate(6px, -14px); }
+  80% { transform: translate(-6px, 8px); }
+}
+@keyframes loginBgShapeDrift3 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-10px, -18px); }
+}
+.animate-login-bg-shape-0 {
+  animation: loginBgShapeDrift0 var(--login-bg-drift-dur, 24s) ease-in-out infinite;
+}
+.animate-login-bg-shape-1 {
+  animation: loginBgShapeDrift1 var(--login-bg-drift-dur, 28s) ease-in-out infinite;
+}
+.animate-login-bg-shape-2 {
+  animation: loginBgShapeDrift2 var(--login-bg-drift-dur, 22s) ease-in-out infinite;
+}
+.animate-login-bg-shape-3 {
+  animation: loginBgShapeDrift3 var(--login-bg-drift-dur, 30s) ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-login-bg-shape-0,
+  .animate-login-bg-shape-1,
+  .animate-login-bg-shape-2,
+  .animate-login-bg-shape-3 {
+    animation: none !important;
+  }
+}
+
+/* Login: altura máxima según viewport estable + safe areas (iPhone notch / home indicator) */
+.max-h-login-card-shell {
+  max-height: min(
+    40rem,
+    calc(
+      100svh - 7rem - env(safe-area-inset-bottom, 0px)
+    )
+  );
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .max-h-login-card-shell {
+    max-height: min(
+      42rem,
+      calc(
+        100svh - 7.25rem - env(safe-area-inset-bottom, 0px)
+      )
+    );
+  }
+}
+@media (min-width: 1024px) {
+  .max-h-login-card-shell {
+    /* Un poco más alto en 14" para evitar overflow; footer sigue reservado en el cálculo */
+    max-height: min(48rem, calc(100dvh - 7rem));
+  }
+}
+
+/* Padding horizontal: al menos 1rem o lo que exija el dispositivo (notch, Dynamic Island) */
+.login-screen-safe-x {
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+}
+
+/* Aire bajo el card antes del footer + home indicator */
+.login-screen-safe-pb {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
+/* Scroll del card de login solo en desktop (iOS/Safari); barra invisible si hace falta scroll */
+@media (min-width: 1024px) {
+  .login-card-scroll-lg {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .login-card-scroll-lg::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
 /* ═══ Achievement System Animations ═══ */
 
 @keyframes achievementSlideIn {

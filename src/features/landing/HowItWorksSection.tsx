@@ -13,9 +13,9 @@ import { motion } from "framer-motion";
 const steps = [
   {
     icon: Car,
-    title: "Pedido en el auto o en la vereda",
+    title: "Pedido en mesa o auto",
     description:
-      "Tu equipo carga el pedido en KarúBox desde el celular o cualquier dispositivo. El cliente puede esperar en el vehículo frente al local.",
+      "Tu equipo carga el pedido en KarúBox desde el celular o cualquier dispositivo. El cliente puede esperar cómodamente en su mesa o vehículo mientras el ticket ya se procesa en el mostrador.",
     color: "from-primary to-primary-light",
   },
   {
@@ -75,6 +75,7 @@ export default function HowItWorksSection() {
           <div className="relative flex items-start justify-between gap-2">
             {/* Connection Line — al centro vertical del bloque de icono (h-24 → mitad ≈ top-12) */}
             <div className="absolute left-0 right-0 top-12 -z-10 h-1 bg-gradient-to-r from-primary via-secondary to-accent opacity-20" />
+
 
             {steps.map((step, index) => (
               <motion.div

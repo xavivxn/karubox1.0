@@ -323,7 +323,7 @@ export default function HeroSection() {
 
       <div className="relative z-[2] mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
-          <motion.div
+          {/* <motion.div
             initial={reduceMotion ? false : { scale: 0.94, opacity: 0 }}
             animate={reduceMotion ? undefined : { scale: 1, opacity: 1 }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
@@ -331,7 +331,7 @@ export default function HeroSection() {
           >
             <span aria-hidden>🔥</span>
             <span>3 nuevos locales se unieron este mes</span>
-          </motion.div>
+          </motion.div> */}
 
           <motion.h1
             variants={titleContainer}
@@ -420,7 +420,7 @@ export default function HeroSection() {
             Te mostramos cómo ahorrar hasta 4 horas diarias en 10 minutos
           </motion.p>
 
-          <motion.div
+          {/* <motion.div
             initial={reduceMotion ? false : { opacity: 0, y: 10 }}
             animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: reduceMotion ? 0 : 0.92 }}
@@ -446,7 +446,7 @@ export default function HeroSection() {
             <span className="max-w-[14rem] pl-3 text-left sm:max-w-none sm:pl-2 sm:text-center">
               Usado por 50+ negocios gastronómicos
             </span>
-          </motion.div>
+          </motion.div> */}
         </div>
 
         <HeroTypewriterBanner />

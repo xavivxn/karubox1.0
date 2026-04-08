@@ -19,7 +19,9 @@ export function CreateTenantView() {
     error,
     step,
     createdTenantNombre,
+    createdTenantId,
     adminEmail,
+    printerConfigWarning,
     handleNextStep,
     handleBack,
     handleSubmitAll,
@@ -132,6 +134,21 @@ export function CreateTenantView() {
             <p className="text-xs text-gray-400 dark:text-gray-500">
               Anotá las credenciales antes de salir. No se vuelven a mostrar.
             </p>
+
+            {printerConfigWarning && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-4 text-sm text-left space-y-2">
+                <p className="font-semibold">Atención: configuración de impresora pendiente</p>
+                <p>{printerConfigWarning}</p>
+                {createdTenantId && (
+                  <Link
+                    href={`/owner/tenants/${createdTenantId}`}
+                    className="inline-flex items-center font-semibold underline hover:no-underline"
+                  >
+                    Ir al detalle de la lomitería para verificar impresora
+                  </Link>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button

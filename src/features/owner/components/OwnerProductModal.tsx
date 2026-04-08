@@ -11,6 +11,7 @@ import {
 } from '@/app/actions/owner'
 import { calcularPuntosAutomaticos, normalizePuntosRetornoPct } from '@/features/pos/utils/pos.utils'
 import { useTenant } from '@/contexts/TenantContext'
+import { calcularPuntos } from '@/features/pos/utils/pos.utils'
 
 interface RecetaItem {
   ingrediente_id: string
