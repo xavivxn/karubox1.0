@@ -90,13 +90,7 @@ export const AdminView = () => {
               }
             : null
       }),
-    [
-      selectedPreset,
-      sesionAbierta,
-      sesionAbierta?.apertura_at,
-      ultimaSesionCerrada?.apertura_at,
-      ultimaSesionCerrada?.cierre_at
-    ]
+    [selectedPreset, sesionAbierta, ultimaSesionCerrada?.apertura_at, ultimaSesionCerrada?.cierre_at]
   )
 
   const {
