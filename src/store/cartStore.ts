@@ -7,6 +7,7 @@ import {
   VALOR_PUNTO_GS,
   type PuntosRetornoPct,
 } from '@/features/pos/utils/pos.utils'
+import { calcularPuntos, VALOR_PUNTO_GS } from '@/features/pos/utils/pos.utils'
 
 export interface ExtraIngredientSelection extends IngredientRequirement {
   unitPrice: number
