@@ -1,12 +1,15 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { isMarketingLightDomPath } from '@/config/routes'
+import { getLogoutRoute } from '@/config'
 import { signOut as signOutAction } from '@/app/actions/auth'
 import { User } from '@supabase/supabase-js'
 import { prefetchPOSCatalog } from '@/features/pos/lib/catalogCache'
 
-interface Tenant {
+export interface Tenant {
   id: string
   nombre: string
   slug: string
@@ -28,6 +31,8 @@ interface Tenant {
   extra_precio_max_estandar?: number | string | null
   /** POS extras tier proteína: piso mínimo (Gs) */
   extra_precio_min_proteina?: number | string | null
+  /** Retorno en puntos sobre ventas: 1, 5 o 10 (% del total). */
+  puntos_retorno_pct?: number
 }
 
 interface Usuario {
@@ -52,11 +57,14 @@ interface TenantContextType {
   isCocinero: boolean
   isRepartidor: boolean
   isTenantActive: boolean
+  /** Vuelve a cargar usuario + tenant desde Supabase (p. ej. tras cambiar configuración). */
+  reloadTenant: () => Promise<void>
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined)
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [tenant, setTenant] = useState<Tenant | null>(null)
@@ -72,48 +80,22 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   // Guardar dark mode en localStorage y aplicar clase al documento
   useEffect(() => {
     localStorage.setItem('darkMode', darkMode.toString())
+    if (isMarketingLightDomPath(pathname)) {
+      document.documentElement.classList.remove('dark')
+      return
+    }
     if (darkMode) {
       document.documentElement.classList.add('dark')
     } else {
       document.documentElement.classList.remove('dark')
     }
-  }, [darkMode])
+  }, [darkMode, pathname])
 
   const toggleDarkMode = () => {
     setDarkMode(prev => !prev)
   }
 
-  useEffect(() => {
-    const supabase = createClient()
-
-    // Verificar sesión actual
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        loadUserData(session.user.id)
-      } else {
-        setLoading(false)
-      }
-    })
-
-    // Escuchar cambios de autenticación
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        loadUserData(session.user.id)
-      } else {
-        setUsuario(null)
-        setTenant(null)
-        setLoading(false)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const loadUserData = async (authUserId: string) => {
+  const loadUserData = useCallback(async (authUserId: string) => {
     try {
       setLoading(true)
       const supabase = createClient()
@@ -123,8 +105,30 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .select(`
-          *,
-          tenants!inner (*)
+          id,
+          tenant_id,
+          nombre,
+          email,
+          rol,
+          activo,
+          tenants!inner (
+            id,
+            nombre,
+            slug,
+            logo_url,
+            direccion,
+            telefono,
+            email,
+            config_impresion,
+            activo,
+            ruc,
+            razon_social,
+            actividad_economica,
+            extra_precio_min_estandar,
+            extra_precio_max_estandar,
+            extra_precio_min_proteina,
+            puntos_retorno_pct
+          )
         `)
         .eq('auth_user_id', authUserId)
         .eq('is_deleted', false)
@@ -166,21 +170,66 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         activo: userData.activo,
       })
 
-      setTenant(userData.tenants as Tenant)
-      console.log('✅ Tenant cargado:', userData.tenants)
+      const tenantRow = Array.isArray(userData.tenants)
+        ? userData.tenants[0]
+        : userData.tenants
+      if (!tenantRow) {
+        throw new Error('Tenant no encontrado para el usuario')
+      }
+      setTenant(tenantRow as Tenant)
+      console.log('✅ Tenant cargado:', tenantRow)
       // Única carga del catálogo POS (categorías + productos) por sesión; el POS solo lee de cache
-      prefetchPOSCatalog((userData.tenants as Tenant).id)
+      prefetchPOSCatalog((tenantRow as Tenant).id)
     } catch (error) {
       console.error('❌ Error cargando datos del usuario:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  const reloadTenant = useCallback(async () => {
+    const supabase = createClient()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    const uid = session?.user?.id
+    if (uid) {
+      await loadUserData(uid)
+    }
+  }, [loadUserData])
+
+  useEffect(() => {
+    const supabase = createClient()
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        loadUserData(session.user.id)
+      } else {
+        setLoading(false)
+      }
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        loadUserData(session.user.id)
+      } else {
+        setUsuario(null)
+        setTenant(null)
+        setLoading(false)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [loadUserData])
 
   const signOut = async () => {
     await signOutAction()
-    // Forzar recarga completa para sincronizar cookies
-    window.location.href = '/'
+    // Recarga completa para sincronizar cookies de sesión (Supabase SSR)
+    window.location.href = getLogoutRoute()
   }
 
   const value: TenantContextType = {
@@ -196,6 +245,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     isCocinero: usuario?.rol === 'cocinero',
     isRepartidor: usuario?.rol === 'repartidor',
     isTenantActive: tenant?.activo ?? true,
+    reloadTenant,
   }
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>

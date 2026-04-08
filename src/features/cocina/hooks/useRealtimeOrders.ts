@@ -37,6 +37,8 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
   const [initialLoad, setInitialLoad] = useState(true)
   const explodedRef = useRef<Set<string>>(new Set())
   const ordersRef = useRef<KitchenOrder[]>([])
+  const fetchInFlightRef = useRef(false)
+  const fetchQueuedRef = useRef(false)
 
   const processRawOrders = useCallback(
     (raw: RawPedido[]): KitchenOrder[] =>
@@ -122,6 +124,23 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
     setInitialLoad(false)
   }, [tenantId, desde, hasta, processRawOrders, computeStats])
 
+  const requestFetchOrders = useCallback(async () => {
+    if (fetchInFlightRef.current) {
+      fetchQueuedRef.current = true
+      return
+    }
+
+    do {
+      fetchQueuedRef.current = false
+      fetchInFlightRef.current = true
+      try {
+        await fetchOrders()
+      } finally {
+        fetchInFlightRef.current = false
+      }
+    } while (fetchQueuedRef.current)
+  }, [fetchOrders])
+
   // Mantener ref en sync con orders para el intervalo (evitar setState dentro de setState)
   useEffect(() => {
     ordersRef.current = orders
@@ -129,8 +148,8 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
 
   // Initial fetch
   useEffect(() => {
-    fetchOrders()
-  }, [fetchOrders])
+    void requestFetchOrders()
+  }, [requestFetchOrders])
 
   // Refresh stages each 5 s & detect new deliveries (sin setState dentro del updater de setOrders)
   useEffect(() => {
@@ -173,7 +192,7 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
           filter: `tenant_id=eq.${tenantId}`,
         },
         () => {
-          fetchOrders()
+          void requestFetchOrders()
         }
       )
       .subscribe()
@@ -181,7 +200,7 @@ export function useRealtimeOrders({ tenantId, desde, hasta }: UseRealtimeOrdersP
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [tenantId, fetchOrders])
+  }, [tenantId, requestFetchOrders])
 
   const clearDelivery = useCallback((id: string) => {
     setNewDeliveryIds((prev) => prev.filter((d) => d !== id))

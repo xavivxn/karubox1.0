@@ -39,8 +39,8 @@ La acumulación ocurre en el POS al confirmar un pedido de venta (no un canje).
 
 En `orderService.confirmOrder` se calculan:
 
-- `puntosAuto = calcularPuntos(total)` donde `calcularPuntos` usa el 5% del total:
-  - `floor(total * 0.05)` (`src/features/pos/utils/pos.utils.ts`)
+- `puntosAuto = calcularPuntosAutomaticos(total, retornoPct)` donde `retornoPct` es **1, 5 u 10** según `tenants.puntos_retorno_pct` (por defecto 5; configurable por admin en la pantalla de Clientes):
+  - `floor(total * retornoPct / 100)` (`src/features/pos/utils/pos.utils.ts`)
 - `puntosBonus` suma puntos extra definidos por el admin por producto:
   - `puntosBonus = SUM(item.puntos_extra * item.cantidad)`
 - `puntosGenerados = puntosAuto + puntosBonus`
@@ -48,7 +48,8 @@ En `orderService.confirmOrder` se calculan:
 La regla de `puntos_extra` está soportada por la migración:
 
 - `database/10_puntos_extra_producto.sql`
-  - `puntos_auto = FLOOR(total * 0.05)`
+- `database/26_puntos_retorno_tenant.sql` (columna `tenants.puntos_retorno_pct`, RPC/trigger alineados al tenant)
+  - `puntos_auto = FLOOR(total × puntos_retorno_pct / 100)`
   - `puntos_extra = SUM(producto.puntos_extra × cantidad)`
   - `total_puntos = puntos_auto + puntos_extra`
 

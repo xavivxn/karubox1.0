@@ -25,10 +25,14 @@ export function AppFooter({
           ? 'bg-gray-900/50 text-gray-400 border-t border-gray-800' 
           : 'bg-orange-50/50 text-gray-500 border-t border-orange-100'
       } ${className}`.trim()}
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      style={{
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingLeft: 'max(0.5rem, env(safe-area-inset-left, 0px))',
+        paddingRight: 'max(0.5rem, env(safe-area-inset-right, 0px))',
+      }}
     >
       <div className="flex flex-col items-center justify-center leading-snug py-3">
-        <p>KarúBox by ARDENTIUM Software Technologies® 2025</p>
+        <p>ARDENTIUM Software Technologies® 2025</p>
         {showVersionLabel && (
           <p className="mt-0.5 text-xs text-inherit opacity-80">
             {APP_VERSION_LABEL}

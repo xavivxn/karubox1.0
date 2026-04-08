@@ -65,6 +65,13 @@ export const useAdminDashboard = (
     activeClients: 0,
     loyaltyPoints: 0,
     weeklyTrend: buildWeekLabels().map((item) => ({ label: item.label, value: 0 })),
+    trendBuckets: buildWeekLabels().map((item) => ({
+      label: item.label,
+      timestamp: item.label,
+      revenue: 0,
+      orders: 0,
+      avgTicket: 0,
+    })),
     candleTrend: [],
     trendGranularity: 'day' as const,
     channelSplit: emptyChannel,

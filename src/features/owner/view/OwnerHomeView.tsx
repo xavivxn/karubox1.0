@@ -38,8 +38,8 @@ export function OwnerHomeView() {
   )
 
   return (
-    <div className="h-full flex flex-col justify-center py-8">
-      <section className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 px-4 md:px-0">
+    <div className="h-full flex flex-col justify-center py-8 overflow-visible">
+      <section className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 px-4 pb-6 md:px-0 overflow-visible">
         {OWNER_CARDS.map((card) => (
           <AppDashboardCard
             key={card.href}

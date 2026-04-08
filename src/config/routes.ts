@@ -5,7 +5,7 @@
 export const ROUTES = {
   // Rutas públicas (sin autenticación)
   PUBLIC: {
-    LOGIN: '/',
+    LOGIN: '/login',
     CARTA_QR: '/carta',
   },
 
@@ -93,6 +93,15 @@ export const PROTECTED_ROUTES = Object.values(ROUTES.PROTECTED)
  */
 export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(route))
+}
+
+/**
+ * Rutas donde el marketing / carta pública deben verse siempre en modo claro en el DOM.
+ * Evita que `class="dark"` en <html> (preferencia del POS) active `dark:` de Tailwind en la landing.
+ */
+export function isMarketingLightDomPath(pathname: string): boolean {
+  if (pathname === '/') return true
+  return isPublicRoute(pathname)
 }
 
 /**

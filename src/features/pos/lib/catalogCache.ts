@@ -39,12 +39,12 @@ export function setCachedSalsas(tenantId: string, salsas: SauceProduct[]): void 
  */
 export function prefetchPOSCatalog(tenantId: string): void {
   Promise.all([
-    posService.loadCategorias(tenantId),
-    posService.loadProductos(tenantId),
+    posService.loadCatalog(tenantId),
     posService.loadComboItems(tenantId),
     posService.loadSauceProducts(tenantId).catch((): SauceProduct[] => [])
   ])
-    .then(([categorias, productos, comboMap, salsas]) => {
+    .then(([catalog, comboMap, salsas]) => {
+      const { categorias, productos } = catalog
       const productosConCombos = productos.map((p) => {
         const items = comboMap.get(p.id)
         return items && items.length > 0 ? { ...p, combo_items: items } : p

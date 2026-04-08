@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { signIn as signInAction } from '@/app/actions/auth'
 import { validateLoginForm } from '../utils/validators'
+import { toParaguayanLoginError } from '../utils/loginErrorMessages'
 
 export function useAuth() {
   const [email, setEmail] = useState('')
@@ -27,7 +28,7 @@ export function useAuth() {
       
       // Si hay error, mostrarlo
       if (result?.error) {
-        setError(result.error)
+        setError(toParaguayanLoginError(result.error))
         setLoading(false)
         return
       }
@@ -37,8 +38,9 @@ export function useAuth() {
       if (result?.success && result?.redirectTo) {
         window.location.href = result.redirectTo
       }
-    } catch (err: any) {
-      setError(err.message || 'Error al iniciar sesión')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : ''
+      setError(toParaguayanLoginError(msg))
       setLoading(false)
     }
   }

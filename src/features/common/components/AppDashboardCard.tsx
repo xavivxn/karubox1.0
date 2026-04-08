@@ -1,7 +1,16 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ShoppingCart, BarChart3, FileText, Users, ChefHat, Loader2, Store, Wallet } from 'lucide-react'
+import {
+  ShoppingCart,
+  BarChart3,
+  FileText,
+  Users,
+  ChefHat,
+  Loader2,
+  Store,
+  Wallet,
+} from 'lucide-react'
 
 export type AppDashboardCardColor = 'orange' | 'blue' | 'green' | 'purple' | 'red'
 
@@ -153,7 +162,7 @@ export function AppDashboardCard({
         group relative rounded-3xl shadow-2xl transition-all duration-300 text-left w-full
         block h-full
         focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent
-        ${isDisabled ? 'pointer-events-none opacity-60 cursor-not-allowed scale-100' : 'hover:scale-105 cursor-pointer active:scale-[1.02]'}
+        ${isDisabled ? 'pointer-events-none opacity-60 cursor-not-allowed scale-100' : 'hover:-translate-y-1 hover:scale-[1.02] cursor-pointer active:scale-[1.01]'}
         ${!isDisabled ? c.shadow : ''}
         ${bgCls}
         ${isThisCardLoading ? `ring-2 ring-offset-2 ring-offset-transparent ${c.ring}` : ''}

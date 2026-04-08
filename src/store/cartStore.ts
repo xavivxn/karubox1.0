@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import type { IngredientRequirement } from '@/types/ingredients'
 import type { Cliente } from '@/types/supabase'
+import {
+  calcularPuntosAutomaticos,
+  normalizePuntosRetornoPct,
+  VALOR_PUNTO_GS,
+  type PuntosRetornoPct,
+} from '@/features/pos/utils/pos.utils'
 import { calcularPuntos, VALOR_PUNTO_GS } from '@/features/pos/utils/pos.utils'
 
 export interface ExtraIngredientSelection extends IngredientRequirement {
@@ -73,8 +79,13 @@ interface CartState {
   // Computed
   getTotal: () => number
   getItemCount: () => number
-  /** Puntos del carrito: automáticos (5% del total, igual que al confirmar) + bonus por producto */
-  getTotalPuntos: () => { puntosAuto: number; puntosExtra: number; total: number; valorGs: number }
+  /** Puntos del carrito: automáticos (% del total según tenant) + bonus por producto */
+  getTotalPuntos: (retornoPct?: PuntosRetornoPct) => {
+    puntosAuto: number
+    puntosExtra: number
+    total: number
+    valorGs: number
+  }
 }
 
 const calculateSubtotal = (precioBase: number, extraCostPerUnit: number | undefined, cantidad: number) => {
@@ -415,9 +426,10 @@ export const useCartStore = create<CartState>((set, get) => ({
     return get().items.reduce((count, item) => count + item.cantidad, 0)
   },
 
-  getTotalPuntos: () => {
+  getTotalPuntos: (retornoPct) => {
     const total = get().getTotal()
-    const puntosAuto = calcularPuntos(total)
+    const pct = normalizePuntosRetornoPct(retornoPct)
+    const puntosAuto = calcularPuntosAutomaticos(total, pct)
     const puntosExtra = get().items.reduce(
       (sum, item) => sum + ((item.puntos_extra ?? 0) * item.cantidad),
       0

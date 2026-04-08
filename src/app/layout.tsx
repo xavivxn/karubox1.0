@@ -25,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="h-full">
-      <body className="h-full">
+    <html lang="es" className="h-full min-h-[100dvh] scroll-smooth">
+      <body className="h-full min-h-[100dvh] w-full min-w-0 antialiased">
         <TenantProvider>
           <AppFrame>{children}</AppFrame>
         </TenantProvider>

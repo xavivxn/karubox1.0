@@ -5,6 +5,7 @@ import { Trash2, Plus, Minus, ShoppingBag, Settings2, Star, Zap, Gift, Droplets 
 import { formatGuaranies } from '@/lib/utils/format'
 import { useMemo, useState } from 'react'
 import { useTenant } from '@/contexts/TenantContext'
+import { normalizePuntosRetornoPct } from '@/features/pos/utils/pos.utils'
 import { SaucesDrawer } from './SaucesDrawer'
 
 type OrderTypeValue = 'delivery' | 'local' | 'para_llevar'
@@ -69,7 +70,8 @@ export default function Cart({
   const total = getTotal()
   const visibleItems = useMemo(() => items.filter((i) => i.grupo !== 'salsa'), [items])
   const itemCount = visibleItems.reduce((sum, item) => sum + item.cantidad, 0)
-  const puntos = getTotalPuntos()
+  const retornoPct = normalizePuntosRetornoPct(tenant?.puntos_retorno_pct)
+  const puntos = getTotalPuntos(retornoPct)
   const sauceItems = useMemo(() => items.filter((i) => i.grupo === 'salsa'), [items])
   const saucesInitialQty = useMemo(() => {
     const map: Record<string, number> = {}

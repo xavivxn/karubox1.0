@@ -8,6 +8,7 @@ import type {
   AdminDatePreset,
   CandlestickTrendItem,
   PedidoRecord,
+  TrendBucketItem,
   WeeklyTrendItem,
 } from '../types/admin.types'
 import { normalizeNumber } from './admin.utils'
@@ -90,7 +91,13 @@ function buildHourSlots(dateRange: AdminDateRange, now: Date): Array<{ key: stri
     rangeEnd = new Date(now)
   } else {
     rangeStart = dateRange.from ? new Date(dateRange.from) : dayStart(now)
-    rangeEnd = new Date(now)
+    // Para turno cerrado, `to` es límite exclusivo; lo convertimos a inclusivo
+    // para no mostrar horas posteriores al cierre.
+    if (preset === 'turno_actual' && dateRange.to) {
+      rangeEnd = new Date(new Date(dateRange.to).getTime() - 1)
+    } else {
+      rangeEnd = new Date(now)
+    }
   }
 
   let cursor = new Date(rangeStart)
@@ -212,18 +219,39 @@ export function processTrendSeries(
   dateRange: AdminDateRange,
   options?: { now?: Date }
 ): WeeklyTrendItem[] {
+  return processTrendBuckets(pedidos, dateRange, options).map((bucket) => ({
+    label: bucket.label,
+    value: bucket.revenue,
+  }))
+}
+
+/**
+ * Serie normalizada por bucket temporal para múltiples métricas del gráfico.
+ */
+export function processTrendBuckets(
+  pedidos: PedidoRecord[],
+  dateRange: AdminDateRange,
+  options?: { now?: Date }
+): TrendBucketItem[] {
   const now = options?.now ? new Date(options.now) : new Date()
   const g = getTrendGranularity(dateRange.preset)
 
-  if (g === 'hour') {
-    const slots = buildHourSlots(dateRange, now)
-    const sums = sumByPedidoHour(pedidos)
-    return slots.map((s) => ({ label: s.label, value: sums.get(s.key) ?? 0 }))
-  }
+  const slots =
+    g === 'hour' ? buildHourSlots(dateRange, now) : buildDaySlots(dateRange, now, pedidos)
 
-  const slots = buildDaySlots(dateRange, now, pedidos)
-  const sums = sumByPedidoDay(pedidos)
-  return slots.map((s) => ({ label: s.label, value: sums.get(s.key) ?? 0 }))
+  return slots.map((slot) => {
+    const bucket =
+      g === 'hour' ? ordersInHourSlot(pedidos, slot.key) : ordersInDaySlot(pedidos, slot.key)
+    const revenue = bucket.reduce((sum, order) => sum + normalizeNumber(order.total), 0)
+    const orders = bucket.length
+    return {
+      label: slot.label,
+      timestamp: slot.key,
+      revenue,
+      orders,
+      avgTicket: orders > 0 ? Math.round(revenue / orders) : 0,
+    }
+  })
 }
 
 /**

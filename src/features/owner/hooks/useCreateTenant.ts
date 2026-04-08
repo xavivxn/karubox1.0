@@ -37,7 +37,9 @@ export function useCreateTenant() {
   const [error, setError] = useState('')
   const [step, setStep] = useState<Step>('tenant')
   const [createdTenantNombre, setCreatedTenantNombre] = useState('')
+  const [createdTenantId, setCreatedTenantId] = useState('')
   const [adminEmail, setAdminEmail] = useState('')
+  const [printerConfigWarning, setPrinterConfigWarning] = useState('')
 
   const setField = <K extends keyof CreateTenantForm>(
     field: K,
@@ -116,6 +118,8 @@ export function useCreateTenant() {
     }
 
     setCreatedTenantNombre(tenantResult.tenant!.nombre)
+    setCreatedTenantId(tenantResult.tenant!.id)
+    setPrinterConfigWarning(tenantResult.printerConfigWarning ?? '')
     setAdminEmail(userResult.email!)
     setStep('done')
   }
@@ -124,7 +128,9 @@ export function useCreateTenant() {
     setForm({ nombreNegocio: '', ruc: '', razon_social: '', actividad_economica: '', email: '', telefono: '', direccion: '', logo_url: '', nombreAdmin: '', emailAdmin: '', passwordAdmin: '' })
     setStep('tenant')
     setCreatedTenantNombre('')
+    setCreatedTenantId('')
     setAdminEmail('')
+    setPrinterConfigWarning('')
     setError('')
   }, [])
 
@@ -135,7 +141,9 @@ export function useCreateTenant() {
     error,
     step,
     createdTenantNombre,
+    createdTenantId,
     adminEmail,
+    printerConfigWarning,
     handleNextStep,
     handleBack,
     handleSubmitAll,

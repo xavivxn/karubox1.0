@@ -15,6 +15,7 @@ import { CampanaModal } from './CampanaModal'
 import { ClienteDetailDrawer } from './ClienteDetailDrawer'
 import { ClientesTableRich } from './ClientesTableRich'
 import { ClienteModal } from './ClienteModal'
+import { PuntosRetornoVentasSelect } from './PuntosRetornoVentasSelect'
 import { LevelSegmentCards } from './LevelSegmentCards'
 import { TopClientesGasto } from './TopClientesGasto'
 import type { TipoCampana } from '../types/clientes.types'
@@ -71,27 +72,32 @@ export const ClientesPanelView = () => {
       <div className="w-full min-w-0 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6 sm:space-y-8">
 
         {/* ── Header ── */}
-        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-w-0">
-          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-            <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400">
-              <Users size={20} className="sm:w-6 sm:h-6" />
+        <header className="flex flex-col gap-4 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-w-0">
+            <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+              <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400">
+                <Users size={20} className="sm:w-6 sm:h-6" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight truncate">
+                  Clientes
+                </h1>
+                <p className="text-gray-500 dark:text-gray-400 mt-0.5 text-sm sm:text-base truncate">
+                  {tenant.nombre}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight truncate">
-                Clientes
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400 mt-0.5 text-sm sm:text-base truncate">
-                {tenant.nombre}
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto shrink-0">
+              <PuntosRetornoVentasSelect />
+              <button
+                onClick={handleNuevoCliente}
+                className="flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 bg-blue-600 dark:bg-blue-500 text-white rounded-xl hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors font-semibold shadow-sm dark:shadow-black/20 hover:shadow-md dark:hover:shadow-black/30 w-full sm:w-auto"
+              >
+                <UserPlus size={18} />
+                Nuevo Cliente
+              </button>
             </div>
           </div>
-          <button
-            onClick={handleNuevoCliente}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 dark:bg-blue-500 text-white rounded-xl hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors font-semibold shadow-sm dark:shadow-black/20 hover:shadow-md dark:hover:shadow-black/30"
-          >
-            <UserPlus size={18} />
-            Nuevo Cliente
-          </button>
         </header>
 
         {/* ── Tarjetas de segmentos ── */}

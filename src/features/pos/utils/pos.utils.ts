@@ -18,16 +18,34 @@ export const formatTipoPedido = (value: TipoPedido): string => {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
-/** Acumulación: 5% del monto de compra en puntos */
-export const PUNTOS_PORCENTAJE = 0.05
+/** Porcentaje de retorno en puntos permitido por tenant (entero). */
+export type PuntosRetornoPct = 1 | 5 | 10
+
+/** Default histórico: 5% del monto en puntos automáticos. */
+export const PUNTOS_RETORNO_PCT_DEFAULT: PuntosRetornoPct = 5
+
+/** Compatibilidad: factor 0.05 para código legado que aún use decimal fijo. */
+export const PUNTOS_PORCENTAJE = PUNTOS_RETORNO_PCT_DEFAULT / 100
 
 /** Valor de canje: 1 punto equivale a 1 Gs de crédito */
 export const VALOR_PUNTO_GS = 1
 
-/** Puntos automáticos que genera una compra según el monto total */
-export const calcularPuntos = (total: number): number => {
-  return Math.floor(total * PUNTOS_PORCENTAJE)
+/** Normaliza el valor persistido en BD (antes de migración puede faltar). */
+export function normalizePuntosRetornoPct(value: unknown): PuntosRetornoPct {
+  if (value === 1 || value === 5 || value === 10) return value
+  const n = Number(value)
+  if (n === 1 || n === 5 || n === 10) return n as PuntosRetornoPct
+  return PUNTOS_RETORNO_PCT_DEFAULT
 }
+
+/** Puntos automáticos por total de venta: floor(total × retornoPct / 100). */
+export function calcularPuntosAutomaticos(totalGs: number, retornoPct: PuntosRetornoPct): number {
+  return Math.floor(totalGs * (retornoPct / 100))
+}
+
+/** @deprecated Preferir `calcularPuntosAutomaticos(total, normalizePuntosRetornoPct(tenant))`. */
+export const calcularPuntos = (total: number): number =>
+  calcularPuntosAutomaticos(total, PUNTOS_RETORNO_PCT_DEFAULT)
 
 /**
  * Arma el texto de modificaciones del ítem para el ticket de cocina.

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useCartStore } from '@/store/cartStore'
 import { useTenant } from '@/contexts/TenantContext'
+import { normalizePuntosRetornoPct } from '@/features/pos/utils/pos.utils'
 import { FEATURES } from '@/config'
 import { orderService } from '../services/orderService'
 import type { FeedbackState, FeedbackDetail } from '../types/pos.types'
@@ -66,6 +67,8 @@ export function useOrderConfirmation() {
     setIsProcessing(true)
     try {
       const total = getTotal()
+      const puntosRetornoPct = normalizePuntosRetornoPct(tenant.puntos_retorno_pct)
+
       const { pedido, successDetails } = await orderService.confirmOrder({
         tenantId: tenant.id,
         usuarioId: usuario.id,
@@ -78,6 +81,7 @@ export function useOrderConfirmation() {
         emitirFactura: false,
         facturaALNombreDelCliente: false,
         facturaMostrarNombreYCI: false,
+        puntosRetornoPct,
       })
 
       clearCart()
@@ -121,6 +125,8 @@ export function useOrderConfirmation() {
     try {
       const total = getTotal()
 
+      const puntosRetornoPct = normalizePuntosRetornoPct(tenant.puntos_retorno_pct)
+
       const { pedido, successDetails } = await orderService.confirmOrder({
         tenantId: tenant.id,
         usuarioId: usuario.id,
@@ -133,6 +139,7 @@ export function useOrderConfirmation() {
         emitirFactura: true,
         facturaALNombreDelCliente,
         facturaMostrarNombreYCI: !facturaALNombreDelCliente && comprobanteNombreYCI,
+        puntosRetornoPct,
       })
 
       setFacturaPrefModalOpen(false)

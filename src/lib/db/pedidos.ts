@@ -7,6 +7,42 @@ import type {
   NuevoItemPedido 
 } from '@/types/supabase'
 
+const PEDIDO_SELECT_FIELDS = `
+  id,
+  tenant_id,
+  numero_pedido,
+  cliente_id,
+  usuario_id,
+  tipo,
+  estado,
+  total,
+  puntos_generados,
+  notas,
+  created_at,
+  updated_at,
+  estado_pedido,
+  empleado_id,
+  cancelado_por_id,
+  cancelado_at,
+  motivo_cancelacion
+`
+
+const ITEM_PEDIDO_SELECT_FIELDS = `
+  id,
+  pedido_id,
+  producto_id,
+  producto_nombre,
+  cantidad,
+  precio_unitario,
+  subtotal,
+  notas,
+  created_at,
+  iva_porcentaje,
+  monto_iva,
+  personalizaciones,
+  orden_ticket
+`
+
 /**
  * Crear un nuevo pedido completo con sus items
  */
@@ -18,7 +54,7 @@ export async function crearPedido(
   const { data: pedido, error: errorPedido } = await supabase
     .from('pedidos')
     .insert(datosPedido)
-    .select()
+    .select(PEDIDO_SELECT_FIELDS)
     .single()
   
   if (errorPedido) throw errorPedido
@@ -60,7 +96,7 @@ export async function getPedidosPorEstado(
 ) {
   const { data, error } = await supabase
     .from('pedidos')
-    .select('*')
+    .select(PEDIDO_SELECT_FIELDS)
     .eq('estado', estado)
     .order('created_at', { ascending: false })
   
@@ -75,9 +111,24 @@ export async function getPedidoPorId(id: string) {
   const { data, error } = await supabase
     .from('pedidos')
     .select(`
-      *,
-      items_pedido(*),
-      clientes(*)
+      ${PEDIDO_SELECT_FIELDS},
+      items_pedido(${ITEM_PEDIDO_SELECT_FIELDS}),
+      clientes(
+        id,
+        tenant_id,
+        nombre,
+        ci,
+        telefono,
+        email,
+        direccion,
+        puntos_totales,
+        notas,
+        created_at,
+        updated_at,
+        ruc,
+        pasaporte,
+        fecha_nacimiento
+      )
     `)
     .eq('id', id)
     .single()
@@ -92,7 +143,7 @@ export async function getPedidoPorId(id: string) {
 export async function getItemsPedido(pedidoId: string) {
   const { data, error } = await supabase
     .from('items_pedido')
-    .select('*')
+    .select(ITEM_PEDIDO_SELECT_FIELDS)
     .eq('pedido_id', pedidoId)
   
   if (error) throw error
@@ -117,7 +168,7 @@ export async function actualizarEstadoPedido(
     .from('pedidos')
     .update(updates)
     .eq('id', pedidoId)
-    .select()
+    .select(PEDIDO_SELECT_FIELDS)
     .single()
   
   if (error) throw error
@@ -133,7 +184,7 @@ export async function getPedidosDelDia() {
   
   const { data, error } = await supabase
     .from('pedidos')
-    .select('*')
+    .select(PEDIDO_SELECT_FIELDS)
     .gte('fecha_creacion', hoy.toISOString())
     .order('fecha_creacion', { ascending: false })
   

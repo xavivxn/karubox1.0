@@ -9,6 +9,8 @@ import {
   getRecetaProductoOwner,
   updateProductoOwner,
 } from '@/app/actions/owner'
+import { useTenant } from '@/contexts/TenantContext'
+import { normalizePuntosRetornoPct } from '@/features/pos/utils/pos.utils'
 
 export interface ProductoEditShape {
   id: string
@@ -52,6 +54,10 @@ type RecetaLineaEditor = {
 }
 
 export function EditProductoModal({ open, onClose, tenantId, producto, onSaved }: EditProductoModalProps) {
+  const { tenant } = useTenant()
+  const retornoPct = normalizePuntosRetornoPct(
+    tenant?.id === tenantId ? tenant.puntos_retorno_pct : undefined
+  )
   const baseId = useId()
   const tabDatosId = `${baseId}-tab-datos`
   const tabRecetaId = `${baseId}-tab-receta`
@@ -485,7 +491,8 @@ export function EditProductoModal({ open, onClose, tenantId, producto, onSaved }
                   <span className="text-xs text-yellow-600 dark:text-yellow-400 font-normal">(opcional)</span>
                 </div>
                 <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                  Puntos adicionales sobre la acumulación automática (5 % del total del pedido).
+                  Puntos adicionales sobre la acumulación automática ({retornoPct}% del total del pedido, configurable en
+                  Clientes).
                 </p>
                 <div className="flex rounded-xl border border-yellow-300 dark:border-yellow-700 bg-white dark:bg-gray-800 overflow-hidden focus-within:border-yellow-500 focus-within:ring-2 focus-within:ring-yellow-400/20 transition">
                   <span className="flex items-center px-3.5 text-sm font-semibold text-yellow-600 border-r border-yellow-200 dark:border-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 select-none">
