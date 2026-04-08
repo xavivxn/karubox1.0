@@ -71,9 +71,11 @@ export default function HowItWorksSection() {
 
         {/* Desktop: Horizontal Flow */}
         <div className="hidden lg:block">
-          <div className="flex items-start justify-between relative">
-            {/* Connection Line */}
-            <div className="absolute top-24 left-0 right-0 h-1 bg-gradient-to-r from-primary via-secondary to-accent opacity-20 -z-10"></div>
+          {/* items-start: misma línea base para iconos; items-center centraba cada columna en altura y desalineaba */}
+          <div className="relative flex items-start justify-between gap-2">
+            {/* Connection Line — al centro vertical del bloque de icono (h-24 → mitad ≈ top-12) */}
+            <div className="absolute left-0 right-0 top-12 -z-10 h-1 bg-gradient-to-r from-primary via-secondary to-accent opacity-20" />
+
 
             {steps.map((step, index) => (
               <motion.div
@@ -82,7 +84,7 @@ export default function HowItWorksSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="flex-1 flex flex-col items-center relative"
+                className="relative flex min-w-0 flex-1 flex-col items-center"
               >
                 <div
                   className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center mb-6 shadow-lg hover:scale-110 transition-transform duration-300`}

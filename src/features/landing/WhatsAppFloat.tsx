@@ -15,7 +15,7 @@ export default function WhatsAppFloat() {
   const href = getWhatsAppHref();
 
   return (
-    <div className="fixed z-[100] flex flex-row items-center gap-2 bottom-[calc(6.25rem+env(safe-area-inset-bottom,0px))] right-[max(1rem,env(safe-area-inset-right,0px))] md:bottom-5 md:right-5">
+    <div className="fixed z-[100] hidden flex-row items-center gap-2 bottom-5 right-[max(1rem,env(safe-area-inset-right,0px))] md:flex">
       <AnimatePresence>
         {showTip && (
           <motion.div

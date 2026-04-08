@@ -30,44 +30,24 @@ const LOGIN_HREF = ROUTES.PUBLIC.LOGIN;
 const navMobileWhatsAppClass = cn(
   "inline-flex w-full min-w-0 items-center justify-center gap-2 rounded-xl px-4 py-3.5",
   "font-semibold text-base leading-snug text-center whitespace-normal no-underline",
-  "bg-transparent text-primary hover:text-primary-light",
-  "shadow-[0_2px_10px_rgba(0,0,0,0.18)] hover:shadow-[0_4px_14px_rgba(0,0,0,0.24)]",
-  "transition-[color,box-shadow] duration-300",
-  "border-0",
+  "border-2 border-primary/45 bg-primary/8 text-primary hover:bg-primary/12 hover:text-primary-dark",
+  "dark:border-primary/50 dark:bg-primary/10",
+  "shadow-sm hover:shadow-md",
+  "transition-[color,box-shadow,background-color] duration-300",
   "[-webkit-tap-highlight-color:transparent]",
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-0"
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900"
 );
 
 export default function Navigation() {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [loginPending, setLoginPending] = useState(false);
   const [isNavigatingLogin, setIsNavigatingLogin] = useState(false);
   const logoRef = useRef<HTMLDivElement>(null);
-
-  const handleLoginClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (loginPending) {
-      e.preventDefault();
-      return;
-    }
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
-      return;
-    }
-    setLoginPending(true);
-    setIsMobileMenuOpen(false);
-  };
 
   useEffect(() => {
     router.prefetch(LOGIN_HREF);
   }, [router]);
-
-  /** Si la navegación no termina, volver a habilitar el botón */
-  useEffect(() => {
-    if (!loginPending) return;
-    const t = window.setTimeout(() => setLoginPending(false), 12_000);
-    return () => window.clearTimeout(t);
-  }, [loginPending]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -137,13 +117,15 @@ export default function Navigation() {
   return (
     <nav
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        "fixed top-0 left-0 right-0 transition-all duration-300",
+        /* Por encima de MobileSticky (96), WhatsAppFloat (100) y ScrollToTop (90) cuando el menú está abierto */
+        isMobileMenuOpen ? "z-[110]" : "z-50",
         "max-md:pt-[env(safe-area-inset-top,0px)]",
         isScrolled || isMobileMenuOpen
           ? cn(
               "shadow-sm border-b border-gray-200/60 dark:border-gray-700/60",
               isMobileMenuOpen
-                ? "bg-white/92 dark:bg-gray-900/92"
+                ? "bg-white dark:bg-gray-900"
                 : "bg-white/75 dark:bg-gray-900/75 backdrop-blur-xl"
             )
           : "bg-transparent"
@@ -154,7 +136,7 @@ export default function Navigation() {
           type="button"
           aria-label="Cerrar menú de navegación"
           tabIndex={-1}
-          className="fixed inset-0 z-[40] bg-gray-950/45 backdrop-blur-[3px] md:hidden"
+          className="fixed inset-0 z-[40] bg-black/65 backdrop-blur-md md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -250,7 +232,29 @@ export default function Navigation() {
             </div>
           </div>
 
-          <div className="md:hidden">
+          <div className="flex md:hidden items-center gap-1.5 sm:gap-2 shrink-0">
+            <Link
+              href={LOGIN_HREF}
+              prefetch
+              onClick={() => setIsNavigatingLogin(true)}
+              aria-busy={isNavigatingLogin}
+              className={cn(
+                navLoginOutlineClass,
+                "px-3 py-2 min-h-10 text-sm font-semibold rounded-lg sm:px-4 sm:rounded-xl",
+                "whitespace-nowrap [-webkit-tap-highlight-color:transparent]",
+                isNavigatingLogin &&
+                  "bg-primary text-white border-primary pointer-events-none"
+              )}
+            >
+              {isNavigatingLogin ? (
+                <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
+                  Cargando...
+                </span>
+              ) : (
+                "Iniciar sesión"
+              )}
+            </Link>
             <button
               type="button"
               id="mobile-nav-toggle"
@@ -288,23 +292,23 @@ export default function Navigation() {
             <div
               className={cn(
                 "overflow-hidden rounded-2xl border shadow-2xl",
-                /* Panel oscuro: sobre hero/secciones oscuras no se ve una “caja blanca”. */
-                "border-white/10 bg-neutral-950/96 text-neutral-100 backdrop-blur-xl",
-                "shadow-black/50"
+                "border-gray-200 bg-white text-gray-900",
+                "dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100",
+                "shadow-gray-900/15 dark:shadow-black/40"
               )}
             >
-              <div className="px-4 py-3 border-b border-white/10 bg-white/[0.04]">
+              <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/80">
                 <p
                   id="mobile-nav-heading"
-                  className="text-xs font-semibold uppercase tracking-wider text-neutral-500"
+                  className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
                 >
                   Navegación
                 </p>
-                <p className="text-sm text-neutral-400 mt-0.5">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
                   Ir a una sección de la página
                 </p>
               </div>
-              <ul className="divide-y divide-white/10">
+              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                 {mobileNavLinks.map(({ id, label }) => (
                   <li key={id}>
                     <button
@@ -313,46 +317,20 @@ export default function Navigation() {
                       className={cn(
                         "flex w-full items-center justify-between gap-3",
                         "min-h-[3.25rem] px-4 py-3 text-left text-base font-medium",
-                        "text-neutral-100",
-                        "active:bg-white/10 hover:text-primary transition-colors"
+                        "text-gray-900 dark:text-gray-100",
+                        "active:bg-gray-100 dark:active:bg-gray-800 hover:text-primary transition-colors"
                       )}
                     >
                       <span>{label}</span>
                       <ChevronRight
-                        className="h-5 w-5 shrink-0 text-neutral-500"
+                        className="h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500"
                         aria-hidden
                       />
                     </button>
                   </li>
                 ))}
               </ul>
-              <div className="p-4 space-y-3 border-t border-white/10">
-                <Link
-                  href={LOGIN_HREF}
-                  prefetch
-                  onClick={() => {
-                    setIsNavigatingLogin(true);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  aria-busy={isNavigatingLogin}
-                  className={cn(
-                    navLoginOutlineClass,
-                    "w-full justify-center text-base py-3.5",
-                    "border-primary text-primary hover:bg-primary/15",
-                    "focus-visible:ring-offset-0 focus-visible:ring-primary/80",
-                    isNavigatingLogin &&
-                      "bg-primary text-white border-primary pointer-events-none"
-                  )}
-                >
-                  {isNavigatingLogin ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2 className="h-5 w-5 animate-spin text-orange-100" />
-                      Cargando...
-                    </span>
-                  ) : (
-                    "Iniciar sesión"
-                  )}
-                </Link>
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
                 <a
                   href={waHref}
                   target="_blank"
