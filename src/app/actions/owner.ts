@@ -84,6 +84,66 @@ async function resolverSlugUnico(
   return `${slugBase}-${siguiente}`
 }
 
+interface CreateDefaultPrinterConfigResult {
+  error: string | null
+  warning: string | null
+}
+
+async function createDefaultPrinterConfig(tenantId: string, slug: string): Promise<CreateDefaultPrinterConfigResult> {
+  const adminClient = createAdminClient()
+
+  const payload = {
+    lomiteria_id: tenantId,
+    printer_id: `${slug}-printer-1`,
+    agent_ip: 'localhost',
+    agent_port: 3001,
+    tipo_impresora: 'usb' as const,
+    nombre_impresora: 'Impresora Térmica Cocina',
+    ubicacion: 'Cocina',
+    activo: true,
+  }
+
+  const insertResult = await adminClient.from('printer_config').insert(payload)
+  if (!insertResult.error) {
+    return { error: null, warning: null }
+  }
+
+  console.error('[createTenant] insert printer_config failed', {
+    tenantId,
+    slug,
+    code: insertResult.error.code,
+    message: insertResult.error.message,
+    details: insertResult.error.details,
+    hint: insertResult.error.hint,
+  })
+
+  const upsertResult = await adminClient
+    .from('printer_config')
+    .upsert(payload, { onConflict: 'lomiteria_id' })
+
+  if (!upsertResult.error) {
+    return {
+      error: null,
+      warning: 'La configuración de impresora tuvo un fallo inicial, pero se recuperó automáticamente.',
+    }
+  }
+
+  console.error('[createTenant] upsert printer_config failed', {
+    tenantId,
+    slug,
+    code: upsertResult.error.code,
+    message: upsertResult.error.message,
+    details: upsertResult.error.details,
+    hint: upsertResult.error.hint,
+  })
+
+  return {
+    error: upsertResult.error.message,
+    warning:
+      'La lomitería se creó, pero no se pudo guardar su configuración de impresora. Configúrala manualmente en el panel de impresoras.',
+  }
+}
+
 /**
  * Verifica que el usuario que llama la acción sea un owner.
  */
@@ -190,26 +250,16 @@ export async function createTenant(data: CreateTenantData) {
     .from('tenant_pedido_counters')
     .insert({ tenant_id: tenant.id, ultimo_numero: 0 })
 
-  // Inicializar configuración de impresora por defecto
-  const printerConfigResult = await supabase
-    .from('printer_config')
-    .insert({
-      lomiteria_id: tenant.id,
-      printer_id: `${slug}-printer-1`,
-      agent_ip: 'localhost',
-      agent_port: 3001,
-      tipo_impresora: 'usb',
-      nombre_impresora: 'Impresora Térmica Cocina',
-      ubicacion: 'Cocina',
-      activo: true,
-    })
-
-  // Log error pero no fallar la creación del tenant
+  const printerConfigResult = await createDefaultPrinterConfig(tenant.id, slug)
   if (printerConfigResult.error) {
-    console.error('[createTenant] Error al crear printer_config:', printerConfigResult.error)
+    console.error('[createTenant] printer_config no persistido tras reintento', {
+      tenantId: tenant.id,
+      slug,
+      error: printerConfigResult.error,
+    })
   }
 
-  return { error: null, tenant }
+  return { error: null, tenant, printerConfigWarning: printerConfigResult.warning }
 }
 
 /**

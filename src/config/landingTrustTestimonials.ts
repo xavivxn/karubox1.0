@@ -36,7 +36,7 @@ export const LANDING_TRUST_TESTIMONIALS: LandingTrustTestimonial[] = [
     business: "Atlas Burguer",
     category: "hamburguesería",
     quote:
-      "KarúBox nos dio el orden para escalar: centralizamos ventas e inventario en tiempo récord. En plena hora pico el sistema fluye impecable, permitiéndonos tomar mejores decisiones con métricas reales. Dejamos las planillas para enfocarnos 100% en la calidad y en la fidelización de nuestros clientes.",
+      "KarúBox profesionalizó nuestro local de comidas rápidas y nos dio el orden para crecer. En plena hora pico el sistema vuela y tener ventas e inventario al día es otra cosa. Chau planillas; ahora nos enfocamos 100% en la calidad y en que los clientes siempre vuelvan.",
     imageSrc: "/landing/atlas-burguer.png",
     role: "Propietario",
     businessHandle: "atlas_burguer24",

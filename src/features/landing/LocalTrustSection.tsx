@@ -141,7 +141,7 @@ export default function LocalTrustSection() {
         <p className="text-center text-sm text-gray-600 dark:text-gray-400 mb-10 max-w-2xl mx-auto">
           {hasMany
             ? "Lomiterías, pizzerías y hamburgueserías que ya digitalizaron pedidos, cocina y caja."
-            : "Cada local cuenta cómo ordena pedidos, cocina y caja. Empezamos con historias reales en producción; cuando se sumen más clientes, vas a ver más voces acá."}
+            : "Cada local cuenta cómo ordena pedidos, cocina y caja."}
         </p>
 
         <div className="relative">
