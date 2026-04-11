@@ -8,7 +8,7 @@ import { ROUTES } from '@/config/routes'
 
 const OWNER_CARDS = [
   {
-    title: 'Analytics landing',
+    title: 'Analytics Landing',
     description: 'Usuarios, sesiones, páginas vistas y fuentes de tráfico de la home pública.',
     href: ROUTES.PROTECTED.OWNER_ANALYTICS,
     icon: 'admin' as const,

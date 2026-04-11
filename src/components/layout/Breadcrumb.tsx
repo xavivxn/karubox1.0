@@ -18,6 +18,7 @@ import {
   FileText,
   Settings,
   Loader2,
+  BarChart3,
 } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { ROUTES } from '@/config/routes'
@@ -53,6 +54,12 @@ export function Breadcrumb() {
         label: 'Caja de socios',
         path: '/owner/caja',
         icon: <FileText className="w-4 h-4" />,
+      })
+    } else if (pathname === ROUTES.PROTECTED.OWNER_ANALYTICS) {
+      items.push({
+        label: 'Analytics Landing',
+        path: ROUTES.PROTECTED.OWNER_ANALYTICS,
+        icon: <BarChart3 className="w-4 h-4" />,
       })
     } else if (pathname === '/owner/tenants') {
       items.push({
