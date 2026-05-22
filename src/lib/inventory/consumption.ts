@@ -774,7 +774,7 @@ export async function revertirIngredientesPorItemPedido({
     items: [cartItem],
     pedidoId,
     pedidoNumero,
-    usuarioId,
+    usuarioId: usuarioId ?? null,
     modo: 'entrada',
     motivoSuffix: 'quita línea',
   })
