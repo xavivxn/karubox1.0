@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import {
   AlertTriangle,
+  ArrowRightLeft,
   CalendarClock,
   CheckCircle2,
   CircleDot,
@@ -20,6 +21,8 @@ import {
 } from 'lucide-react'
 import type { EstadoMesa, Mesa, MesaReserva, ResumenMesa } from '../types/mesas.types'
 import { useRealtimeMesaDetalle } from '../hooks/useRealtimeMesaDetalle'
+import { CambiarMesaPanel } from './CambiarMesaPanel'
+import { puedeCambiarDeMesa } from '../services/cambiarMesa'
 
 type MetodoCobro = 'tarjeta' | 'efectivo'
 
@@ -64,6 +67,15 @@ export interface DetalleMesaModalProps {
   showCerrarCuenta?: boolean
   /** Cuenta sin mesa (p. ej. para llevar): muestra resumen aunque no haya fila `mesas`, sin realtime de mesa. */
   takeawayAccountMode?: boolean
+  /**
+   * "Cambiar mesa": muda la cuenta abierta a otra mesa libre. Si se omite, no se muestra.
+   * Debe lanzar con el mensaje a mostrar si falla (el panel lo muestra y recarga la lista).
+   */
+  onCambiarMesa?: (mesaOrigen: Mesa, destino: Mesa) => Promise<void>
+  /** Trae las mesas del local al abrir el selector (requerido junto con `onCambiarMesa`). */
+  cargarMesasCambio?: () => Promise<Mesa[]>
+  /** Mesas en unión activa (se excluyen como destino y bloquean el cambio). */
+  mesasEnUnion?: ReadonlySet<string>
   /** Encabezado cuando `takeawayAccountMode` (ej. "Para llevar"). */
   accountHeaderEyebrow?: string
   /** Título principal cuando `takeawayAccountMode` (ej. "Pedido #12"). */
@@ -148,6 +160,9 @@ export function DetalleMesaModal({
   showSplitActions = true,
   showCerrarCuenta = true,
   takeawayAccountMode = false,
+  onCambiarMesa,
+  cargarMesasCambio,
+  mesasEnUnion,
   accountHeaderEyebrow = 'Para llevar',
   accountHeaderTitle = 'Pedido',
 }: DetalleMesaModalProps) {
@@ -155,6 +170,7 @@ export function DetalleMesaModal({
     takeawayAccountMode && showCerrarCuenta && Boolean(onCerrarCuenta)
   const [mounted, setMounted] = useState(false)
   const [showCloseOptions, setShowCloseOptions] = useState(false)
+  const [showCambiarMesa, setShowCambiarMesa] = useState(false)
   const [editingExtraId, setEditingExtraId] = useState<string | null>(null)
   const [editingExtraRowKey, setEditingExtraRowKey] = useState<string | null>(null)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
@@ -177,6 +193,7 @@ export function DetalleMesaModal({
   useEffect(() => {
     if (!mesa?.id) return
     setShowCloseOptions(false)
+    setShowCambiarMesa(false)
     setEditingExtraId(null)
     setEditingExtraRowKey(null)
     setEditingItemId(null)
@@ -558,6 +575,40 @@ export function DetalleMesaModal({
                 Tarjeta
               </button>
             </div>
+          )}
+
+          {!takeawayAccountMode && onCambiarMesa && cargarMesasCambio && (
+            showCambiarMesa ? (
+              <CambiarMesaPanel
+                mesaOrigen={mesa}
+                totalCuenta={resumenPedido?.total_acumulado ?? null}
+                cargarMesas={cargarMesasCambio}
+                mesasEnUnion={mesasEnUnion}
+                onConfirmar={async (destino) => {
+                  await onCambiarMesa(mesa, destino)
+                  setShowCambiarMesa(false)
+                }}
+                onCancelar={() => setShowCambiarMesa(false)}
+              />
+            ) : (
+              <button
+                type="button"
+                disabled={!puedeCambiarDeMesa(mesa, { mesasEnUnion }) || isClosingMesa}
+                onClick={() => {
+                  setShowCloseOptions(false)
+                  setShowCambiarMesa(true)
+                }}
+                title={
+                  puedeCambiarDeMesa(mesa, { mesasEnUnion })
+                    ? 'Mudar la cuenta abierta a otra mesa libre'
+                    : 'Solo se puede cambiar una mesa ocupada que no esté en una unión'
+                }
+                className="w-full rounded-xl border border-amber-300 bg-amber-50 text-amber-800 text-sm font-semibold px-3 py-2.5 inline-flex items-center justify-center gap-1.5 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-200"
+              >
+                <ArrowRightLeft className="w-4 h-4" />
+                Cambiar mesa
+              </button>
+            )
           )}
 
           {showOperationalActions && estadoBotones && (

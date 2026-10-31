@@ -11,6 +11,8 @@ import { useTenant } from '@/contexts/TenantContext'
 import { ROUTES } from '@/config/routes'
 import { mesasService } from '../services/mesasService'
 import { cerrarCuentaMesaService } from '../services/cerrarCuentaMesaService'
+import { cambiarMesaService } from '../services/cambiarMesaService'
+import { mensajeExitoCambioMesa } from '../services/cambiarMesa'
 import { DetalleMesaModal } from '../components/DetalleMesaModal'
 import { CuentaEditableModal } from '../components/CuentaEditableModal'
 import { useRealtimeMesas } from '../hooks/useRealtimeMesas'
@@ -516,6 +518,26 @@ export default function MesasView() {
       setSplittingMesaId(null)
     }
   }, [tenant?.id, splitPartsByMesa, usuario?.id, loadData, setMesaFeedback])
+
+  // ── Cambiar mesa: muda la cuenta abierta a una mesa libre y abre el detalle en la nueva ──
+  const handleCambiarMesa = useCallback(async (origen: Mesa, destino: Mesa) => {
+    if (!tenant?.id) throw new Error('No hay un local activo.')
+    const result = await cambiarMesaService.cambiarMesa({
+      tenantId: tenant.id,
+      mesaOrigen: origen,
+      mesaDestino: destino,
+      usuarioId: usuario?.id ?? null,
+      contexto: { mesasEnUnion },
+    })
+    await loadData()
+    setSelectedMesaId(destino.id)
+    setMesaFeedback(destino.id, 'success', mensajeExitoCambioMesa(result))
+  }, [tenant?.id, usuario?.id, mesasEnUnion, loadData, setMesaFeedback])
+
+  const cargarMesasCambio = useCallback(
+    () => (tenant?.id ? mesasService.listMesas(tenant.id) : Promise.resolve([] as Mesa[])),
+    [tenant?.id]
+  )
 
   const handleCerrarCuentaMesa = useCallback(async (mesa: Mesa, metodo?: 'tarjeta' | 'efectivo') => {
     if (!tenant?.id) return
@@ -1147,6 +1169,9 @@ export default function MesasView() {
               addingProductoManual={selectedMesa ? addingManualItemMesaId === selectedMesa.id : false}
               onReemplazarProductoCatalogo={handleReemplazarProductoCatalogo}
               onEliminarItem={handleEliminarItem}
+              onCambiarMesa={handleCambiarMesa}
+              cargarMesasCambio={cargarMesasCambio}
+              mesasEnUnion={mesasEnUnion}
             />
           )}
 

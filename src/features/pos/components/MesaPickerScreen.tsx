@@ -14,6 +14,8 @@ import { ROUTES } from '@/config/routes'
 import { MesaPedidoCocinaToastHost } from './MesaPedidoCocinaToastHost'
 import type { EstadoMesa, Mesa, MesaReserva } from '@/features/mesas/types/mesas.types'
 import { DetalleMesaModal } from '@/features/mesas/components/DetalleMesaModal'
+import { cambiarMesaService } from '@/features/mesas/services/cambiarMesaService'
+import { mensajeExitoCambioMesa } from '@/features/mesas/services/cambiarMesa'
 
 // ─── Estilos por estado ───────────────────────────────────────────────────────
 
@@ -173,6 +175,24 @@ export function MesaPickerScreen({ tenantId, onSinMesa }: MesaPickerScreenProps)
     setNavigatingTo(mesaId)
     router.push(`${ROUTES.PROTECTED.POS}?mesaId=${mesaId}&from=${ROUTES.POS_FROM.POS_PICKER}`)
   }
+
+  // ── Cambiar mesa (mozo/cajero): la cuenta se muda y el detalle queda abierto en la nueva mesa ──
+  const handleCambiarMesa = useCallback(async (origen: Mesa, destino: Mesa) => {
+    const result = await cambiarMesaService.cambiarMesa({
+      tenantId,
+      mesaOrigen: origen,
+      mesaDestino: destino,
+      usuarioId: usuario?.id ?? null,
+    })
+    await fetchMesas(true)
+    setSelectedMesaId(destino.id)
+    setMesaFeedbackById(prev => ({
+      ...prev,
+      [destino.id]: { type: 'success', message: mensajeExitoCambioMesa(result) },
+    }))
+  }, [tenantId, usuario?.id, fetchMesas])
+
+  const cargarMesasCambio = useCallback(() => mesasService.listMesas(tenantId), [tenantId])
 
   const handleCerrarCuentaMesa = useCallback(async (mesa: Mesa, metodo?: 'tarjeta' | 'efectivo') => {
     setClosingCuentaMesaId(mesa.id)
@@ -581,6 +601,8 @@ export function MesaPickerScreen({ tenantId, onSinMesa }: MesaPickerScreenProps)
         addingProductoManual={selectedMesaId ? addingManualItemMesaId === selectedMesaId : false}
         onReemplazarProductoCatalogo={handleReemplazarProductoCatalogo}
         onEliminarItem={handleEliminarItem}
+        onCambiarMesa={handleCambiarMesa}
+        cargarMesasCambio={cargarMesasCambio}
         showOperationalActions={false}
         showSplitActions={false}
       />

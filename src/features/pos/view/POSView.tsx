@@ -37,6 +37,7 @@ import { AppFooter } from '@/components/layout/AppFooter'
 import { cerrarCuentaMesaService } from '@/features/mesas/services/cerrarCuentaMesaService'
 import { cerrarCuentaParaLlevarService } from '@/features/mesas/services/cerrarCuentaParaLlevarService'
 import { mesasService } from '@/features/mesas/services/mesasService'
+import { cambiarMesaService } from '@/features/mesas/services/cambiarMesaService'
 import { DetalleMesaModal } from '@/features/mesas/components/DetalleMesaModal'
 import { CuentaEditableModal } from '@/features/mesas/components/CuentaEditableModal'
 import type { Mesa, ResumenMesa } from '@/features/mesas/types/mesas.types'
@@ -539,6 +540,29 @@ export default function POSView() {
     ])
     setResumenMesa(resumenes.find(r => r.mesa_id === mesa.id) ?? null)
   }
+
+  /**
+   * Cambiar mesa desde el POS: la cuenta se muda en la base y el POS pasa a trabajar
+   * sobre la mesa nueva (el carrito sin confirmar se conserva y se cargará en la nueva mesa).
+   */
+  const handleCambiarMesaDesdePos = async (origen: Mesa, destino: Mesa) => {
+    if (!tenant?.id) throw new Error('No hay un local activo.')
+    await cambiarMesaService.cambiarMesa({
+      tenantId: tenant.id,
+      mesaOrigen: origen,
+      mesaDestino: destino,
+      usuarioId: usuario?.id ?? null,
+    })
+    setDetalleMesaOpen(false)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('mesaId', destino.id)
+    router.replace(`${ROUTES.PROTECTED.POS}?${params.toString()}`)
+  }
+
+  const cargarMesasCambioPos = useCallback(
+    () => (tenant?.id ? mesasService.listMesas(tenant.id) : Promise.resolve([] as Mesa[])),
+    [tenant?.id]
+  )
 
   const handleAbrirDetalleMesa = async (mesaExplicit?: Mesa | null) => {
     const mesa = mesaExplicit ?? mesaObj
@@ -1434,6 +1458,8 @@ export default function POSView() {
             addingProductoManual={addingManualItemInDetalle}
             onReemplazarProductoCatalogo={handleReemplazarProductoDetalleMesa}
             onEliminarItem={handleEliminarItemDetalleMesa}
+            onCambiarMesa={handleCambiarMesaDesdePos}
+            cargarMesasCambio={cargarMesasCambioPos}
             showOperationalActions={false}
             showSplitActions={false}
             showCerrarCuenta
