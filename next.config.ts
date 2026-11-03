@@ -18,6 +18,11 @@ const supabaseHost = (() => {
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
+  // En producción se eliminan los console.log/info/debug del bundle: no ensucian la
+  // consola del POS ni exponen datos (usuario, email, RUC). Se mantienen error y warn.
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
+  },
   images: {
     remotePatterns: [
       ...(supabaseHost
