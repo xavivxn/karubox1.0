@@ -8,3 +8,10 @@ export function getWhatsAppHref(): string {
   const text = encodeURIComponent(DEFAULT_MESSAGE);
   return `https://wa.me/${n}?text=${text}`;
 }
+
+/** WhatsApp de soporte de KarúBox con un mensaje ya armado (p. ej. desde la campanita del POS). */
+export function getWhatsAppSoporteHref(mensaje: string): string {
+  const raw = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "595982906021";
+  const n = raw.replace(/\D/g, "");
+  return `https://wa.me/${n}?text=${encodeURIComponent(mensaje)}`;
+}

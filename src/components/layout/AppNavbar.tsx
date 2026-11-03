@@ -15,6 +15,7 @@ import {
 import Image from 'next/image'
 import { PreprodBadge } from '@/components/PreprodBadge'
 import { LOGO_SISTEMA_2026_PATH } from '@/config/branding'
+import { AvisosBell } from '@/features/avisos/components/AvisosBell'
 
 const ROL_LABELS: Record<string, string> = {
   admin: 'Administrador',
@@ -145,6 +146,7 @@ export function AppNavbar({ pageTitle, pageSubtitle, actionsSlot }: AppNavbarPro
           {/* Bloque unificado: negocio + rol/nombre usuario + menú */}
           <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
             {actionsSlot}
+            <AvisosBell />
             <div className="relative flex items-center" ref={menuRef}>
               <button
                 type="button"
