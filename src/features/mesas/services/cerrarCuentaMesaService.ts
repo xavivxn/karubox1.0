@@ -31,7 +31,19 @@ interface CerrarCuentaMesaResult {
   warning: string | null
 }
 
-const MAX_PEDIDOS_CIERRE_MESA = 12
+/**
+ * Tope de seguridad de rondas (pedidos FACT) por cuenta de mesa.
+ * El cierre consolida todo en UN pedido/factura, así que muchas rondas no generan
+ * reimpresiones: el tope solo frena casos claramente anómalos. Antes era 12 y bloqueaba
+ * mesas reales con muchas rondas (Oriental 8, mesa 9: 24 rondas en una noche).
+ */
+const MAX_PEDIDOS_CIERRE_MESA = 80
+
+/**
+ * Ventana máxima entre la primera y la última ronda de una misma cuenta.
+ * Si se supera, casi seguro se colaron pedidos de otra cuenta/día (no se liberó la mesa).
+ */
+const MAX_HORAS_SESION_MESA = 16
 
 async function buildMissingFiscalConfigWarning(
   supabase: ReturnType<typeof createClient>,
@@ -175,10 +187,19 @@ export const cerrarCuentaMesaService = {
     if (!pedidosActivos || pedidosActivos.length === 0) {
       throw new Error('No hay pedidos FACT para cerrar en esta mesa.')
     }
+    const primeraRondaMs = new Date(pedidosActivos[0].created_at).getTime()
+    const ultimaRondaMs = new Date(pedidosActivos[pedidosActivos.length - 1].created_at).getTime()
+    const horasSesion = (ultimaRondaMs - primeraRondaMs) / 3_600_000
+    if (Number.isFinite(horasSesion) && horasSesion > MAX_HORAS_SESION_MESA) {
+      throw new Error(
+        `Esta cuenta mezcla pedidos de hace ${Math.round(horasSesion)} horas (máximo ${MAX_HORAS_SESION_MESA}). ` +
+        'Parece que la mesa no se liberó en una cuenta anterior. Revisá los pedidos de la mesa antes de cerrar.'
+      )
+    }
     if (pedidosActivos.length > MAX_PEDIDOS_CIERRE_MESA) {
       throw new Error(
-        `Se detectaron ${pedidosActivos.length} pedidos FACT para esta mesa (límite ${MAX_PEDIDOS_CIERRE_MESA}). ` +
-        'Se detuvo el cierre para evitar reimpresiones masivas. Revisá pedidos históricos vinculados a la mesa.'
+        `Esta cuenta tiene ${pedidosActivos.length} rondas (máximo ${MAX_PEDIDOS_CIERRE_MESA}). ` +
+        'Se detuvo el cierre por seguridad. Revisá los pedidos de la mesa antes de cerrar.'
       )
     }
 
