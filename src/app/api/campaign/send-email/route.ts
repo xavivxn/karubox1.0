@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { buildEmailCampaignHtml } from '@/features/clientes/utils/emailCampaignTemplate'
+import { resolveSessionTenant } from '@/lib/auth/actionAuth'
 
 export interface SendEmailDestinatario {
   email: string
@@ -44,6 +45,22 @@ export async function POST(request: Request) {
     )
   }
 
+  // Solo un admin logueado puede enviar campañas, y siempre a nombre de SU local
+  // (el nombre que venga en el body se ignora para que no se pueda suplantar a otro).
+  const { supabase, tenantId, rol } = await resolveSessionTenant()
+  if (!tenantId) {
+    return NextResponse.json({ sent: 0, failed: 0, error: 'UNAUTHORIZED' }, { status: 401 })
+  }
+  if (rol !== 'admin') {
+    return NextResponse.json({ sent: 0, failed: 0, error: 'FORBIDDEN' }, { status: 403 })
+  }
+  const { data: tenantRow } = await supabase
+    .from('tenants')
+    .select('nombre')
+    .eq('id', tenantId)
+    .maybeSingle()
+  const tenantNombreSeguro = tenantRow?.nombre?.trim() || 'KarúBox'
+
   let body: SendEmailBody
   try {
     body = await request.json()
@@ -73,7 +90,7 @@ export async function POST(request: Request) {
   // Con onboarding@resend.dev solo llega al email de tu cuenta. Para enviar a TODOS los clientes
   // hay que verificar un dominio en Resend y poner RESEND_FROM (ej. "Atlas Burger <campanas@tudominio.com>").
   const fromAddress =
-    process.env.RESEND_FROM?.trim() || `${tenantNombre} <onboarding@resend.dev>`
+    process.env.RESEND_FROM?.trim() || `${tenantNombreSeguro} <onboarding@resend.dev>`
 
   const resend = new Resend(apiKey)
   let sent = 0
@@ -82,10 +99,10 @@ export async function POST(request: Request) {
   let lastError: string | undefined
 
   for (const dest of valid) {
-    const bodyReplaced = replaceVariables(mensajeConVariables, dest, tenantNombre)
+    const bodyReplaced = replaceVariables(mensajeConVariables, dest, tenantNombreSeguro)
     const html = buildEmailCampaignHtml({
       body: bodyReplaced,
-      tenantNombre,
+      tenantNombre: tenantNombreSeguro,
       subject,
     })
     const { error } = await resend.emails.send({

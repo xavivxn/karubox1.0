@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getSesionAbierta, getSesionCerradaMasReciente, calcularTotalesTurno } from '@/features/caja/services/cajaService'
 import type { GastoExtra, SesionCaja } from '@/features/caja/types/caja.types'
+import { resolveSessionTenant } from '@/lib/auth/actionAuth'
 
 export type CajaActionResult<T = void> = { success: true; data: T } | { success: false; error: string }
 
@@ -10,10 +11,11 @@ export type CajaActionResult<T = void> = { success: true; data: T } | { success:
  * Obtiene la sesión de caja abierta del tenant (para UI y bloqueos).
  * Cualquier usuario autenticado del tenant puede leer.
  */
-export async function getSesionAbiertaAction(tenantId: string | null): Promise<CajaActionResult<SesionCaja | null>> {
+// El `tenantId` que manda el cliente se ignora: el local sale de la sesión (anti-IDOR).
+export async function getSesionAbiertaAction(_tenantId: string | null): Promise<CajaActionResult<SesionCaja | null>> {
+  const { supabase, tenantId } = await resolveSessionTenant()
   if (!tenantId) return { success: true, data: null }
 
-  const supabase = await createClient()
   try {
     const sesion = await getSesionAbierta(supabase, tenantId)
     return { success: true, data: sesion }
@@ -26,10 +28,10 @@ export async function getSesionAbiertaAction(tenantId: string | null): Promise<C
 /**
  * Obtiene la última sesión de caja cerrada (para mostrar resumen hasta que se abra de nuevo).
  */
-export async function getSesionCerradaMasRecienteAction(tenantId: string | null): Promise<CajaActionResult<SesionCaja | null>> {
+export async function getSesionCerradaMasRecienteAction(_tenantId: string | null): Promise<CajaActionResult<SesionCaja | null>> {
+  const { supabase, tenantId } = await resolveSessionTenant()
   if (!tenantId) return { success: true, data: null }
 
-  const supabase = await createClient()
   try {
     const sesion = await getSesionCerradaMasReciente(supabase, tenantId)
     return { success: true, data: sesion }
@@ -166,12 +168,12 @@ export async function cerrarCajaAction(
  * ordenadas de más reciente a más antigua. Útil para el historial de logros.
  */
 export async function getSesionesPasadasAction(
-  tenantId: string | null,
+  _tenantId: string | null,
   limit = 60
 ): Promise<CajaActionResult<SesionCaja[]>> {
+  const { supabase, tenantId } = await resolveSessionTenant()
   if (!tenantId) return { success: false, error: 'Tenant inválido.' }
 
-  const supabase = await createClient()
   try {
     const { data, error } = await supabase
       .from('sesiones_caja')
@@ -202,13 +204,13 @@ export interface SessionStats {
  * Incluye: quiénes atendieron, clientes nuevos, desglose por tipo, pedidos anulados.
  */
 export async function getHistorialSesionStatsAction(
-  tenantId: string | null,
+  _tenantId: string | null,
   apertura_at: string,
   cierre_at: string | null
 ): Promise<CajaActionResult<SessionStats>> {
+  const { supabase, tenantId } = await resolveSessionTenant()
   if (!tenantId) return { success: false, error: 'Tenant inválido.' }
 
-  const supabase = await createClient()
   const hasta = cierre_at ?? new Date().toISOString()
 
   try {
@@ -296,12 +298,12 @@ export async function getHistorialSesionStatsAction(
  * Solo si hay sesión abierta.
  */
 export async function getTotalesTurnoAction(
-  tenantId: string | null,
+  _tenantId: string | null,
   aperturaAt: string
 ): Promise<CajaActionResult<{ total_ventas: number; total_costo_estimado: number; cantidad_pedidos: number }>> {
+  const { supabase, tenantId } = await resolveSessionTenant()
   if (!tenantId) return { success: false, error: 'Tenant inválido.' }
 
-  const supabase = await createClient()
   try {
     const totales = await calcularTotalesTurno(supabase, tenantId, aperturaAt)
     return { success: true, data: totales }
